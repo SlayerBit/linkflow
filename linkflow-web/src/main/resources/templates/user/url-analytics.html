@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>URL Analytics</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none">
+        <div class="page-pretitle"><a th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a></div>
+        <h2 class="page-title">Analytics</h2>
+    </div>
+
+    <div class="row row-deck row-cards">
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="subheader">Total clicks</div>
+                    <div class="h1" th:text="${analytics.totalClicks}">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="subheader">Last accessed</div>
+                    <div class="h3" th:text="${analytics.lastAccessedAt != null ? #temporals.format(analytics.lastAccessedAt, 'yyyy-MM-dd HH:mm ''UTC''') : 'Never'}">Never</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="subheader">Short URL</div>
+                    <code class="text-break" th:text="${url.shortUrl}">short</code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info mt-4">
+        Click-over-time charts are not available — the backend only exposes aggregate totals per URL.
+    </div>
+</div>
+</body>
+</html>

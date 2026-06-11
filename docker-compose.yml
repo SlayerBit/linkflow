@@ -1,0 +1,126 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: linkflow
+      POSTGRES_USER: linkflow
+      POSTGRES_PASSWORD: linkflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkflow -d linkflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  linkflow-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/linkflow
+      SPRING_DATASOURCE_USERNAME: linkflow
+      SPRING_DATASOURCE_PASSWORD: linkflow
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      LINKFLOW_JWT_SECRET: ${LINKFLOW_JWT_SECRET}
+      LINKFLOW_BASE_URL: http://localhost:8080
+      LINKFLOW_METRICS_PUBLIC: "true"
+      LINKFLOW_BOOTSTRAP_ADMIN_ENABLED: ${LINKFLOW_BOOTSTRAP_ADMIN_ENABLED:-true}
+      LINKFLOW_BOOTSTRAP_ADMIN_EMAIL: ${LINKFLOW_BOOTSTRAP_ADMIN_EMAIL:-admin@linkflow.local}
+      LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD: ${LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD:-ChangeMeAdmin1!}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  linkflow-web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      LINKFLOW_GATEWAY_URL: http://linkflow-gateway:8080
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
+    depends_on:
+      linkflow-gateway:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  linkflow-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      LINKFLOW_APP_URI: http://linkflow-app:8081
+      LINKFLOW_WEB_URI: http://linkflow-web:8082
+    depends_on:
+      linkflow-app:
+        condition: service_healthy
+      linkflow-web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      linkflow-app:
+        condition: service_healthy
+      linkflow-gateway:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:

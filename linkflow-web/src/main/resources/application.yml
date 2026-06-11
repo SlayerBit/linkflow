@@ -1,0 +1,36 @@
+server:
+  port: 8082
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        same-site: strict
+        http-only: true
+        secure: ${SERVER_SERVLET_SESSION_COOKIE_SECURE:false}
+
+spring:
+  application:
+    name: linkflow-web
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+
+linkflow:
+  web:
+    gateway-url: ${LINKFLOW_GATEWAY_URL:http://127.0.0.1:8080}
+    grafana-url: ${LINKFLOW_GRAFANA_URL:http://localhost:3000}
+    prometheus-url: ${LINKFLOW_PROMETHEUS_URL:http://localhost:8080/actuator/prometheus}
+    rate-limit:
+      user-rpm: ${LINKFLOW_RATE_LIMIT_USER_RPM:100}
+      ip-rpm: ${LINKFLOW_RATE_LIMIT_IP_RPM:200}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.linkflow.web: INFO

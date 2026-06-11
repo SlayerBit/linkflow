@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>My URLs</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col"><h2 class="page-title">My URLs</h2></div>
+            <div class="col-auto">
+                <a th:href="@{/urls/new}" class="btn btn-primary"><i class="ti ti-plus"></i> New URL</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" th:if="${!#lists.isEmpty(urls.content)}">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table table-hover">
+                <thead>
+                <tr>
+                    <th>Short code</th>
+                    <th>Original URL</th>
+                    <th>Status</th>
+                    <th>Expires</th>
+                    <th>Created</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="url : ${urls.content}">
+                    <td><a th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a></td>
+                    <td class="text-truncate" style="max-width:240px" th:text="${url.originalUrl}">original</td>
+                    <td><span class="badge" th:classappend="${url.active} ? ' bg-green' : ' bg-red'"
+                              th:text="${url.active} ? 'Active' : 'Inactive'">Active</span></td>
+                    <td th:text="${url.expiresAt != null ? #temporals.format(url.expiresAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+                    <td th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd')}">date</td>
+                    <td class="text-end table-actions">
+                        <a th:href="@{/urls/{id}(id=${url.id})}" class="btn btn-sm">View</a>
+                        <a th:href="@{/urls/{id}/analytics(id=${url.id})}" class="btn btn-sm btn-ghost-primary">Analytics</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="empty empty-state" th:if="${#lists.isEmpty(urls.content)}">
+        <div class="empty-icon"><i class="ti ti-link-off"></i></div>
+        <p class="empty-title">No URLs yet</p>
+        <a th:href="@{/urls/new}" class="btn btn-primary">Create URL</a>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: pagination(${urls}, '/urls', ${sortBy}, ${direction})}"></div>
+</div>
+</body>
+</html>

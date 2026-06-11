@@ -1,0 +1,24 @@
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+COPY pom.xml .
+COPY linkflow-common/pom.xml linkflow-common/
+COPY linkflow-auth/pom.xml linkflow-auth/
+COPY linkflow-user/pom.xml linkflow-user/
+COPY linkflow-url/pom.xml linkflow-url/
+COPY linkflow-rate-limit/pom.xml linkflow-rate-limit/
+COPY linkflow-analytics/pom.xml linkflow-analytics/
+COPY linkflow-observability/pom.xml linkflow-observability/
+COPY linkflow-app/pom.xml linkflow-app/
+COPY linkflow-gateway/pom.xml linkflow-gateway/
+RUN apk add --no-cache maven
+RUN mvn -B -pl linkflow-gateway -am dependency:go-offline -DskipTests
+
+COPY . .
+RUN mvn -B -pl linkflow-gateway -am package -DskipTests
+
+FROM eclipse-temurin:21-jre-alpine
+RUN apk add --no-cache curl
+WORKDIR /app
+COPY --from=build /app/linkflow-gateway/target/linkflow-gateway-*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

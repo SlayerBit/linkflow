@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Dashboard</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="page-pretitle">Overview</div>
+                <h2 class="page-title">Welcome, <span th:text="${auth.firstName()}">User</span></h2>
+            </div>
+            <div class="col-auto">
+                <a th:href="@{/urls/new}" class="btn btn-primary">
+                    <i class="ti ti-plus"></i> Create URL
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-deck row-cards mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <h3 class="card-title mb-0">Recent URLs</h3>
+                    <div class="card-actions ms-auto">
+                        <a th:href="@{/urls}" class="btn btn-sm">View all</a>
+                    </div>
+                </div>
+                <div class="card-body p-0" th:if="${!#lists.isEmpty(recentUrls)}">
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table table-hover">
+                            <thead><tr><th>Code</th><th>Original</th><th>Status</th></tr></thead>
+                            <tbody>
+                            <tr th:each="url : ${recentUrls}">
+                                <td><a th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a></td>
+                                <td class="text-truncate" style="max-width:200px" th:text="${url.originalUrl}">url</td>
+                                <td><span class="badge" th:classappend="${url.active} ? ' bg-green' : ' bg-red'"
+                                          th:text="${url.active} ? 'Active' : 'Inactive'">Active</span></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="empty empty-state" th:if="${#lists.isEmpty(recentUrls)}">
+                    <div class="empty-icon"><i class="ti ti-link-off"></i></div>
+                    <p class="empty-title">No URLs yet</p>
+                    <a th:href="@{/urls/new}" class="btn btn-primary">Create your first URL</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">Top URLs by clicks</h3></div>
+                <div class="card-body">
+                    <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}">
+                        <canvas id="topUrlsChart"></canvas>
+                    </div>
+                    <div class="empty empty-state" th:if="${#lists.isEmpty(topUrls)}">
+                        <p class="text-muted mb-0">No click data yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:if="${!#lists.isEmpty(topUrls)}">
+        const topUrls = /*[[${topUrlsJson}]]*/ [];
+        const labels = topUrls.map(u => u.shortCode);
+        const data = topUrls.map(u => u.totalClicks);
+        new Chart(document.getElementById('topUrlsChart'), {
+            type: 'bar',
+            data: { labels, datasets: [{ label: 'Clicks', data, backgroundColor: '#206bc4' }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } } }
+        });
+    </script>
+</th:block>
+</body>
+</html>

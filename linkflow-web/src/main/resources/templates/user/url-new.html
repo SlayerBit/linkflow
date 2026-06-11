@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Create URL</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none"><h2 class="page-title">Create short URL</h2></div>
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form th:action="@{/urls/new}" th:object="${createUrlForm}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label required">Original URL</label>
+                            <input type="url" class="form-control" th:field="*{originalUrl}" placeholder="https://example.com/page" required>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('originalUrl')}" th:errors="*{originalUrl}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Custom alias (optional)</label>
+                            <input type="text" class="form-control" th:field="*{customAlias}" placeholder="my-link">
+                            <div class="text-danger small" th:if="${#fields.hasErrors('customAlias')}" th:errors="*{customAlias}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Expires at (optional, UTC)</label>
+                            <input type="datetime-local" class="form-control" th:field="*{expiresAt}">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                        <a th:href="@{/urls}" class="btn btn-link">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

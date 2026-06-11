@@ -1,0 +1,12 @@
+spring:
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    com.linkflow: DEBUG
+    org.springframework.security: INFO
+
+linkflow:
+  jwt:
+    secret: ${LINKFLOW_JWT_SECRET:ZGV2LXNlY3JldC1rZXktZm9yLWxvY2FsLWRldmVsb3BtZW50LW1pbmltdW0tNjQtY2hhcnM=}

@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# Maven build output
+**/target/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Local secrets
+.env
+.env.local
+
+# Docs and CI (not needed in runtime image)
+docs/
+.github/
+*.md
+!README.md
+
+# Logs
+logs/
+*.log
+
+# Test artifacts
+**/surefire-reports/
+**/failsafe-reports/

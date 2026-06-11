@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Login</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="row justify-content-center auth-card">
+        <div class="col-md-5 col-lg-4">
+            <div class="card card-md">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4">Sign in</h2>
+                    <div class="alert alert-warning" th:if="${param.expired}">Your session has expired. Please sign in again.</div>
+                    <form th:action="@{/login}" th:object="${loginForm}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" th:field="*{email}" required>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" th:field="*{password}" required>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Sign in</button>
+                    </form>
+                    <p class="text-center text-muted mt-3 mb-0">
+                        No account? <a th:href="@{/register}">Register</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

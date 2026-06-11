@@ -1,0 +1,7 @@
+logging:
+  level:
+    com.linkflow.web: DEBUG
+
+spring:
+  thymeleaf:
+    cache: false

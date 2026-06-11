@@ -1,0 +1,67 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: linkflow-app
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/linkflow}
+    username: ${SPRING_DATASOURCE_USERNAME:linkflow}
+    password: ${SPRING_DATASOURCE_PASSWORD:linkflow}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+linkflow:
+  base-url: ${LINKFLOW_BASE_URL:http://localhost:8080}
+  cors:
+    allowed-origins: ${LINKFLOW_CORS_ALLOWED_ORIGINS:*}
+  jwt:
+    secret: ${LINKFLOW_JWT_SECRET:}
+    access-expiration-ms: ${LINKFLOW_JWT_ACCESS_EXPIRATION_MS:900000}
+    refresh-expiration-ms: ${LINKFLOW_JWT_REFRESH_EXPIRATION_MS:2592000000}
+  rate-limit:
+    user-rpm: ${LINKFLOW_RATE_LIMIT_USER_RPM:100}
+    ip-rpm: ${LINKFLOW_RATE_LIMIT_IP_RPM:200}
+    auth-fail-closed: ${LINKFLOW_RATE_LIMIT_AUTH_FAIL_CLOSED:true}
+  security:
+    swagger-public: ${LINKFLOW_SECURITY_SWAGGER_PUBLIC:true}
+    actuator-public: ${LINKFLOW_SECURITY_ACTUATOR_PUBLIC:true}
+    metrics-public: ${LINKFLOW_SECURITY_METRICS_PUBLIC:false}
+  bootstrap:
+    admin:
+      enabled: ${LINKFLOW_BOOTSTRAP_ADMIN_ENABLED:false}
+      email: ${LINKFLOW_BOOTSTRAP_ADMIN_EMAIL:}
+      password: ${LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

@@ -1,0 +1,45 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: linkflow-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: linkflow-api
+          uri: ${LINKFLOW_APP_URI:http://127.0.0.1:8081}
+          predicates:
+            - Path=/api/**
+        - id: linkflow-redirect
+          uri: ${LINKFLOW_APP_URI:http://127.0.0.1:8081}
+          predicates:
+            - Path=/r/**
+        - id: linkflow-swagger
+          uri: ${LINKFLOW_APP_URI:http://127.0.0.1:8081}
+          predicates:
+            - Path=/swagger-ui/**,/v3/api-docs/**
+        - id: linkflow-web-static
+          uri: ${LINKFLOW_WEB_URI:http://127.0.0.1:8082}
+          predicates:
+            - Path=/css/**,/js/**,/webjars/**
+        - id: linkflow-web
+          uri: ${LINKFLOW_WEB_URI:http://127.0.0.1:8082}
+          predicates:
+            - Path=/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>All URLs</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none"><h2 class="page-title">All URLs</h2></div>
+
+    <div class="card" th:if="${!#lists.isEmpty(urls.content)}">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table table-hover">
+                <thead><tr><th>Code</th><th>Original</th><th>Status</th><th>Created</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="url : ${urls.content}">
+                    <td th:text="${url.shortCode}">code</td>
+                    <td class="text-truncate" style="max-width:240px" th:text="${url.originalUrl}">original</td>
+                    <td><span class="badge" th:classappend="${url.active} ? ' bg-green' : ' bg-red'"
+                              th:text="${url.active} ? 'Active' : 'Inactive'">Active</span></td>
+                    <td th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd')}">date</td>
+                    <td class="text-end">
+                        <form th:if="${url.active}" th:action="@{/admin/urls/{id}/deactivate(id=${url.id})}" method="post" class="d-inline"
+                              onsubmit="return confirm('Deactivate this URL?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Deactivate</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="empty empty-state" th:if="${#lists.isEmpty(urls.content)}">
+        <p class="empty-title">No URLs found</p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: pagination(${urls}, '/admin/urls', ${sortBy}, ${direction})}"></div>
+</div>
+</body>
+</html>

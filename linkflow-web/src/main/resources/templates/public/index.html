@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>LinkFlow — URL Shortener</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="landing-hero text-center">
+        <h1 class="display-4 fw-bold">Shorten links. Track clicks. Stay in control.</h1>
+        <p class="lead text-muted mt-3 mx-auto" style="max-width: 640px;">
+            LinkFlow is a production-style URL shortener with analytics, rate limiting,
+            and role-based access — all backed by a modular Spring Boot API.
+        </p>
+        <div class="mt-4">
+            <a th:href="@{/register}" class="btn btn-primary btn-lg me-2">Get started</a>
+            <a th:href="@{/login}" class="btn btn-outline-primary btn-lg">Sign in</a>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2 mb-5">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="feature-icon mb-3"><i class="ti ti-link"></i></div>
+                    <h3 class="card-title">Short URLs</h3>
+                    <p class="text-muted">Create short links with optional custom aliases and expiry dates.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="feature-icon mb-3"><i class="ti ti-chart-bar"></i></div>
+                    <h3 class="card-title">Analytics</h3>
+                    <p class="text-muted">Track total clicks and top-performing links across your account.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="feature-icon mb-3"><i class="ti ti-shield-check"></i></div>
+                    <h3 class="card-title">Secure &amp; rate-limited</h3>
+                    <p class="text-muted">JWT auth, Redis-backed rate limits, and server-side session management.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-5">
+        <div class="card-body">
+            <h3 class="card-title">How redirects work</h3>
+            <p class="text-muted">
+                Short links resolve through the API gateway at
+                <code>/r/{shortCode}</code> (e.g. <code>http://localhost:8080/r/abc123</code>).
+                The gateway forwards the request to the backend, which returns an HTTP 302 redirect
+                to the original URL. This web UI does not intercept redirects — it only manages
+                your links via the REST API.
+            </p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

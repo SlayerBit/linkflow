@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Admin Dashboard</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none"><h2 class="page-title">Admin Dashboard</h2></div>
+
+    <div class="row row-deck row-cards mb-4">
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card"><div class="card-body">
+                <div class="subheader">Total users</div><div class="h1" th:text="${stats.totalUsers}">0</div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card"><div class="card-body">
+                <div class="subheader">Total URLs</div><div class="h1" th:text="${stats.totalUrls}">0</div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card"><div class="card-body">
+                <div class="subheader">Total clicks</div><div class="h1" th:text="${stats.totalClicks}">0</div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card"><div class="card-body">
+                <div class="subheader">Active URLs</div><div class="h1" th:text="${stats.activeUrls}">0</div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card"><div class="card-body">
+                <div class="subheader">Expired URLs</div><div class="h1" th:text="${stats.expiredUrls}">0</div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card"><div class="card-body">
+                <div class="subheader">Deleted URLs</div><div class="h1" th:text="${stats.deletedUrls}">0</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">Top URLs (system-wide)</h3></div>
+        <div class="card-body">
+            <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}">
+                <canvas id="adminTopChart"></canvas>
+            </div>
+            <p class="text-muted mb-0" th:if="${#lists.isEmpty(topUrls)}">No data yet.</p>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:if="${!#lists.isEmpty(topUrls)}">
+        const topUrls = /*[[${topUrlsJson}]]*/ [];
+        new Chart(document.getElementById('adminTopChart'), {
+            type: 'bar',
+            data: {
+                labels: topUrls.map(u => u.shortCode),
+                datasets: [{ label: 'Clicks', data: topUrls.map(u => u.totalClicks), backgroundColor: '#206bc4' }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+    </script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,29 @@
+logging:
+  level:
+    com.linkflow: INFO
+    org.springframework: WARN
+
+spring:
+  jpa:
+    show-sql: false
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+linkflow:
+  security:
+    swagger-public: false
+    actuator-public: false
+    metrics-public: ${LINKFLOW_METRICS_PUBLIC:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: never

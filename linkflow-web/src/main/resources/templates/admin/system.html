@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>System</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none"><h2 class="page-title">System Health &amp; Observability</h2></div>
+
+    <div class="row row-deck row-cards mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="subheader">Overall status</div>
+                    <div class="h2">
+                        <span class="badge" th:classappend="${health.get('status').asText() == 'UP'} ? ' bg-green' : ' bg-red'"
+                              th:text="${health.get('status').asText()}">UP</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3" th:if="${health.has('components') and health.get('components').has('db')}">
+            <div class="card">
+                <div class="card-body">
+                    <div class="subheader">Database</div>
+                    <span class="badge" th:classappend="${health.get('components').get('db').get('status').asText() == 'UP'} ? ' bg-green' : ' bg-red'"
+                          th:text="${health.get('components').get('db').get('status').asText()}">UP</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3" th:if="${health.has('components') and health.get('components').has('redis')}">
+            <div class="card">
+                <div class="card-body">
+                    <div class="subheader">Redis</div>
+                    <span class="badge" th:classappend="${health.get('components').get('redis').get('status').asText() == 'UP'} ? ' bg-green' : ' bg-red'"
+                          th:text="${health.get('components').get('redis').get('status').asText()}">UP</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-deck row-cards mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">Observability links</h3></div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><a th:href="${grafanaUrl}" target="_blank"><i class="ti ti-chart-dots"></i> Grafana</a></li>
+                        <li class="mb-2"><a th:href="${prometheusUrl}" target="_blank"><i class="ti ti-database"></i> Prometheus</a></li>
+                        <li><a th:href="${gatewayUrl + '/actuator/health'}" target="_blank"><i class="ti ti-heartbeat"></i> Gateway health</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">Rate limit configuration</h3></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-6">Authenticated users</dt>
+                        <dd class="col-sm-6" th:text="${userRpm} + ' req/min'">100 req/min</dd>
+                        <dt class="col-sm-6">Anonymous IPs</dt>
+                        <dd class="col-sm-6" th:text="${ipRpm} + ' req/min'">200 req/min</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">Raw health response</h3></div>
+        <div class="card-body">
+            <pre class="mb-0 health-pre" th:text="${health.toPrettyString()}">{}</pre>
+        </div>
+    </div>
+</div>
+</body>
+</html>

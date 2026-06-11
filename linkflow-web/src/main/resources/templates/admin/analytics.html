@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>System Analytics</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none"><h2 class="page-title">System Analytics</h2></div>
+
+    <div class="row row-deck row-cards mb-4">
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">URL status breakdown</h3></div>
+                <div class="card-body">
+                    <div class="chart-container"><canvas id="statusChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">Top URLs</h3></div>
+                <div class="card-body">
+                    <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}">
+                        <canvas id="topChart"></canvas>
+                    </div>
+                    <p class="text-muted mb-0" th:if="${#lists.isEmpty(topUrls)}">No top URL data yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-deck row-cards">
+        <div class="col-sm-4"><div class="card stat-card"><div class="card-body">
+            <div class="subheader">Users</div><div class="h2" th:text="${stats.totalUsers}">0</div>
+        </div></div></div>
+        <div class="col-sm-4"><div class="card stat-card"><div class="card-body">
+            <div class="subheader">Total clicks</div><div class="h2" th:text="${stats.totalClicks}">0</div>
+        </div></div></div>
+        <div class="col-sm-4"><div class="card stat-card"><div class="card-body">
+            <div class="subheader">Total URLs</div><div class="h2" th:text="${stats.totalUrls}">0</div>
+        </div></div></div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:inline="javascript">
+        const stats = /*[[${statsJson}]]*/ {};
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Active', 'Expired', 'Deleted'],
+                datasets: [{ data: [stats.activeUrls, stats.expiredUrls, stats.deletedUrls],
+                    backgroundColor: ['#2fb344', '#f76707', '#d63939'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+        const topUrls = /*[[${topUrlsJson}]]*/ [];
+        if (topUrls.length) {
+            new Chart(document.getElementById('topChart'), {
+                type: 'bar',
+                data: {
+                    labels: topUrls.map(u => u.shortCode),
+                    datasets: [{ data: topUrls.map(u => u.totalClicks), backgroundColor: '#206bc4' }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+    </script>
+</th:block>
+</body>
+</html>

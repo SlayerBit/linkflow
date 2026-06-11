@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Profile</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none"><h2 class="page-title">Profile</h2></div>
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Email</dt>
+                        <dd class="col-sm-9" th:text="${user.email}">email</dd>
+                        <dt class="col-sm-3">Roles</dt>
+                        <dd class="col-sm-9">
+                            <span th:each="role : ${user.roles}" class="badge bg-blue-lt me-1" th:text="${role}">USER</span>
+                        </dd>
+                        <dt class="col-sm-3">Member since</dt>
+                        <dd class="col-sm-9" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">date</dd>
+                    </dl>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">Update profile</h3></div>
+                <div class="card-body">
+                    <form th:action="@{/profile}" th:object="${updateProfileForm}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">First name</label>
+                            <input type="text" class="form-control" th:field="*{firstName}" required>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Last name</label>
+                            <input type="text" class="form-control" th:field="*{lastName}">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Rate Limit Demo</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none"><h2 class="page-title">Rate Limit Demo</h2></div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="card-title">About rate limiting</h3>
+            <p class="text-muted">
+                LinkFlow applies Redis-backed token bucket rate limits to API requests.
+                Authenticated users are limited to <strong th:text="${userRpm}">100</strong> requests/minute;
+                anonymous IPs to <strong th:text="${ipRpm}">200</strong> requests/minute.
+                Responses include <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>,
+                and <code>X-RateLimit-Reset</code> headers. Exceeding the limit returns HTTP 429.
+            </p>
+            <div class="alert alert-warning">
+                Requests are fired <strong>server-side</strong> using your authenticated session token,
+                so they consume your user rate-limit quota (not the browser IP).
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header"><h3 class="card-title">Interactive demo</h3></div>
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label">Endpoint</label>
+                    <select id="probe-endpoint" class="form-select">
+                        <option value="/api/v1/urls">GET /api/v1/urls (list URLs)</option>
+                        <option value="/api/v1/users/me">GET /api/v1/users/me</option>
+                        <option value="/api/v1/analytics/top">GET /api/v1/analytics/top</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Request count (1–200)</label>
+                    <input type="number" id="probe-count" class="form-control" value="20" min="1" max="200">
+                </div>
+                <div class="col-md-4">
+                    <button type="button" id="fire-probe-btn" class="btn btn-primary">
+                        <i class="ti ti-bolt"></i> Fire Requests
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-danger d-none" id="alert-429" role="alert">
+        <h4 class="alert-title">Rate limit exceeded (HTTP 429)</h4>
+        <div id="alert-429-message"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">Results</h3></div>
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                <tr><th>#</th><th>Status</th><th>Limit</th><th>Remaining</th><th>Reset</th><th>Message</th></tr>
+                </thead>
+                <tbody id="probe-results-body">
+                <tr><td colspan="6" class="text-muted">Click "Fire Requests" to start.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

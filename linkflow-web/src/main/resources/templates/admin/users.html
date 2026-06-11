@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Users</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none"><h2 class="page-title">Users</h2></div>
+
+    <div class="card" th:if="${!#lists.isEmpty(users.content)}">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table table-hover">
+                <thead><tr><th>Email</th><th>Name</th><th>Roles</th><th>Created</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="user : ${users.content}">
+                    <td th:text="${user.email}">email</td>
+                    <td th:text="${user.firstName + ' ' + (user.lastName != null ? user.lastName : '')}">name</td>
+                    <td>
+                        <span th:each="role : ${user.roles}" class="badge bg-blue-lt me-1" th:text="${role}">USER</span>
+                    </td>
+                    <td th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">date</td>
+                    <td class="text-end">
+                        <a th:href="@{/admin/users/{id}(id=${user.id})}" class="btn btn-sm">View</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="empty empty-state" th:if="${#lists.isEmpty(users.content)}">
+        <p class="empty-title">No users found</p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: pagination(${users}, '/admin/users', ${sortBy}, ${direction})}"></div>
+</div>
+</body>
+</html>
