@@ -8,18 +8,19 @@ LinkFlow is a multi-user URL shortener. Registered users create short links thro
 
 ## Gateway subsystem
 
-**What:** Single HTTP entry point for API, redirects, actuator, and Swagger.
+**What:** Single HTTP entry point for API, redirects, Swagger, and the web UI at one host (`:8080`).
 
 **Why:** Separates routing/correlation from business logic; allows independent scaling and TLS termination at the edge.
 
-**How:** Spring Cloud Gateway YAML routes in `linkflow-gateway/src/main/resources/application.yml`. `CorrelationIdGatewayFilter` adds `X-Correlation-ID`.
+**How:** Spring Cloud Gateway YAML routes in `linkflow-gateway/src/main/resources/application.yml`. Backend paths (`/api/**`, `/r/**`, docs) go to `linkflow-app`; static assets and pages go to `linkflow-web`. Gateway `/actuator/**` is local only — app health/metrics stay on `:8081`. `CorrelationIdGatewayFilter` adds `X-Correlation-ID`.
 
 **Starts in code:** `LinkFlowGatewayApplication.main`
 
 **Interview questions:**
 
-- Why not call `linkflow-app` directly? — You can for dev; gateway models production edge routing.
+- Why not call `linkflow-app` directly? — You can for dev; gateway models production edge routing and unifies browser + API entry.
 - Does gateway authenticate? — No; JWT validation happens in the app.
+- Why not proxy app actuator? — Prometheus scrapes the app directly; keeps gateway health independent of backend failures.
 
 ---
 
@@ -107,7 +108,7 @@ See [security-review.md](security-review.md).
 
 **Tables:** `click_events`, `url_analytics`
 
-**Limitation:** No time-series API — only totals and last accessed time.
+**Limitation:** No time-series rollup API (hourly/daily charts) — v1 exposes aggregate totals, `lastAccessedAt`, and paginated recent click events via `/analytics/clicks`.
 
 ---
 

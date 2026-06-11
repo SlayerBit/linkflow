@@ -65,6 +65,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       LINKFLOW_GATEWAY_URL: http://linkflow-gateway:8080
+      LINKFLOW_PROMETHEUS_URL: http://linkflow-app:8081/actuator/prometheus
       SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
     depends_on:
       linkflow-gateway:

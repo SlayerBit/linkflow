@@ -36,6 +36,9 @@ Interactive docs: http://localhost:8080/swagger-ui/index.html
 | PUT | `/api/v1/users/me` | Bearer |
 | GET | `/api/v1/admin/users` | ADMIN |
 | GET | `/api/v1/admin/users/{id}` | ADMIN |
+| PATCH | `/api/v1/admin/users/{id}/disable` | ADMIN |
+| PATCH | `/api/v1/admin/users/{id}/enable` | ADMIN |
+| DELETE | `/api/v1/admin/users/{id}` | ADMIN |
 
 ## URLs
 
@@ -55,9 +58,11 @@ Interactive docs: http://localhost:8080/swagger-ui/index.html
 | Method | Path | Auth |
 |--------|------|------|
 | GET | `/api/v1/urls/{id}/analytics` | Bearer (owner) |
+| GET | `/api/v1/urls/{id}/analytics/clicks` | Bearer (owner) |
 | GET | `/api/v1/analytics/top` | Bearer |
 | GET | `/api/v1/admin/analytics/top` | ADMIN |
 | GET | `/api/v1/admin/analytics/stats` | ADMIN |
+| GET | `/api/v1/admin/analytics/urls/{id}/clicks` | ADMIN |
 
 ## Rate limit headers
 

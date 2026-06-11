@@ -412,7 +412,7 @@ erDiagram
     }
 
     URL_ANALYTICS {
-        uuid short_url_id PK_FK
+        uuid short_url_id FK
         bigint total_clicks
         timestamp last_accessed_at
     }

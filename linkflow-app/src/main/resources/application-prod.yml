@@ -17,7 +17,7 @@ linkflow:
   security:
     swagger-public: false
     actuator-public: false
-    metrics-public: ${LINKFLOW_METRICS_PUBLIC:false}
+    metrics-public: ${LINKFLOW_METRICS_PUBLIC:${LINKFLOW_SECURITY_METRICS_PUBLIC:false}}
 
 management:
   endpoints:

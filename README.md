@@ -145,10 +145,11 @@ Guide: [docs/docker.md](docs/docker.md)
 | `LINKFLOW_APP_URI` | `http://127.0.0.1:8081` | Gateway upstream for backend (gateway module) |
 | `LINKFLOW_WEB_URI` | `http://127.0.0.1:8082` | Gateway upstream for web UI (gateway module) |
 | `LINKFLOW_GATEWAY_URL` | `http://127.0.0.1:8080` | Gateway URL (web module) |
+| `LINKFLOW_RATE_LIMIT_AUTH_FAIL_CLOSED` | `true` | Return 503 on auth paths when Redis is down |
 | `LINKFLOW_SECURITY_SWAGGER_PUBLIC` | `true` (dev) | Allow Swagger without auth |
 | `LINKFLOW_SECURITY_ACTUATOR_PUBLIC` | `true` (dev) | Allow all actuator paths without auth |
-| `LINKFLOW_METRICS_PUBLIC` | `false` | Allow Prometheus/metrics without auth in prod |
-| `LINKFLOW_RATE_LIMIT_AUTH_FAIL_CLOSED` | `true` | Return 503 on auth paths when Redis is down |
+| `LINKFLOW_SECURITY_METRICS_PUBLIC` | `false` | Allow Prometheus/metrics without auth (dev default) |
+| `LINKFLOW_METRICS_PUBLIC` | `false` | Prod profile alias for `metrics-public` |
 
 Full reference: [docs/environment.md](docs/environment.md)
 
@@ -194,8 +195,8 @@ Custom health: `RedisHealthIndicator` in `linkflow-observability`.
 - Stateless JWT API (`SecurityConfig` in `linkflow-auth`); CSRF disabled on API
 - Refresh tokens are opaque, SHA-256 hashed in PostgreSQL, rotated on refresh
 - BCrypt strength 12 for passwords
-- Rate limiting fail-open if Redis is unavailable
-- Actuator endpoints are **permitAll** in `SecurityConfig` — restrict at network layer in production
+- Rate limiting: **auth paths fail closed** (503) when Redis is down; authenticated and redirect traffic **fail open**
+- Actuator/Swagger exposure is **profile-based** — prod denies Swagger and restricts actuator to health (+ optional metrics via `LINKFLOW_METRICS_PUBLIC`)
 - Web UI stores JWTs in server-side `HttpSession`, not browser storage
 
 Full review: [docs/security-review.md](docs/security-review.md)
@@ -221,7 +222,7 @@ Docker Compose deploys app + gateway + observability on a single host. Kubernete
 - **Modular monolith:** feature modules compile independently but deploy as one JAR; cross-module calls use ports in `linkflow-common` (`UserLookupPort`, `ClickTrackingPort`)
 - **Gateway:** single public entry, correlation IDs, future cross-cutting concerns without touching business code
 - **Redis:** redirect cache (15 min), Lua rate limiter, alias creation locks — each with different TTL semantics
-- **Analytics:** `@Async` click tracking so redirects stay fast; aggregates in `url_analytics`, raw events in `click_events` (no list API)
+- **Analytics:** `@Async` click tracking so redirects stay fast; aggregates in `url_analytics`, raw events in `click_events` with paginated recent-click APIs
 - **Idempotency:** `idempotency_records` table keyed by `(user_id, endpoint, idempotency_key)`
 
 Prep guide: [docs/interview-prep.md](docs/interview-prep.md)

@@ -58,7 +58,7 @@ flowchart TB
 | `LINKFLOW_JWT_SECRET` | app | Required in prod profile |
 | `LINKFLOW_METRICS_PUBLIC` | app | `true` in Compose enables Prometheus scrape |
 | `LINKFLOW_BOOTSTRAP_ADMIN_*` | app | Creates initial admin user |
-| `LINKFLOW_GATEWAY_URL` | web | Backend API base URL |
+| `LINKFLOW_GATEWAY_URL` | web | Gateway URL for `RestClient` backend calls |
 | `LINKFLOW_APP_URI` | gateway | Backend upstream |
 | `LINKFLOW_WEB_URI` | gateway | Web UI upstream |
 

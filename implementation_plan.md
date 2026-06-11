@@ -4,6 +4,8 @@
 
 ## 1. Architecture Overview
 
+> **Superseded:** This section describes the original two-app design. The current system has **three** runnable applications (`linkflow-gateway`, `linkflow-app`, `linkflow-web`). See [docs/system-design.md](docs/system-design.md).
+
 LinkFlow is a **modular monolith** URL shortener built with Java 21 and Spring Boot 3.x. It consists of two runnable Spring Boot applications:
 
 1. **linkflow-gateway** — A Spring Cloud Gateway application that acts as the single entry point. It routes requests to `linkflow-app`, applies correlation-ID propagation, and handles cross-cutting concerns (CORS, request logging). It contains **zero** business logic.
@@ -429,8 +431,8 @@ erDiagram
     }
 
     user_roles {
-        uuid user_id PK,FK
-        bigint role_id PK,FK
+        uuid user_id
+        bigint role_id
     }
 
     refresh_tokens {

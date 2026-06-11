@@ -39,8 +39,8 @@ erDiagram
     }
 
     user_roles {
-        uuid user_id PK_FK
-        bigint role_id PK_FK
+        uuid user_id
+        bigint role_id
     }
 
     refresh_tokens {
@@ -72,7 +72,7 @@ erDiagram
 
     url_analytics {
         uuid id PK
-        uuid short_url_id UK_FK
+        uuid short_url_id FK
         bigint total_clicks
         timestamptz last_accessed_at
         timestamptz created_at
@@ -249,7 +249,7 @@ erDiagram
 **JPA:** `ClickEvent` — `com.linkflow.analytics.domain.entity`  
 **Repository:** `ClickEventRepository`
 
-**API note:** No REST endpoint exposes individual click events.
+**API note:** Recent click events are exposed via `GET /api/v1/urls/{id}/analytics/clicks` (owner) and `GET /api/v1/admin/analytics/urls/{id}/clicks` (admin). There is no time-series rollup or export API.
 
 ---
 

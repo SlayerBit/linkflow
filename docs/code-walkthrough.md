@@ -39,7 +39,9 @@ Guided path from application startup through request handling. All class names v
 
 **Routes** loaded from `application.yml`:
 
-- `/api/**`, `/r/**`, `/actuator/**`, `/swagger-ui/**`, `/v3/api-docs/**` → `${LINKFLOW_APP_URI}`
+- `/api/**`, `/r/**`, `/swagger-ui/**`, `/v3/api-docs/**` → `${LINKFLOW_APP_URI}` (backend)
+- `/css/**`, `/js/**`, `/webjars/**`, `/**` → `${LINKFLOW_WEB_URI}` (web UI)
+- Gateway `/actuator/**` is served locally — **not** proxied to the app
 
 **Filter:** `CorrelationIdGatewayFilter` — global, highest precedence; sets/propagates `X-Correlation-ID`.
 

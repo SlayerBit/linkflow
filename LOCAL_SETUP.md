@@ -69,6 +69,7 @@ export LINKFLOW_JWT_SECRET="$(openssl rand -base64 64)"
 
 # Gateway upstream — use 127.0.0.1 on macOS to avoid IPv6 localhost issues
 export LINKFLOW_APP_URI=http://127.0.0.1:8081
+export LINKFLOW_WEB_URI=http://127.0.0.1:8082
 
 # Short-link base URL (when using gateway)
 export LINKFLOW_BASE_URL=http://localhost:8080
@@ -96,7 +97,7 @@ mvn clean verify
 mvn clean package -DskipTests -pl linkflow-app -am
 ```
 
-**Expected result:** `BUILD SUCCESS` for all 10 modules.
+**Expected result:** `BUILD SUCCESS` for all 11 modules.
 
 ## Run commands
 
@@ -118,11 +119,13 @@ Start **after** `linkflow-app` is healthy:
 ```bash
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 export LINKFLOW_APP_URI=http://127.0.0.1:8081   # recommended on macOS
+export LINKFLOW_WEB_URI=http://127.0.0.1:8082
 java -jar linkflow-gateway/target/linkflow-gateway-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
 ```
 
 - Listens on **8080**
-- Proxies `/api/**`, `/r/**`, `/actuator/**`, `/swagger-ui/**`, `/v3/api-docs/**` to the app
+- Proxies `/api/**`, `/r/**`, `/swagger-ui/**`, `/v3/api-docs/**` to the app; `/css/**`, `/js/**`, `/webjars/**`, and `/**` to the web UI
+- Gateway `/actuator/**` is handled **locally** (gateway health only) — app metrics/health are on **8081**
 
 ### Full stack via Docker
 
@@ -145,7 +148,8 @@ docker compose up --build
 | OpenAPI JSON (app) | http://localhost:8081/v3/api-docs | |
 | OpenAPI JSON (gateway) | http://localhost:8080/v3/api-docs | Proxied from app |
 | Redirects | http://localhost:8080/r/{code} | Via gateway |
-| Web UI | http://localhost:8082 | Requires gateway + app running |
+| Web UI (direct) | http://localhost:8082 | Optional; use gateway at :8080 for single entry |
+| Web UI (via gateway) | http://localhost:8080 | Recommended public entry |
 | Prometheus | http://localhost:9090 | Docker full stack only |
 | Grafana | http://localhost:3000 | Docker full stack only (admin/admin) |
 
@@ -157,7 +161,9 @@ docker compose up --build
 | Redis | 6379 | `redis:7-alpine` |
 | linkflow-app | 8081 | Docker full stack |
 | linkflow-gateway | 8080 | Docker full stack |
-| linkflow-web | 8082 | Local JAR only (not in Compose) |
+| linkflow-web | 8082 | Docker full stack and local JAR |
+| Prometheus | 9090 | Docker full stack only |
+| Grafana | 3000 | Docker full stack only |
 
 ### Verify Postgres and Redis
 

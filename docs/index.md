@@ -18,7 +18,7 @@ Start here for a guided path through the repository documentation. Each topic ha
 | [code-walkthrough.md](code-walkthrough.md) | Startup → request lifecycle with actual classes |
 | [project-deep-dive.md](project-deep-dive.md) | Subsystem narrative for interviews |
 | [learning-roadmap.md](learning-roadmap.md) | Dependency-aware learning order |
-| [interview-prep.md](interview-prep.md) | Repo-specific Q&A (75+ questions) |
+| [interview-prep.md](interview-prep.md) | Interview guide — pitches, design tradeoffs, failure scenarios |
 | [feature-matrix.md](feature-matrix.md) | Feature → code mapping |
 
 ## Operations

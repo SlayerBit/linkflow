@@ -34,7 +34,7 @@ Spring Data Redis configured in `RedisConfig` (`linkflow-common`).
 
 **Positive:** Fast redirects, accurate distributed rate limits, reduced DB read load.
 
-**Negative:** Additional infrastructure; cache invalidation complexity; rate limit fail-open if Redis unavailable.
+**Negative:** Additional infrastructure; cache invalidation complexity; rate limit **fail-open** for most paths when Redis is unavailable; **fail-closed (503)** on `/api/v1/auth/**` by default to protect login/register.
 
 ## References
 
