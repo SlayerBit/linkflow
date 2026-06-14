@@ -32,9 +32,9 @@ Correlation IDs: `CorrelationIdGatewayFilter` at gateway → `X-Correlation-ID` 
 | Topic | Detail |
 |-------|--------|
 | Auth | JWT access (15 min) + opaque refresh (30 days) with rotation |
-| Cache | Redis cache-aside for redirects (15 min TTL) |
-| Rate limit | Auth paths fail-closed when Redis down; other paths fail-open |
-| Analytics | `@Async` click tracking; aggregate + recent click listing |
+| Cache | Redis cache-aside with ±20% TTL jitter, negative caching (90s TTL), stale-while-revalidate (SWR), and lock-based stampede protection |
+| Rate limit | Redis-backed sliding-window (Lua script + sorted sets). Auth paths fail-closed; others fail-open |
+| Analytics | `@Async` click tracking buffered in Redis Streams, periodically flushed (30s delay) via consumer group to PostgreSQL |
 | Security | Profile-based actuator/Swagger exposure |
 | Schema | Flyway in `linkflow-app` (V1–V6) |
 

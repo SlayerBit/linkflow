@@ -38,6 +38,8 @@ linkflow:
     user-rpm: ${LINKFLOW_RATE_LIMIT_USER_RPM:100}
     ip-rpm: ${LINKFLOW_RATE_LIMIT_IP_RPM:200}
     auth-fail-closed: ${LINKFLOW_RATE_LIMIT_AUTH_FAIL_CLOSED:true}
+  analytics:
+    flush-interval-ms: ${LINKFLOW_ANALYTICS_FLUSH_INTERVAL_MS:30000}
   security:
     swagger-public: ${LINKFLOW_SECURITY_SWAGGER_PUBLIC:true}
     actuator-public: ${LINKFLOW_SECURITY_ACTUATOR_PUBLIC:true}

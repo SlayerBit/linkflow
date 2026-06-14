@@ -193,7 +193,13 @@ public class UrlService {
                 .ownerId(ownerId)
                 .expiresAt(request.getExpiresAt())
                 .build();
-        return shortUrlRepository.save(shortUrl);
+        ShortUrl saved = shortUrlRepository.save(shortUrl);
+
+        // Evict any negative cache entry for this shortCode so redirects work immediately.
+        // This is critical for custom aliases that may have been previously cached as not-found.
+        urlCacheService.evict(saved.getShortCode());
+
+        return saved;
     }
 
     private String resolveShortCode(String customAlias) {

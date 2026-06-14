@@ -36,8 +36,9 @@ class RateLimitServiceTest {
 
     @Test
     void checkForUser_allowsWhenUnderLimit() {
-        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any()))
-                .thenReturn(List.of(1L, 2L, 45L));
+        // Lua script returns: [allowed=1, current=2, ttl=60]
+        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any(), any(), any()))
+                .thenReturn(List.of(1L, 2L, 60L));
 
         RateLimitInfo info = rateLimitService.checkForUser(UUID.randomUUID());
 
@@ -48,8 +49,9 @@ class RateLimitServiceTest {
 
     @Test
     void checkForUser_deniesWhenOverLimit() {
-        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any()))
-                .thenReturn(List.of(0L, 6L, 30L));
+        // Lua script returns: [allowed=0, current=6, ttl=45]
+        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any(), any(), any()))
+                .thenReturn(List.of(0L, 6L, 45L));
 
         RateLimitInfo info = rateLimitService.checkForUser(UUID.randomUUID());
 
@@ -59,7 +61,7 @@ class RateLimitServiceTest {
 
     @Test
     void checkForIp_failOpenWhenRedisUnavailable() {
-        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any()))
+        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("Redis down"));
 
         RateLimitInfo info = rateLimitService.checkForIp("192.168.1.1");
@@ -70,12 +72,34 @@ class RateLimitServiceTest {
 
     @Test
     void checkForIp_failClosedWhenRedisUnavailable() {
-        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any()))
+        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("Redis down"));
 
         RateLimitInfo info = rateLimitService.checkForIp("192.168.1.1", true);
 
         assertFalse(info.isAllowed());
         assertTrue(info.isBackendUnavailable());
+    }
+
+    @Test
+    void checkForUser_handlesNullScriptResult() {
+        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any(), any(), any()))
+                .thenReturn(null);
+
+        RateLimitInfo info = rateLimitService.checkForUser(UUID.randomUUID());
+
+        // Default fail-open for user checks
+        assertTrue(info.isAllowed());
+    }
+
+    @Test
+    void checkForIp_handlesShortScriptResult() {
+        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any(), any(), any()))
+                .thenReturn(List.of(1L));
+
+        RateLimitInfo info = rateLimitService.checkForIp("10.0.0.1");
+
+        // Unexpected result treated as fail-open
+        assertTrue(info.isAllowed());
     }
 }

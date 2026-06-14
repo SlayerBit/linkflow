@@ -74,8 +74,8 @@ HTTP Request
 
 1. Skip if path starts with `/actuator`, `/swagger-ui`, `/v3/api-docs`
 2. Resolve user ID or client IP
-3. `RateLimitService.checkForUser` or `checkForIp` (Redis Lua)
-4. Set rate limit headers; throw `RateLimitExceededException` if denied
+3. `RateLimitService.checkForUser` or `checkForIp` (Redis Lua `rate_limiter.lua` using a sliding-window sorted set)
+4. Set rate limit headers; throw `RateLimitExceededException` if denied (HTTP 429) or `ServiceUnavailableException` if Redis is down on auth paths (HTTP 503)
 
 ---
 
@@ -125,18 +125,21 @@ Idempotency-Key: optional
 GET /r/{shortCode}
 ```
 
-| Step | Class | Method |
-|------|-------|--------|
-| 1 | `RedirectController` | `redirect(@PathVariable shortCode)` |
-| 2 | `RedirectService` | `resolveRedirect(shortCode, request)` |
-| 3 | `UrlCacheService` | `get(url:shortcode:{lower})` |
-| 4a | cache hit | validate + track + return URL |
-| 4b | cache miss | `ShortUrlRepository.findByShortCode` |
-| 5 | `UrlCacheService` | `put(shortUrl)` — 15 min TTL |
-| 6 | `ClickTrackingPort` | `trackClick(command)` |
-| 7 | `ClickTrackingAdapter` | delegates to `ClickTrackingService` |
-| 8 | `ClickTrackingService` | `@Async trackClick` — save event + increment analytics |
-| 9 | `RedirectController` | `ResponseEntity.status(302).location(uri)` |
+| Step | Class | Method | Detail |
+|------|-------|--------|--------|
+| 1 | `RedirectController` | `redirect(@PathVariable shortCode)` | Entry point for HTTP redirection |
+| 2 | `RedirectService` | `resolveRedirect(shortCode, request)` | Core redirect logic orchestration |
+| 3 | `UrlCacheService` | `get(url:shortcode:{lower})` | Check Redis cache for cached entry |
+| 4a | cache hit (fresh) | return URL | Serve directly from cache; execute click tracking asynchronously |
+| 4b | cache hit (negative) | throw exception | If entry has `negative=true` flag, immediately throw `ResourceNotFoundException` |
+| 4c | cache hit (stale) | serve + refresh | If entry is stale (SWR), serve it and trigger `triggerAsyncRefresh` in background thread |
+| 4d | cache miss | check stampede lock | Attempt to acquire `cache_refresh:{code}` lock via `RedisLockService` |
+| 5a | lock acquired | fetch DB + write cache | Read from `ShortUrlRepository`, write positive or negative entry to cache, release lock |
+| 5b | lock failed | wait + retry | Sleep 100ms and retry `UrlCacheService.get` up to 3 times. If still missing, query DB directly. |
+| 6 | `ClickTrackingPort` | `trackClick(command)` | Delegate tracking command asynchronously |
+| 7 | `ClickTrackingAdapter` | delegates to `ClickTrackingService` | Connects URL module to Analytics module |
+| 8 | `ClickTrackingService` | `@Async trackClick` | Buffers event to `analytics:clicks:stream`, increments counter Hash, tracks URL in Set |
+| 9 | `RedirectController` | return redirect | `ResponseEntity.status(302).location(uri)` returned to user |
 
 ---
 
@@ -157,11 +160,12 @@ GET /r/{shortCode}
 
 ## 8. Redis interactions
 
-| Service | When |
-|---------|------|
-| `UrlCacheService` | Redirect path; evict on URL update/delete |
-| `RateLimitService` | Every non-excluded API request |
-| `RedisLockService` | Custom alias creation |
+| Service | Key / Pattern | Details |
+|---------|---------------|---------|
+| `UrlCacheService` | `url:shortcode:{code}` | Redirect cache-aside. Positive TTL is 15m (30m extended for SWR). Negative TTL is 90s. Evicted on update/delete/create. |
+| `RateLimitService` | `rate_limit:user:{userId}` / `rate_limit:ip:{ip}` | Sorted sets tracking request timestamps in microseconds. Checked atomically via `rate_limiter.lua`. |
+| `RedisLockService` | `lock:alias:{name}` / `lock:cache_refresh:{code}` | Mutual exclusion locks. Acquire via `SET NX EX`; release via `unlock.lua` atomic check. |
+| `ClickTrackingService` | `analytics:clicks:stream` / `analytics:counter:{id}` / `analytics:active_urls` | Buffers click events in a Redis Stream and counters in a Redis Hash. Tracks active counter IDs in a Redis Set. |
 
 **Config:** `RedisConfig` in `linkflow-common` — shared templates.
 
@@ -171,14 +175,23 @@ GET /r/{shortCode}
 
 ## 9. Analytics processing
 
-**Write (async):**
+**Write (async buffer):**
 
 ```
 RedirectService.trackClick
   → ClickTrackingPort
   → ClickTrackingService.trackClick (@Async clickTrackingExecutor)
-  → ClickEventRepository.save
-  → UrlAnalyticsRepository save/increment
+  → Buffer to Redis Stream (analytics:clicks:stream)
+  → Increment Redis Hash counter (analytics:counter:{id})
+  → Add ID to Redis Set (analytics:active_urls)
+```
+
+**Flush (scheduled daemon):**
+
+```
+AnalyticsFlushService.flush (Every 30s / PreDestroy)
+  → Read Stream (XREADGROUP) → saveAll to click_events (PostgreSQL) → XACK & XTRIM
+  → Read Set (active_urls) → get Hash count → save to url_analytics (PostgreSQL) → delete Hash/Set key
 ```
 
 **Read:**
@@ -186,7 +199,7 @@ RedirectService.trackClick
 ```
 AnalyticsController
   → AnalyticsQueryService.getUrlAnalytics / getTopUrlsForCurrentUser
-  → UrlAnalyticsRepository / StatsRepository
+  → UrlAnalyticsRepository / StatsRepository (reads PostgreSQL tables populated by flush job)
 ```
 
 ---
@@ -214,10 +227,16 @@ Example: dashboard load
 
 ## 11. Scheduled jobs
 
-**Class:** `com.linkflow.app.scheduler.ExpiredUrlCleanupJob`
+### ExpiredUrlCleanupJob
 
 - Cron: `0 0 * * * *` (every hour)
 - Calls `UrlService.deactivateExpiredUrls()` and `cleanupExpiredIdempotencyRecords()`
+
+### AnalyticsFlushService
+
+- Fixed delay: `${linkflow.analytics.flush-interval-ms:30000}` (every 30 seconds)
+- Calls `flushClickEvents()` and `flushCounters()` to sync buffered Redis data to PostgreSQL.
+- Also runs on application shutdown (`@PreDestroy` block) to ensure zero data loss.
 
 ---
 

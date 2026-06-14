@@ -18,7 +18,7 @@ LinkFlow is a production-style URL shortener built as a **modular monolith** in 
 
 LinkFlow demonstrates how to build a real URL-management platform without premature microservices. Seven feature modules (`auth`, `user`, `url`, `rate-limit`, `analytics`, `observability`, plus `common`) compile independently but deploy as one backend JAR (`linkflow-app` on 8081). Spring Cloud Gateway (8080) is the public entry: API, redirects, Swagger, and the web UI all share one host.
 
-Security is stateless JWT on the API with opaque refresh tokens stored as SHA-256 hashes in PostgreSQL — rotation on refresh, revoke-all on reuse. Redirects use Redis cache-aside (15-minute TTL) with PostgreSQL fallback. Click tracking is `@Async` so the redirect path never waits on analytics writes.
+Security is stateless JWT on the API with opaque refresh tokens stored as SHA-256 hashes in PostgreSQL — rotation on refresh, revoke-all on reuse. Redirects use Redis cache-aside (15-minute base TTL, stale-while-revalidate, negative caching, and stampede protection) with PostgreSQL fallback. Click tracking is `@Async` and buffered in Redis Streams so the redirect path never blocks on DB writes.
 
 Why this shape? It shows module boundaries, port/adapter integration, idempotency, observability, and production tradeoffs (fail-open vs fail-closed rate limiting) in a codebase small enough to explain in an interview.
 
@@ -76,7 +76,7 @@ URLs, users, and tokens need **referential integrity** (owner FK, unique short c
 
 ### Why Redis instead of in-memory caching?
 
-Three distinct needs: (1) **shared redirect cache** across app instances, (2) **distributed rate limit counters** with minute buckets, (3) **short-lived alias locks** during custom alias creation. Caffeine (present in url module) could supplement local caching but cannot coordinate rate limits or locks across pods.
+Four distinct needs: (1) **shared redirect cache** across app instances with SWR and stampede protection, (2) **distributed sliding-window rate limiters** with a Lua script and sorted sets, (3) **short-lived alias locks** during custom alias creation and cache refresh, (4) **high-throughput analytics buffering** via Redis Streams and counter hashes. Caffeine (present in url module) could supplement local caching but cannot coordinate rate limits, streams, or locks across multiple instances.
 
 **Follow-up:** “Why not PostgreSQL advisory locks for aliases?” — Possible; Redis 10-second TTL locks are simpler and keep contention off the primary DB.
 
@@ -100,9 +100,9 @@ Single public URL for browser (`/`), API (`/api/**`), and redirects (`/r/**`). C
 
 ### Why async analytics?
 
-Redirect latency is user-visible. Writing `click_events` + updating `url_analytics` on the hot path would add DB round-trips to every anonymous click. `@Async ClickTrackingService` with a bounded pool (core 2, max 8, queue 500) decouples tracking from 302 response. Lost clicks under overload are an accepted tradeoff — logged, not fatal to redirect.
+Redirect latency is user-visible. Writing `click_events` + updating `url_analytics` directly on the hot path would add DB round-trips to every anonymous click. We use `@Async ClickTrackingService` with a bounded pool (core 2, max 8, queue 500) to decouple tracking. Under the hood, this buffers events in a Redis Stream and increments counters in a Redis Hash. A scheduled flusher (`AnalyticsFlushService`) drains this stream using a consumer group and bulk-inserts to PostgreSQL every 30 seconds, keeping database write pressure low and constant.
 
-**Follow-up:** “How do you guarantee exactly-once clicks?” — Not guaranteed; analytics is best-effort. Idempotency applies to URL **creation**, not clicks.
+**Follow-up:** “How do you guarantee exactly-once clicks?” — Clicks are best-effort. Events are processed at-most-once (read, saved, and then acknowledged to prune stream size) and counters are at-least-once (using atomic Redis decrement updates during flush to handle intermittent failures safely).
 
 ### Why fail-open vs fail-closed for rate limiting?
 
@@ -176,10 +176,14 @@ Balance cost vs UX on login; configurable industry default for password hashing.
 ## URLs, redirects, cache
 
 **Q: Redirect flow?**  
-`GET /r/{shortCode}` (public) → `RedirectService` → Redis cache-aside → validate active/not deleted/not expired → async `ClickTrackingPort` → 302.
+`GET /r/{shortCode}` (public) → `RedirectService` → Redis cache-aside (fresh/stale/negative checks) → validate active/not deleted/not expired → async `ClickTrackingPort` → 302.
+- **Fresh hit:** Served immediately.
+- **Stale hit:** Stale value returned immediately; async background cache refresh triggered.
+- **Negative hit:** Throw 404 immediately.
+- **Miss:** Bounded-retry stampede protection (lock-holder fetches from DB and populates cache; other requests retry cache lookup up to 3 times before falling back to direct DB fetch).
 
 **Q: Cache key and TTL?**  
-`url:shortcode:{lowercase}` — 15 minutes. Evicted on URL update/delete/deactivate.
+`url:shortcode:{lowercase}` — Base freshness TTL is 15 minutes, with ±20% jitter. Redis TTL is set to 30 minutes to retain stale entries for SWR. Invalid codes are cached as negative entries with a 90-second TTL (plus jitter). Caches are evicted on URL create (to clear any negative cached entries), update, delete, or deactivation.
 
 **Q: Custom alias races?**  
 `RedisLockService` key `lock:alias:{normalized}` (~10s) + DB unique on `short_code`.
@@ -193,6 +197,9 @@ Optional `Idempotency-Key` on single create; required on bulk. Keyed `(user_id, 
 
 **Q: What tables?**  
 `click_events` (raw rows with IP, UA, referer), `url_analytics` (per-URL `total_clicks`, `last_accessed_at`).
+
+**Q: How is write throughput handled?**  
+Redirect path invokes `@Async trackClick()` which buffers details into a Redis Stream (`analytics:clicks:stream`), increments per-URL counters in a Redis Hash (`analytics:counter:{id}`), and registers active URLs in a Redis Set (`analytics:active_urls`). A scheduled flusher (`AnalyticsFlushService`) drains the stream in batches of 1000 and bulk-inserts them into PostgreSQL, then syncs the hash counters to the `url_analytics` table.
 
 **Q: Is there a click list API?**  
 Yes — `GET /api/v1/urls/{id}/analytics/clicks` (owner, paginated, max 100). Admin: `GET /api/v1/admin/analytics/urls/{id}/clicks`.
@@ -295,9 +302,9 @@ Expected — `swagger-public=false` in prod profile.
 | Gateway | YAML routes + correlation ID | Route order: API before web catch-all |
 | Auth | JWT + opaque refresh rotation | Why HMAC-SHA512? Symmetric simplicity for monolith |
 | URL | CRUD + redirect + QR + idempotency | Why soft delete? Audit trail + prevent code reuse |
-| Rate limit | Redis Lua, user vs IP buckets | Why skip actuator/swagger? Ops endpoints shouldn't consume user quota |
-| Analytics | Async insert + aggregate increment | Eventual consistency on `total_clicks` — acceptable for v1 |
-| Web | Session BFF, RestClient to gateway | Why not WebClient? RestClient simpler for blocking SSR |
+| Rate limit | Redis Lua sliding-window (sorted sets) | Why skip actuator/swagger? Ops endpoints shouldn't consume user quota |
+| Analytics | Redis Stream buffer + batch flush | Eventual consistency on `total_clicks` — acceptable for v1 |
+| Web | Session BFF, RestClient to gateway | Why not WebClient? RestClient simpler for SSR |
 | Observability | Actuator + Prometheus + Grafana | Why not scrape web? Minimal custom metrics on web tier |
 
 ---
@@ -308,10 +315,10 @@ Expected — `swagger-public=false` in prod profile.
 |----------|--------|----------------------|
 | Architecture | Modular monolith | Microservices, flat monolith |
 | Database | PostgreSQL + Flyway | MongoDB, Hibernate ddl-auto |
-| Hot path cache | Redis | DB-only, local Caffeine only |
+| Hot path cache | Redis cache-aside (with SWR, jitter, negative caching, and stampede protection) | DB-only, local Caffeine only |
 | API auth | JWT + opaque refresh | Session cookies, JWT refresh tokens |
 | Edge | Spring Cloud Gateway | Direct app, Nginx-only |
-| Analytics write | @Async best-effort | Sync write on redirect |
+| Analytics write | Redis Stream buffer + scheduled bulk flush | Sync write on redirect, direct async DB insert |
 | Rate limit Redis down | Fail-open except auth | Fail-closed everywhere |
 | Web auth | Server session | SPA + localStorage JWT |
 | Analytics API | Aggregates + recent list | Full time-series platform |

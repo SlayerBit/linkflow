@@ -17,8 +17,8 @@ Maps each feature to code entry points, persistence, and security. Verified agai
 | Update URL | Change expiry/active | `PATCH /api/v1/urls/{id}` | `UrlController` | `UrlService`, `UrlCacheService` | `ShortUrlRepository` | `short_urls` | Cache evict | Owner check |
 | Delete URL | Soft delete | `DELETE /api/v1/urls/{id}` | `UrlController` | `UrlService`, `UrlCacheService` | `ShortUrlRepository` | `short_urls` | Cache evict | Owner check |
 | QR code | PNG for short link | `GET /api/v1/urls/{id}/qr` | `UrlController` | `UrlService`, `QrCodeService` | `ShortUrlRepository` | `short_urls` | — | Owner check |
-| Public redirect | Follow short link | `GET /r/{shortCode}` | `RedirectController` | `RedirectService`, `UrlCacheService`, `ClickTrackingPort` | `ShortUrlRepository` | `short_urls` | Cache read/write | Public; IP rate limit |
-| Click tracking | Record analytics | (internal) | — | `ClickTrackingService` | `ClickEventRepository`, `UrlAnalyticsRepository` | `click_events`, `url_analytics` | — | Async on redirect |
+| Public redirect | Follow short link | `GET /r/{shortCode}` | `RedirectController` | `RedirectService`, `UrlCacheService`, `ClickTrackingPort` | `ShortUrlRepository` | `short_urls` | Cache read/write (with SWR, jitter, negative cache, stampede lock) | Public; IP rate limit |
+| Click tracking | Record analytics | (internal) | — | `ClickTrackingService` | `ClickEventRepository`, `UrlAnalyticsRepository` | `click_events`, `url_analytics` | Stream (buffer), Hash (counter), Set (active) | Async on redirect |
 | Per-URL analytics | Owner stats | `GET /api/v1/urls/{id}/analytics` | `AnalyticsController` | `AnalyticsQueryService` | `UrlAnalyticsRepository` | `url_analytics`, `short_urls` | — | Owner check |
 | Recent click events | Owner click history | `GET /api/v1/urls/{id}/analytics/clicks` | `AnalyticsController` | `AnalyticsQueryService` | `ClickEventRepository` | `click_events` | — | Owner check |
 | Top URLs (user) | Rank by clicks | `GET /api/v1/analytics/top` | `AnalyticsController` | `AnalyticsQueryService` | `UrlAnalyticsRepository` | `url_analytics` | — | Authenticated |
@@ -32,7 +32,7 @@ Maps each feature to code entry points, persistence, and security. Verified agai
 | System stats | Platform metrics | `GET /api/v1/admin/analytics/stats` | `AdminAnalyticsController` | `AnalyticsQueryService` | `StatsRepository` | multiple | — | ROLE_ADMIN |
 | System top URLs | Platform ranking | `GET /api/v1/admin/analytics/top` | `AdminAnalyticsController` | `AnalyticsQueryService` | `UrlAnalyticsRepository` | `url_analytics` | — | ROLE_ADMIN |
 | Admin click history | Any URL clicks | `GET /api/v1/admin/analytics/urls/{id}/clicks` | `AdminAnalyticsController` | `AnalyticsQueryService` | `ClickEventRepository` | `click_events` | — | ROLE_ADMIN |
-| Rate limiting | Abuse protection | (filter) | — | `RateLimitService` | — | — | Lua counters | All non-excluded paths |
+| Rate limiting | Abuse protection | (filter) | — | `RateLimitService` | — | — | Lua sliding-window sorted sets | All non-excluded paths |
 | Expiry cleanup | Deactivate expired | (scheduled) | — | `UrlService` | `ShortUrlRepository`, `IdempotencyRecordRepository` | `short_urls`, `idempotency_records` | — | Internal job |
 | Admin bootstrap | First admin | (startup) | — | `AdminBootstrap` | `UserRepository` | `users`, `user_roles` | — | Env-gated |
 | Health / metrics | Operability | `/actuator/health`, optional metrics | — | `RedisHealthIndicator` | — | — | PING | Profile-based; see system-design.md |

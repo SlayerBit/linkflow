@@ -232,6 +232,7 @@ sequenceDiagram
     participant RedirectController as RedirectController
     participant RedirectService as RedirectService
     participant UrlCache as UrlCacheService
+    participant LockService as RedisLockService
     participant Database as PostgreSQL
     participant ClickTracking as ClickTrackingPort
     participant Analytics as ClickTrackingService
@@ -240,15 +241,36 @@ sequenceDiagram
     Gateway->>RedirectController: forward request
     RedirectController->>RedirectService: resolveRedirect
     RedirectService->>UrlCache: get cached URL
-    alt cache hit
+    alt cache hit (fresh)
         UrlCache-->>RedirectService: cached entry
+    else cache hit (negative)
+        UrlCache-->>RedirectService: negative cached entry
+        RedirectService-->>Visitor: 404 Not Found (Short URL)
+    else cache hit (stale - SWR)
+        UrlCache-->>RedirectService: stale cached entry
+        RedirectService->>RedirectService: triggerAsyncRefresh
+        Note over RedirectService: Async background refresh via ClickTrackingExecutor
     else cache miss
-        RedirectService->>Database: findByShortCode
-        RedirectService->>UrlCache: put with TTL
+        RedirectService->>LockService: tryLock(cache_refresh:{code})
+        alt lock acquired
+            RedirectService->>Database: findByShortCode
+            alt shortcode exists
+                Database-->>RedirectService: ShortUrl
+                RedirectService->>UrlCache: put (15m base TTL / 30m Redis TTL)
+            else shortcode missing
+                RedirectService->>UrlCache: putNegative (90s TTL)
+            end
+            RedirectService->>LockService: unlock
+        else lock failed (concurrent request populating)
+            loop up to 3 retries (100ms delay)
+                RedirectService->>UrlCache: get cached URL
+            end
+            Note over RedirectService: Fall back to DB if still missing after retries
+        end
     end
     RedirectService->>ClickTracking: trackClick (async)
-    ClickTracking->>Analytics: persist click event
-    Analytics->>Database: INSERT click_events, UPDATE url_analytics
+    ClickTracking->>Analytics: trackClick
+    Note over Analytics: Buffers click in Redis Stream & increments Redis counter hash
     RedirectService-->>Visitor: 302 redirect
 ```
 
@@ -291,14 +313,25 @@ sequenceDiagram
     participant RedirectService as RedirectService
     participant Port as ClickTrackingPort
     participant TrackingService as ClickTrackingService
+    participant Redis as Redis Stream & Set
+    participant Flusher as AnalyticsFlushService (Scheduled)
     participant ClickEvents as click_events table
     participant UrlAnalytics as url_analytics table
     participant ReadApi as AnalyticsQueryService
 
     RedirectService->>Port: trackClick (async)
-    Port->>TrackingService: save event
-    TrackingService->>ClickEvents: INSERT row
-    TrackingService->>UrlAnalytics: increment total_clicks
+    Port->>TrackingService: trackClick
+    TrackingService->>Redis: Append to Stream (analytics:clicks:stream)
+    TrackingService->>Redis: Increment Hash (analytics:counter:{id}) & Add to Set (analytics:active_urls)
+
+    Note over Flusher: Scheduled Flush (Default 30s)
+    Flusher->>Redis: Read Stream (XREADGROUP)
+    Flusher->>ClickEvents: Bulk INSERT events
+    Flusher->>Redis: Acknowledge & Trim stream (XACK, XTRIM)
+
+    Flusher->>Redis: Get active URLs Set & Hash values
+    Flusher->>Redis: Decrement Hash counters (Get & Reset)
+    Flusher->>UrlAnalytics: Update total_clicks (PostgreSQL)
 
     Note over ReadApi: Read paths (sync)
     ReadApi->>UrlAnalytics: aggregate counts
