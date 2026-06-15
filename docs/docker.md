@@ -19,7 +19,6 @@ Open **http://localhost:8080** for the web UI and API through the gateway.
 | linkflow-gateway | 8080 | Public entry — routes API, redirects, web UI |
 | linkflow-web | 8082 | Thymeleaf UI (also proxied at `/` via gateway) |
 | linkflow-app | 8081 | Backend API and redirect handler |
-| postgres | 5432 | Database |
 | redis | 6379 | Cache / rate limiting |
 | prometheus | 9090 | Metrics scraper |
 | grafana | 3000 | Dashboards (default admin/admin — change for shared use) |
@@ -43,7 +42,7 @@ flowchart TB
 
     WebUI --> Gateway
 
-    Backend --> Postgres[(postgres)]
+    Backend --> CloudPG[(Cloud PostgreSQL)]
     Backend --> Redis[(redis)]
 
     Prometheus["prometheus :9090"] --> Backend

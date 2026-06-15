@@ -16,7 +16,7 @@ Three independently runnable Spring Boot processes compose the full product:
 | `linkflow-app` | 8081 | Modular monolith assembling all feature JARs |
 | `linkflow-web` | 8082 | Thymeleaf SSR UI — also reachable via gateway at `/` |
 
-Infrastructure: **PostgreSQL 16** (primary data), **Redis 7** (URL cache, rate limits, alias locks), **Prometheus + Grafana** (Docker full stack only).
+Infrastructure: **Cloud PostgreSQL (Neon)** (primary data), **Redis 7** (URL cache, rate limits, alias locks), **Prometheus + Grafana** (Docker full stack only).
 
 ```mermaid
 flowchart LR
@@ -54,7 +54,7 @@ Canonical design: [docs/system-design.md](docs/system-design.md)
 
 - Java 21, Maven multi-module
 - Spring Boot 3.4.1, Spring Security 6, Spring Data JPA, Spring Cloud Gateway 2024.0.0
-- PostgreSQL 16 + Flyway, Redis 7
+- Cloud PostgreSQL (Neon) + Flyway, Redis 7
 - JWT (jjwt, HMAC-SHA512), BCrypt password hashing
 - Micrometer, Prometheus, Grafana, Logstash JSON logging
 - Thymeleaf + Tabler (web UI), Testcontainers (integration tests)
@@ -85,7 +85,7 @@ Details: [docs/code-walkthrough.md](docs/code-walkthrough.md)
 
 - **JDK 21** (enforced by Maven Enforcer)
 - Maven 3.9+
-- Docker Desktop (PostgreSQL, Redis, integration tests)
+- Docker Desktop (Redis, integration tests)
 
 ### Quick start
 
@@ -93,7 +93,7 @@ Details: [docs/code-walkthrough.md](docs/code-walkthrough.md)
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 
 # Infrastructure
-docker compose up -d postgres redis
+docker compose up -d redis
 
 # Build
 mvn clean package -DskipTests
@@ -119,7 +119,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-**Included in Compose:** postgres, redis, linkflow-app, linkflow-gateway, **linkflow-web**, prometheus, grafana
+**Included in Compose:** redis, linkflow-app, linkflow-gateway, **linkflow-web**, prometheus, grafana
 
 Open **http://localhost:8080** for the full experience (web UI + API via gateway).
 
@@ -129,9 +129,9 @@ Guide: [docs/docker.md](docs/docker.md)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/linkflow` | PostgreSQL JDBC URL |
-| `SPRING_DATASOURCE_USERNAME` | `linkflow` | DB user |
-| `SPRING_DATASOURCE_PASSWORD` | `linkflow` | DB password |
+| `SPRING_DATASOURCE_URL` | (required) | PostgreSQL JDBC URL (e.g. Neon DB) |
+| `SPRING_DATASOURCE_USERNAME` | (required) | DB user |
+| `SPRING_DATASOURCE_PASSWORD` | (required) | DB password |
 | `SPRING_DATA_REDIS_HOST` | `localhost` | Redis host |
 | `SPRING_DATA_REDIS_PORT` | `6379` | Redis port |
 | `LINKFLOW_JWT_SECRET` | (required in prod) | Base64-encoded secret for HMAC-SHA512 JWT |

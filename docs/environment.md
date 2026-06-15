@@ -6,9 +6,9 @@
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/linkflow` | Database URL |
-| `SPRING_DATASOURCE_USERNAME` | `linkflow` | Database user |
-| `SPRING_DATASOURCE_PASSWORD` | `linkflow` | Database password |
+| `SPRING_DATASOURCE_URL` | (required) | Database URL (e.g. Neon DB) |
+| `SPRING_DATASOURCE_USERNAME` | (required) | Database user |
+| `SPRING_DATASOURCE_PASSWORD` | (required) | Database password |
 | `SPRING_DATA_REDIS_HOST` | `localhost` | Redis host |
 | `SPRING_DATA_REDIS_PORT` | `6379` | Redis port |
 | `SPRING_PROFILES_ACTIVE` | — | Use `dev` locally, `prod` in Compose |
@@ -54,6 +54,6 @@
 
 Copy `.env.example` to `.env`. Minimum for app container: `LINKFLOW_JWT_SECRET`.
 
-Compose sets internal hostnames (`postgres`, `redis`, `linkflow-app`, `linkflow-web`, `linkflow-gateway`) — see [docker-compose.yml](../docker-compose.yml).
+Compose sets internal hostnames (`redis`, `linkflow-app`, `linkflow-web`, `linkflow-gateway`) — see [docker-compose.yml](../docker-compose.yml).
 
 **Compose defaults differ from `.env.example`:** bootstrap admin is **enabled** in Compose with demo credentials unless overridden in `.env`.

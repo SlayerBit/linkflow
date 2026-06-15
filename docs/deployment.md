@@ -30,7 +30,6 @@ docker compose up -d --build
 | linkflow-gateway | 8080 | Public entry point |
 | linkflow-web | 8082 | Web UI (also reachable via gateway `/`) |
 | linkflow-app | 8081 | Backend API (direct access for debugging) |
-| postgres | 5432 | Database |
 | redis | 6379 | Cache / rate limits |
 | prometheus | 9090 | Metrics |
 | grafana | 3000 | Dashboards |

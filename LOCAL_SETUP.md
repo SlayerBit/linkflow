@@ -8,7 +8,7 @@ Validated on macOS (Apple Silicon) with JDK 21, Maven 3.9+, Docker Desktop, and 
 |-------------|---------|-------|
 | JDK | **21** (required) | Enforced by Maven Enforcer. Java 26 in `PATH` will break builds if `JAVA_HOME` is wrong. |
 | Maven | 3.9+ | Must not have comment lines in `.mvn/jvm.config` (see Troubleshooting). |
-| Docker Desktop | Latest | For PostgreSQL and Redis via Compose. |
+| Docker Desktop | Latest | For Redis via Compose. |
 | Docker Compose | v2 | Included with Docker Desktop. |
 
 Optional: `openssl` (generate JWT secret), `redis-cli` / `psql` (smoke tests).
@@ -21,10 +21,10 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 java -version   # must show 21.x
 
 # 2. Infrastructure
-docker compose up -d postgres redis
+docker compose up -d redis
 
-# 3. Resolve PostgreSQL port conflict (see Troubleshooting if needed)
-#    Ensure connections to localhost:5432 reach Docker Postgres with user `linkflow`.
+# 3. Resolve PostgreSQL port conflict
+#    Ensure connections to the cloud DB are not blocked.
 
 # 4. Build
 mvn clean package -DskipTests
@@ -55,9 +55,9 @@ Defaults in `application.yml` match `docker-compose.yml` for Postgres and Redis 
 
 | Variable | Default (local JAR) | `docker-compose.yml` (containers) |
 |----------|---------------------|-----------------------------------|
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/linkflow` | `jdbc:postgresql://postgres:5432/linkflow` |
-| `SPRING_DATASOURCE_USERNAME` | `linkflow` | `linkflow` |
-| `SPRING_DATASOURCE_PASSWORD` | `linkflow` | `linkflow` |
+| `SPRING_DATASOURCE_URL` | Cloud DB URL | `${SPRING_DATASOURCE_URL}` |
+| `SPRING_DATASOURCE_USERNAME` | Cloud DB User | `${SPRING_DATASOURCE_USERNAME}` |
+| `SPRING_DATASOURCE_PASSWORD` | Cloud DB Password | `${SPRING_DATASOURCE_PASSWORD}` |
 | `SPRING_DATA_REDIS_HOST` | `localhost` | `redis` (in app container) |
 | `SPRING_DATA_REDIS_PORT` | `6379` | `6379` |
 
@@ -110,7 +110,7 @@ java -jar linkflow-app/target/linkflow-app-1.0.0-SNAPSHOT.jar --spring.profiles.
 
 - Listens on **8081**
 - Runs Flyway migrations on startup
-- Requires PostgreSQL and Redis
+- Requires Cloud PostgreSQL and Redis
 
 ### linkflow-gateway (optional)
 
@@ -157,7 +157,7 @@ docker compose up --build
 
 | Service | Host port | Container |
 |---------|-----------|-----------|
-| PostgreSQL | 5432 | `postgres:16-alpine` |
+
 | Redis | 6379 | `redis:7-alpine` |
 | linkflow-app | 8081 | Docker full stack |
 | linkflow-gateway | 8080 | Docker full stack |
@@ -169,7 +169,6 @@ docker compose up --build
 
 ```bash
 docker compose ps
-PGPASSWORD=linkflow psql -h 127.0.0.1 -U linkflow -d linkflow -c 'SELECT 1'
 redis-cli -h 127.0.0.1 ping   # expect PONG
 ```
 
@@ -190,24 +189,7 @@ mvn -version   # Java version should be 21.x
 
 Always use `$JAVA_HOME/bin/java` for `java -jar` if your default `java` points to Java 26.
 
-### `FATAL: role "linkflow" does not exist`
-
-**Cause:** A **native PostgreSQL** instance on macOS is bound to `localhost:5432` instead of Docker Postgres. Homebrew `postgresql@18` commonly conflicts with `docker compose` port `5432:5432`.
-
-**Check:**
-
-```bash
-lsof -iTCP:5432 -sTCP:LISTEN
-docker compose ps postgres
-PGPASSWORD=linkflow psql -h 127.0.0.1 -U linkflow -d linkflow -c 'SELECT 1'
-```
-
-**Fix (pick one):**
-
-1. Stop native Postgres: `brew services stop postgresql@18` (adjust version as needed)
-2. Remap Docker Postgres to host port 5433 in `docker-compose.yml` and set:
-   `export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/linkflow`
-3. Remove stale volume and recreate: `docker compose down -v && docker compose up -d postgres redis`
+**Fix:** Wait, Cloud PostgreSQL is hosted remotely, so native Postgres on port 5432 won't conflict. If you see this, check your `.env` connection string.
 
 ### Gateway returns 500 / `Connection refused` to app
 
@@ -225,7 +207,7 @@ Default in `linkflow-gateway` `application.yml` uses `127.0.0.1` for this reason
 
 **Cause:** Older Flyway migration `V4` did not include audit columns required by `AuditableEntity`.
 
-**Fix:** Migration `V6__add_audit_columns_to_url_analytics.sql` adds the columns. Restart the app (Flyway runs on startup). For a clean DB: `docker compose down -v && docker compose up -d postgres redis`.
+**Fix:** Migration `V6__add_audit_columns_to_url_analytics.sql` adds the columns. Restart the app (Flyway runs on startup).
 
 ### Redis connection errors
 

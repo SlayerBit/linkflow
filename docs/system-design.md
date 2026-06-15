@@ -44,7 +44,7 @@ flowchart TB
         BackendApp["Backend application\nmodular monolith port 8081"]
     end
 
-    PostgreSQL[(PostgreSQL 16)]
+    PostgreSQL[(Cloud PostgreSQL)]
     Redis[(Redis 7)]
     Prometheus["Prometheus"]
     Grafana["Grafana"]
@@ -94,7 +94,7 @@ flowchart LR
     GatewayContainer --> BackendContainer
     GatewayContainer --> WebContainer
     WebContainer --> GatewayContainer
-    BackendContainer --> PostgreSQL[(PostgreSQL)]
+    BackendContainer --> PostgreSQL[(Cloud PostgreSQL)]
     BackendContainer --> Redis[(Redis)]
 ```
 
@@ -188,7 +188,7 @@ flowchart TB
 
     Client["HTTP client"] --> JwtFilter --> RateLimitFilter --> Controllers
     Controllers --> Services --> JpaRepositories & UrlCache & RedisLock
-    JpaRepositories --> PostgreSQL[(PostgreSQL)]
+    JpaRepositories --> PostgreSQL[(Cloud PostgreSQL)]
     UrlCache & RateLimitService --> Redis[(Redis)]
 ```
 
@@ -205,7 +205,7 @@ sequenceDiagram
     participant UserLookup as UserLookupPort
     participant JwtService as JwtService
     participant RefreshTokens as RefreshTokenService
-    participant Database as PostgreSQL
+    participant Database as Cloud PostgreSQL
 
     Client->>Gateway: POST /api/v1/auth/login
     Gateway->>AuthController: forward request
@@ -331,7 +331,7 @@ sequenceDiagram
 
     Flusher->>Redis: Get active URLs Set & Hash values
     Flusher->>Redis: Decrement Hash counters (Get & Reset)
-    Flusher->>UrlAnalytics: Update total_clicks (PostgreSQL)
+    Flusher->>UrlAnalytics: Update total_clicks (Cloud PostgreSQL)
 
     Note over ReadApi: Read paths (sync)
     ReadApi->>UrlAnalytics: aggregate counts
@@ -383,7 +383,6 @@ flowchart TB
         Gateway["linkflow-gateway\n:8080 public entry"]
         WebUI["linkflow-web\n:8082 internal + optional host map"]
         Backend["linkflow-app\n:8081 internal + optional host map"]
-        Postgres[(postgres :5432)]
         Redis[(redis :6379)]
         Prometheus["prometheus :9090"]
         Grafana["grafana :3000"]
@@ -393,7 +392,6 @@ flowchart TB
     Gateway --> Backend
     Gateway --> WebUI
     WebUI --> Gateway
-    Backend --> Postgres
     Backend --> Redis
     Prometheus --> Backend
     Prometheus --> Gateway

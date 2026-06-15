@@ -5,9 +5,9 @@ spring:
   application:
     name: linkflow-app
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/linkflow}
-    username: ${SPRING_DATASOURCE_USERNAME:linkflow}
-    password: ${SPRING_DATASOURCE_PASSWORD:linkflow}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
