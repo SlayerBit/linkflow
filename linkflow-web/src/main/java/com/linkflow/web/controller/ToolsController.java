@@ -61,14 +61,5 @@ public class ToolsController {
         ));
     }
 
-    @GetMapping("/system-health")
-    public String systemHealth(Model model) {
-        JsonNode health = actuatorApiClient.getHealth();
-        model.addAttribute("health", health);
-        model.addAttribute("grafanaUrl", webClientConfig.getGrafanaUrl());
-        model.addAttribute("prometheusUrl", webClientConfig.getPrometheusUrl());
-        model.addAttribute("pageTitle", "System Health");
-        model.addAttribute("activeNav", "tools-health");
-        return "tools/system-health";
-    }
+
 }

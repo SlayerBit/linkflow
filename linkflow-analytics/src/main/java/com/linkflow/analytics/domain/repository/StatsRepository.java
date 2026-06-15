@@ -13,14 +13,13 @@ public interface StatsRepository extends Repository<UrlAnalytics, java.util.UUID
     @Query(value = "SELECT COUNT(*) FROM short_urls WHERE deleted = false", nativeQuery = true)
     long countTotalUrls();
 
-    @Query(value = "SELECT COUNT(*) FROM short_urls WHERE deleted = false AND active = true", nativeQuery = true)
+    @Query(value = "SELECT COUNT(*) FROM short_urls WHERE deleted = false AND active = true AND (expires_at IS NULL OR expires_at >= NOW())", nativeQuery = true)
     long countActiveUrls();
 
-    @Query(value = """
-            SELECT COUNT(*) FROM short_urls
-            WHERE deleted = false AND active = false
-              AND expires_at IS NOT NULL AND expires_at < NOW()
-            """, nativeQuery = true)
+    @Query(value = "SELECT COUNT(*) FROM short_urls WHERE deleted = false AND active = false AND (expires_at IS NULL OR expires_at >= NOW())", nativeQuery = true)
+    long countInactiveUrls();
+
+    @Query(value = "SELECT COUNT(*) FROM short_urls WHERE deleted = false AND expires_at IS NOT NULL AND expires_at < NOW()", nativeQuery = true)
     long countExpiredUrls();
 
     @Query(value = "SELECT COUNT(*) FROM short_urls WHERE deleted = true", nativeQuery = true)

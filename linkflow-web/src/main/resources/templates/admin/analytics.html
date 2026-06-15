@@ -2,61 +2,285 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>System Analytics</title></head>
+<head>
+    <title>System Analytics — LinkFlow</title>
+    <style>
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .skeleton-line, .skeleton-circle {
+            background: linear-gradient(90deg, #f8fafc 25%, #f1f5f9 50%, #f8fafc 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        
+        /* Segmented controls styling */
+        .btn-trend-range.btn-primary {
+            background-color: #0f172a !important;
+            border-color: #0f172a !important;
+            color: #ffffff !important;
+        }
+        .btn-trend-range.btn-light {
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #475569 !important;
+        }
+        .btn-trend-range.btn-light:hover {
+            background-color: #f8fafc !important;
+            color: #1e293b !important;
+        }
+        
+        /* Dashboard Polish */
+        .card {
+            border-radius: 12px !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04) !important;
+        }
+        .card-header {
+            background-color: transparent !important;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+            padding: 1.1rem 1.25rem !important;
+        }
+        .bg-light-lt {
+            background-color: #f8fafc;
+            border: 1px solid #f1f5f9;
+        }
+    </style>
+</head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none"><h2 class="page-title">System Analytics</h2></div>
+    <div class="page-header d-print-none mb-4">
+        <h2 class="page-title fw-bold text-dark fs-2">System Analytics</h2>
+    </div>
 
-    <div class="row row-deck row-cards mb-4">
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header"><h3 class="card-title">URL status breakdown</h3></div>
-                <div class="card-body">
-                    <div class="chart-container"><canvas id="statusChart"></canvas></div>
-                </div>
-            </div>
+    <!-- Empty state for totalUrls == 0 -->
+    <div class="card bg-white empty-state py-5 mb-4 text-center d-flex flex-column align-items-center justify-content-center" th:if="${stats.totalUrls == 0}">
+        <div class="empty-state-icon mb-3" style="font-size: 3.5rem; color: #94a3b8;"><i class="ti ti-chart-bar"></i></div>
+        <h2 class="empty-state-title fw-bold text-dark">No analytics available yet</h2>
+        <p class="empty-state-description text-muted mt-2" style="max-width: 420px;">Create your first short link to start collecting analytics.</p>
+        <div class="empty-state-actions mt-3">
+            <a th:href="@{/urls/new}" class="btn btn-primary px-4 py-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">
+                <i class="ti ti-plus me-1"></i> Create Link
+            </a>
         </div>
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header"><h3 class="card-title">Top URLs</h3></div>
-                <div class="card-body">
-                    <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}">
-                        <canvas id="topChart"></canvas>
+    </div>
+
+    <!-- KPI Metric Cards Grid -->
+    <div class="row row-deck row-cards mb-4 g-3" th:if="${stats.totalUrls > 0}">
+        <!-- Total Links -->
+        <div class="col-sm-4">
+            <div class="card stat-card card-cyan bg-white border card-hoverable">
+                <div class="card-body py-4 px-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="metric-label">Total Links</span>
+                        <div class="stat-card-icon bg-cyan-lt ms-auto">
+                            <i class="ti ti-link"></i>
+                        </div>
                     </div>
-                    <p class="text-muted mb-0" th:if="${#lists.isEmpty(topUrls)}">No top URL data yet.</p>
+                    <div class="metric-value" th:text="${stats.totalUrls}">0</div>
+                    <div class="metric-subtext">
+                        <span class="badge bg-cyan-lt text-cyan py-0.5 px-1.5 fw-semibold" th:text="${stats.activeUrls} + ' active'">0 active</span>
+                        <span class="text-secondary ms-1">in registry</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Total Clicks -->
+        <div class="col-sm-4">
+            <div class="card stat-card card-green bg-white border card-hoverable">
+                <div class="card-body py-4 px-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="metric-label">Total Clicks</span>
+                        <div class="stat-card-icon bg-green-lt ms-auto">
+                            <i class="ti ti-mouse-click"></i>
+                        </div>
+                    </div>
+                    <div class="metric-value" th:text="${stats.totalClicks}">0</div>
+                    <div class="metric-subtext">
+                        <span class="badge bg-green-lt text-green py-0.5 px-1.5 fw-semibold" id="clicks-today-badge">+0 today</span>
+                        <span class="text-secondary ms-1">tracked clicks</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Active Links -->
+        <div class="col-sm-4">
+            <div class="card stat-card card-emerald bg-white border card-hoverable">
+                <div class="card-body py-4 px-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="metric-label">Active Links</span>
+                        <div class="stat-card-icon bg-emerald-lt ms-auto">
+                            <i class="ti ti-circle-check"></i>
+                        </div>
+                    </div>
+                    <div class="metric-value" th:text="${stats.activeUrls}">0</div>
+                    <div class="metric-subtext">
+                        <span class="badge bg-emerald-lt text-emerald py-0.5 px-1.5 fw-semibold" 
+                              th:text="${stats.totalUrls > 0 ? (stats.activeUrls * 100 / stats.totalUrls) + '%' : '0%'}">0%</span>
+                        <span class="text-secondary ms-1">of total links</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row row-deck row-cards">
-        <div class="col-sm-4"><div class="card stat-card"><div class="card-body">
-            <div class="subheader">Users</div><div class="h2" th:text="${stats.totalUsers}">0</div>
-        </div></div></div>
-        <div class="col-sm-4"><div class="card stat-card"><div class="card-body">
-            <div class="subheader">Total clicks</div><div class="h2" th:text="${stats.totalClicks}">0</div>
-        </div></div></div>
-        <div class="col-sm-4"><div class="card stat-card"><div class="card-body">
-            <div class="subheader">Total URLs</div><div class="h2" th:text="${stats.totalUrls}">0</div>
-        </div></div></div>
-    </div>
-
-    <div class="row row-deck row-cards mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex align-items-center">
-                    <h3 class="card-title">Platform Clicks Over Time</h3>
-                    <div class="ms-auto">
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-sm btn-outline-secondary btn-trend-range" id="btn-trend-7" onclick="renderTrendChart(7)">7D</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary btn-trend-range" id="btn-trend-30" onclick="renderTrendChart(30)">30D</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary btn-trend-range" id="btn-trend-90" onclick="renderTrendChart(90)">90D</button>
+    <!-- Charts Row -->
+    <div class="row row-deck row-cards mb-4 g-4" th:if="${stats.totalUrls > 0}">
+        <!-- Link Status Doughnut Chart -->
+        <div class="col-lg-4">
+            <div class="card bg-white h-100">
+                <div class="card-header py-3">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                        <i class="ti ti-chart-pie"></i> Link Status
+                    </h3>
+                </div>
+                <div class="card-body d-flex align-items-center" style="min-height: 160px; padding: 1.25rem 1.5rem;">
+                    <div class="row w-100 align-items-center g-3">
+                        <div class="col-5 text-center">
+                            <div class="chart-container" style="position: relative; height: 100px; width: 100%;">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-7">
+                            <div class="d-flex flex-column gap-2">
+                                <div class="d-flex align-items-center justify-content-between pb-1.5 border-bottom border-light">
+                                    <span class="small text-secondary fw-semibold d-flex align-items-center gap-2">
+                                        <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #22c55e; display: inline-block;"></span> Active
+                                    </span>
+                                    <span class="fs-4 fw-extrabold text-dark" th:text="${stats.activeUrls}">0</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between pb-1.5 border-bottom border-light">
+                                    <span class="small text-secondary fw-semibold d-flex align-items-center gap-2">
+                                        <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #ef4444; display: inline-block;"></span> Inactive
+                                    </span>
+                                    <span class="fs-4 fw-extrabold text-dark" th:text="${stats.inactiveUrls}">0</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="small text-secondary fw-semibold d-flex align-items-center gap-2">
+                                        <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #f59e0b; display: inline-block;"></span> Expired
+                                    </span>
+                                    <span class="fs-4 fw-extrabold text-dark" th:text="${stats.expiredUrls}">0</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 320px;">
+            </div>
+        </div>
+
+        <!-- Top Performing Links Chart -->
+        <div class="col-lg-8">
+            <div class="card bg-white h-100">
+                <div class="card-header py-3">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-cyan mb-0">
+                        <i class="ti ti-link"></i> Top Performing Links
+                    </h3>
+                </div>
+                <div class="card-body d-flex flex-column justify-content-center" style="position: relative; min-height: 160px; padding: 1.5rem;">
+                    <div class="chart-container" id="topChart-container" th:if="${!#lists.isEmpty(topUrls)}" style="position: relative; height: 130px; width: 100%;">
+                        <canvas id="topChart"></canvas>
+                    </div>
+                    <div class="empty-state py-3" th:if="${#lists.isEmpty(topUrls)}">
+                        <div class="empty-state-icon" style="font-size: 2rem; padding: 0.5rem; background: #f8fafc; border-radius: 50%; display: inline-block; line-height: 1; color: #94a3b8;"><i class="ti ti-link-off"></i></div>
+                        <h4 class="empty-state-title fw-bold text-dark mt-2 mb-1" style="font-size: 1rem;">No click data available</h4>
+                        <p class="empty-state-description text-muted small mb-0">Top performing redirect targets will appear here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Traffic Trend Line Chart Row -->
+    <div class="row row-deck row-cards mb-4 g-4" th:if="${stats.totalUrls > 0}">
+        <div class="col-12">
+            <div class="card bg-white">
+                <div class="card-header d-flex align-items-center py-3">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-green mb-0">
+                        <i class="ti ti-chart-line"></i> Traffic Trend
+                    </h3>
+                    <div class="ms-auto" th:if="${stats.totalClicks > 0}">
+                        <div class="segmented-control">
+                            <button type="button" class="btn-segmented btn-trend-range" id="btn-trend-7" onclick="renderTrendChart(7)">7D</button>
+                            <button type="button" class="btn-segmented btn-trend-range" id="btn-trend-30" onclick="renderTrendChart(30)">30D</button>
+                            <button type="button" class="btn-segmented btn-trend-range" id="btn-trend-90" onclick="renderTrendChart(90)">90D</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" style="position: relative; min-height: 240px; padding: 1.5rem;">
+                    <div class="chart-container" id="platformClickTrendChart-container" style="position: relative; height: 210px; width: 100%;" th:if="${stats.totalClicks > 0}">
                         <canvas id="platformClickTrendChart"></canvas>
+                    </div>
+                    <div class="empty-state py-4" th:if="${stats.totalClicks == 0}">
+                        <div class="empty-state-icon" style="font-size: 2.25rem; padding: 0.6rem; background: #f8fafc; border-radius: 50%; display: inline-block; line-height: 1; color: #94a3b8;"><i class="ti ti-activity"></i></div>
+                        <h4 class="empty-state-title fw-bold text-dark mt-2 mb-1" style="font-size: 1rem;">No traffic recorded yet</h4>
+                        <p class="empty-state-description text-muted small mb-0">No redirection clicks have been tracked on the platform yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dynamic Insights Section -->
+    <div class="row row-deck row-cards g-4 mt-2" th:if="${stats.totalUrls > 0}">
+        <div class="col-12">
+            <div class="card bg-white">
+                <div class="card-header py-3">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
+                        <i class="ti ti-bulb text-purple"></i> Insights
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light-lt">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-green-lt p-1.5"><i class="ti ti-chart-line fs-3"></i></span>
+                                    <div>
+                                        <div class="fw-bold text-dark">Link Efficiency</div>
+                                        <div class="text-secondary small mt-0.5" th:text="${stats.totalUrls > 0 ? (stats.activeUrls * 100 / stats.totalUrls) + '% of links are active' : '0% of links are active'}">0% active</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4" th:if="${!#lists.isEmpty(topUrls)}">
+                            <div class="p-3 border rounded bg-light-lt">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-cyan-lt p-1.5"><i class="ti ti-star fs-3"></i></span>
+                                    <div>
+                                        <div class="fw-bold text-dark">Top Performer</div>
+                                        <div class="text-secondary small mt-0.5" th:text="'Most clicked link: ' + ${topUrls[0].shortCode} + ' (' + ${topUrls[0].totalClicks} + ' clicks)'">None</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4" th:if="${#lists.isEmpty(topUrls)}">
+                            <div class="p-3 border rounded bg-light-lt">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-secondary-lt p-1.5"><i class="ti ti-star-off fs-3"></i></span>
+                                    <div>
+                                        <div class="fw-bold text-dark">Top Performer</div>
+                                        <div class="text-secondary small mt-0.5">No click activity recorded yet.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light-lt">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-purple-lt p-1.5" id="insight-traffic-icon"><i class="ti ti-activity fs-3"></i></span>
+                                    <div>
+                                        <div class="fw-bold text-dark">Traffic Context</div>
+                                        <div class="text-secondary small mt-0.5" id="insight-traffic-wow" th:text="${stats.totalClicks > 0 ? 'Redirection volume averaged at ' + #numbers.formatDecimal((stats.totalClicks * 1.0 / stats.totalUrls), 1, 1) + ' clicks per link' : 'Insufficient traffic data to generate comparative trends.'}">None</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -67,27 +291,81 @@
 <th:block layout:fragment="scripts">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script th:inline="javascript">
-        const stats = /*[[${statsJson}]]*/ {};
-        new Chart(document.getElementById('statusChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Active', 'Expired', 'Deleted'],
-                datasets: [{ data: [stats.activeUrls, stats.expiredUrls, stats.deletedUrls],
-                    backgroundColor: ['#2fb344', '#f76707', '#d63939'] }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
+        const stats = JSON.parse(/*[[${statsJson}]]*/ '{}');
         
-        const topUrls = /*[[${topUrlsJson}]]*/ [];
-        if (topUrls.length) {
-            new Chart(document.getElementById('topChart'), {
-                type: 'bar',
+        if (stats.totalUrls > 0) {
+            new Chart(document.getElementById('statusChart'), {
+                type: 'doughnut',
                 data: {
-                    labels: topUrls.map(u => u.shortCode),
-                    datasets: [{ data: topUrls.map(u => u.totalClicks), backgroundColor: '#206bc4' }]
+                    labels: ['Active', 'Inactive', 'Expired'],
+                    datasets: [{ 
+                        data: [stats.activeUrls, stats.inactiveUrls, stats.expiredUrls],
+                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
                 },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
             });
+            
+            const topUrls = JSON.parse(/*[[${topUrlsJson}]]*/ '[]').slice(0, 5);
+            if (topUrls.length) {
+                const topCtx = document.getElementById('topChart').getContext('2d');
+                const topGradient = topCtx.createLinearGradient(0, 0, 400, 0);
+                topGradient.addColorStop(0, '#0891b2');
+                topGradient.addColorStop(1, '#22c55e');
+
+                new Chart(topCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: topUrls.map(u => u.shortCode),
+                        datasets: [{ 
+                            data: topUrls.map(u => u.totalClicks), 
+                            backgroundColor: topGradient,
+                            borderRadius: 6,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: { 
+                        indexAxis: 'y', 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleFont: { family: 'Inter', size: 12, weight: 'bold' },
+                                bodyFont: { family: 'Inter', size: 12 },
+                                padding: 10,
+                                cornerRadius: 8,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return ' ' + context.raw + ' clicks';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(15, 23, 42, 0.03)', drawTicks: false },
+                                ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { font: { family: 'Inter', size: 12, weight: '600' }, color: '#334155' }
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         const trends = {
@@ -133,7 +411,13 @@
                 currentTrendChart.destroy();
             }
 
-            const ctx = document.getElementById('platformClickTrendChart').getContext('2d');
+            const chartEl = document.getElementById('platformClickTrendChart');
+            if (!chartEl) return;
+            const ctx = chartEl.getContext('2d');
+            const lineGradient = ctx.createLinearGradient(0, 0, 0, 200);
+            lineGradient.addColorStop(0, 'rgba(34, 197, 94, 0.12)');
+            lineGradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+
             currentTrendChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -141,28 +425,46 @@
                     datasets: [{
                         label: 'System Clicks',
                         data: dataPoints,
-                        borderColor: '#206bc4',
-                        backgroundColor: 'rgba(32, 107, 196, 0.08)',
+                        borderColor: '#22c55e',
+                        backgroundColor: lineGradient,
                         fill: true,
-                        tension: 0.2,
-                        borderWidth: 2,
-                        pointRadius: days > 30 ? 1 : 3,
-                        pointHoverRadius: 5
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: days > 30 ? 1 : 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#22c55e',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', size: 12, weight: 'bold' },
+                            bodyFont: { family: 'Inter', size: 12 },
+                            padding: 10,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.raw + ' clicks';
+                                }
+                            }
+                        }
                     },
                     scales: {
                         x: {
-                            grid: { display: false }
+                            grid: { display: false },
+                            ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
                         },
                         y: {
                             beginAtZero: true,
-                            ticks: { precision: 0 }
+                            grid: { color: 'rgba(15, 23, 42, 0.03)', drawTicks: false },
+                            ticks: { precision: 0, font: { family: 'Inter', size: 11 }, color: '#64748b' }
                         }
                     }
                 }
@@ -172,11 +474,72 @@
                 btn.classList.remove('active');
             });
             const activeBtn = document.getElementById('btn-trend-' + days);
-            if (activeBtn) activeBtn.classList.add('active');
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            renderTrendChart(30);
+            // Dynamic KPI clicks subtext
+            if (data7d && data7d.length > 0) {
+                const sorted7d = [...data7d].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const todayClicks = sorted7d[sorted7d.length - 1].clicks;
+                const clicksBadge = document.getElementById('clicks-today-badge');
+                if (clicksBadge) {
+                    clicksBadge.innerText = `+${todayClicks} today`;
+                }
+            }
+
+            // Dynamic Insights traffic summary
+            if (data30d && data30d.length >= 14) {
+                const sortedData = [...data30d].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const last7 = sortedData.slice(-7);
+                const prev7 = sortedData.slice(-14, -7);
+                
+                const last7Clicks = last7.reduce((sum, item) => sum + item.clicks, 0);
+                const prev7Clicks = prev7.reduce((sum, item) => sum + item.clicks, 0);
+                
+                let wowText = "";
+                let wowIcon = "";
+                let wowBadgeClass = "";
+                
+                if (prev7Clicks > 0) {
+                    const pctChange = ((last7Clicks - prev7Clicks) / prev7Clicks) * 100;
+                    if (pctChange > 0) {
+                        wowText = `Traffic increased by ${pctChange.toFixed(0)}% this week`;
+                        wowIcon = "ti-arrow-up-right";
+                        wowBadgeClass = "bg-green-lt text-green";
+                    } else if (pctChange < 0) {
+                        wowText = `Traffic decreased by ${Math.abs(pctChange).toFixed(0)}% this week`;
+                        wowIcon = "ti-arrow-down-left";
+                        wowBadgeClass = "bg-red-lt text-red";
+                    } else {
+                        wowText = "Traffic remained steady this week";
+                        wowIcon = "ti-activity";
+                        wowBadgeClass = "bg-secondary-lt text-secondary";
+                    }
+                } else if (last7Clicks > 0) {
+                    wowText = `Traffic grew with +${last7Clicks} clicks this week`;
+                    wowIcon = "ti-arrow-up-right";
+                    wowBadgeClass = "bg-green-lt text-green";
+                }
+                
+                if (wowText) {
+                    const wowEl = document.getElementById('insight-traffic-wow');
+                    if (wowEl) {
+                        wowEl.innerText = wowText;
+                    }
+                    const iconContainer = document.getElementById('insight-traffic-icon');
+                    if (iconContainer) {
+                        iconContainer.className = `badge ${wowBadgeClass} p-1.5`;
+                        iconContainer.innerHTML = `<i class="ti ${wowIcon} fs-3"></i>`;
+                    }
+                }
+            }
+
+            if (stats.totalUrls > 0 && stats.totalClicks > 0) {
+                renderTrendChart(30);
+            }
         });
     </script>
 </th:block>

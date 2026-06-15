@@ -3,38 +3,33 @@
 <body>
 <th:block th:fragment="userNav">
     <li class="nav-item">
-        <a class="nav-link" th:href="@{/dashboard}" th:classappend="${activeNav == 'dashboard'} ? ' active'">
+        <a class="nav-link nav-link-blue" th:href="@{/dashboard}" th:classappend="${activeNav == 'dashboard'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-home"></i></span>
             <span class="nav-link-title">Dashboard</span>
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" th:href="@{/urls}" th:classappend="${activeNav == 'urls'} ? ' active'">
+        <a class="nav-link nav-link-cyan" th:href="@{/urls}" th:classappend="${activeNav == 'urls'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-link"></i></span>
             <span class="nav-link-title">My URLs</span>
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" th:href="@{/profile}" th:classappend="${activeNav == 'profile'} ? ' active'">
+        <a class="nav-link nav-link-purple" th:href="@{/profile}" th:classappend="${activeNav == 'profile'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-user"></i></span>
             <span class="nav-link-title">Profile</span>
         </a>
     </li>
     <li class="nav-item">
-        <span class="nav-link disabled text-uppercase small mt-2">Tools</span>
+        <span class="nav-link disabled text-uppercase small mt-2" style="font-size: 0.65rem; letter-spacing: 0.05em; color: #64748b;">Tools</span>
     </li>
     <li class="nav-item">
-        <a class="nav-link" th:href="@{/tools/rate-limit}" th:classappend="${activeNav == 'tools-rate-limit'} ? ' active'">
+        <a class="nav-link nav-link-red" th:href="@{/tools/rate-limit}" th:classappend="${activeNav == 'tools-rate-limit'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-gauge"></i></span>
             <span class="nav-link-title">Rate Limit Demo</span>
         </a>
     </li>
-    <li class="nav-item">
-        <a class="nav-link" th:href="@{/tools/system-health}" th:classappend="${activeNav == 'tools-health'} ? ' active'">
-            <span class="nav-link-icon"><i class="ti ti-heartbeat"></i></span>
-            <span class="nav-link-title">System Health</span>
-        </a>
-    </li>
+
 </th:block>
 </body>
 </html>

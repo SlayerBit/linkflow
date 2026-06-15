@@ -8,6 +8,7 @@ public record SystemStatsResponse(
         long totalUrls,
         long totalClicks,
         long activeUrls,
+        long inactiveUrls,
         long expiredUrls,
         long deletedUrls
 ) {

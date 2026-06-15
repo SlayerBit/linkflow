@@ -2,34 +2,51 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>Users</title></head>
+<head><title>Users Management — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none"><h2 class="page-title">Users</h2></div>
+    <div class="page-header d-print-none mb-4">
+        <h2 class="page-title fw-bold text-dark fs-2">Users Management</h2>
+    </div>
 
-    <div class="card" th:if="${!#lists.isEmpty(users.content)}">
+    <div class="card bg-white" th:if="${!#lists.isEmpty(users.content)}">
+        <div class="card-header">
+            <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
+                <i class="ti ti-users"></i> Registered Platform Users
+            </h3>
+        </div>
         <div class="table-responsive">
             <table class="table table-vcenter card-table table-hover">
-                <thead><tr><th>Email</th><th>Name</th><th>Roles</th><th>Created</th><th></th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Email Address</th>
+                        <th>Full Name</th>
+                        <th>Roles</th>
+                        <th>Created Date</th>
+                        <th class="w-1">Actions</th>
+                    </tr>
+                </thead>
                 <tbody>
-                <tr th:each="user : ${users.content}">
-                    <td th:text="${user.email}">email</td>
-                    <td th:text="${user.firstName + ' ' + (user.lastName != null ? user.lastName : '')}">name</td>
-                    <td>
-                        <span th:each="role : ${user.roles}" class="badge bg-blue-lt me-1" th:text="${role}">USER</span>
-                    </td>
-                    <td th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">date</td>
-                    <td class="text-end">
-                        <a th:href="@{/admin/users/{id}(id=${user.id})}" class="btn btn-sm">View</a>
-                    </td>
-                </tr>
+                    <tr th:each="user : ${users.content}">
+                        <td class="fw-bold text-dark" th:text="${user.email}">email</td>
+                        <td class="text-secondary" th:text="${user.firstName + ' ' + (user.lastName != null ? user.lastName : '')}">name</td>
+                        <td>
+                            <span th:each="role : ${user.roles}" class="badge bg-purple-lt text-purple me-1 fw-bold" th:text="${role}">USER</span>
+                        </td>
+                        <td class="text-secondary" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">date</td>
+                        <td class="text-end">
+                            <a th:href="@{/admin/users/{id}(id=${user.id})}" class="btn btn-sm btn-light" style="border-radius: 6px;">View details</a>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <div class="empty empty-state" th:if="${#lists.isEmpty(users.content)}">
-        <p class="empty-title">No users found</p>
+    <div class="card bg-white empty-state" th:if="${#lists.isEmpty(users.content)}">
+        <div class="empty-state-icon"><i class="ti ti-users"></i></div>
+        <div class="empty-state-title">No users found</div>
+        <p class="empty-state-description">No registered users exist on the platform currently.</p>
     </div>
 
     <div th:replace="~{fragments/alerts :: pagination(${users}, '/admin/users', ${sortBy}, ${direction})}"></div>

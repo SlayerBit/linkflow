@@ -2,105 +2,159 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>Dashboard</title></head>
+<head><title>Dashboard — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none">
+    <div class="page-header d-print-none mb-4">
         <div class="row align-items-center">
             <div class="col">
-                <div class="page-pretitle">Overview</div>
-                <h2 class="page-title">Welcome, <span th:text="${auth.firstName()}">User</span></h2>
+                <div class="page-pretitle text-muted text-uppercase small fw-bold" style="letter-spacing: 0.05em;">Overview</div>
+                <h2 class="page-title fw-bold text-dark fs-2">Welcome, <span th:text="${auth.firstName()}">User</span></h2>
             </div>
             <div class="col-auto">
-                <a th:href="@{/urls/new}" class="btn btn-primary">
-                    <i class="ti ti-plus"></i> Create URL
+                <a th:href="@{/urls/new}" class="btn btn-primary px-3 shadow-sm" style="border-radius: 8px; font-weight: 600;">
+                    <i class="ti ti-plus me-1"></i> Create Short URL
                 </a>
             </div>
         </div>
     </div>
 
-    <div class="row row-deck row-cards mb-4">
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header d-flex align-items-center">
-                    <h3 class="card-title mb-0">Recent URLs</h3>
-                    <div class="card-actions ms-auto">
-                        <a th:href="@{/urls}" class="btn btn-sm">View all</a>
+    <!-- Summary Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-6">
+            <div class="card stat-card card-cyan py-3 px-4 bg-white">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Recent Links</div>
+                        <div class="h2 fw-bold text-dark" th:text="${#lists.size(recentUrls)}">0</div>
                     </div>
-                </div>
-                <div class="card-body p-0" th:if="${!#lists.isEmpty(recentUrls)}">
-                    <div class="table-responsive">
-                        <table class="table table-vcenter card-table table-hover">
-                            <thead><tr><th>Code</th><th>Original</th><th>Status</th></tr></thead>
-                            <tbody>
-                            <tr th:each="url : ${recentUrls}">
-                                <td><a th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a></td>
-                                <td class="text-truncate" style="max-width:200px" th:text="${url.originalUrl}">url</td>
-                                <td><span class="badge" th:classappend="${url.active} ? ' bg-green' : ' bg-red'"
-                                          th:text="${url.active} ? 'Active' : 'Inactive'">Active</span></td>
-                            </tr>
-                            </tbody>
-                        </table>
+                    <div class="stat-card-icon bg-cyan-lt ms-auto">
+                        <i class="ti ti-link"></i>
                     </div>
-                </div>
-                <div class="empty empty-state" th:if="${#lists.isEmpty(recentUrls)}">
-                    <div class="empty-icon"><i class="ti ti-link-off"></i></div>
-                    <p class="empty-title">No URLs yet</p>
-                    <a th:href="@{/urls/new}" class="btn btn-primary">Create your first URL</a>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header"><h3 class="card-title">Top URLs by clicks</h3></div>
-                <div class="card-body">
-                    <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}">
-                        <canvas id="topUrlsChart"></canvas>
+        <div class="col-sm-6 col-lg-6">
+            <div class="card stat-card card-green py-3 px-4 bg-white" th:with="sumClicks=${topUrls != null && !topUrls.isEmpty() ? #aggregates.sum(topUrls.![totalClicks]) : 0}">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Total Link Clicks</div>
+                        <div class="h2 fw-bold text-dark" th:text="${sumClicks}">0</div>
                     </div>
-                    <div class="empty empty-state" th:if="${#lists.isEmpty(topUrls)}">
-                        <p class="text-muted mb-0">No click data yet.</p>
+                    <div class="stat-card-icon bg-green-lt ms-auto">
+                        <i class="ti ti-chart-line"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row row-deck row-cards">
-        <div class="col-12">
-            <div class="card">
+    <div class="row row-deck row-cards mb-4 g-4">
+        <div class="col-lg-6">
+            <div class="card bg-white h-100">
+                <div class="card-header d-flex align-items-center">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-cyan mb-0">
+                        <i class="ti ti-link"></i> Recent Links
+                    </h3>
+                    <div class="card-actions ms-auto">
+                        <a th:href="@{/urls}" class="btn btn-sm btn-light" style="border-radius: 6px;">View all</a>
+                    </div>
+                </div>
+                <div class="card-body p-0" th:if="${!#lists.isEmpty(recentUrls)}">
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Original Target URL</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="url : ${recentUrls}">
+                                    <td>
+                                        <a class="fw-bold text-primary text-decoration-none" th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a>
+                                    </td>
+                                    <td class="text-truncate text-muted" style="max-width:260px" th:text="${url.originalUrl}">url</td>
+                                    <td>
+                                        <span th:if="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())}" 
+                                              class="badge bg-warning-lt text-warning">Expired</span>
+                                        <span th:if="${!(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" 
+                                              class="badge" th:classappend="${url.active} ? ' bg-green-lt text-green' : ' bg-red-lt text-red'"
+                                              th:text="${url.active} ? 'Active' : 'Inactive'">Active</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="empty-state" th:if="${#lists.isEmpty(recentUrls)}">
+                    <div class="empty-state-icon"><i class="ti ti-link-off"></i></div>
+                    <div class="empty-state-title">No URLs yet</div>
+                    <p class="empty-state-description">Generate short redirects to manage your targets easily.</p>
+                    <a th:href="@{/urls/new}" class="btn btn-primary px-3 shadow-sm" style="border-radius: 8px;">Create your first URL</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card bg-white h-100">
                 <div class="card-header">
-                    <h3 class="card-title">Recent Activity Feed</h3>
+                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                        <i class="ti ti-chart-bar"></i> Top Links
+                    </h3>
+                </div>
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}">
+                        <canvas id="topUrlsChart"></canvas>
+                    </div>
+                    <div class="empty-state" th:if="${#lists.isEmpty(topUrls)}">
+                        <div class="empty-state-icon"><i class="ti ti-chart-pie"></i></div>
+                        <div class="empty-state-title">No click metrics</div>
+                        <p class="empty-state-description">Share your links to start tracking analytics dynamic logs.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-deck row-cards g-4">
+        <div class="col-12">
+            <div class="card bg-white">
+                <div class="card-header">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
+                        <i class="ti ti-activity"></i> Recent Activity
+                    </h3>
                 </div>
                 <div class="card-body p-0" th:if="${!#lists.isEmpty(recentClicks)}">
                     <div class="table-responsive">
                         <table class="table table-vcenter card-table table-hover">
                             <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Code</th>
-                                <th>IP Address</th>
-                                <th>Referrer</th>
-                                <th>User Agent</th>
-                            </tr>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Code</th>
+                                    <th>IP Address</th>
+                                    <th>Referrer</th>
+                                    <th>User Agent</th>
+                                </tr>
                             </thead>
                             <tbody>
-                            <tr th:each="click : ${recentClicks}">
-                                <td th:text="${click.clickedAt != null ? #temporals.format(click.clickedAt, 'yyyy-MM-dd HH:mm ''UTC''') : ''}">Time</td>
-                                <td>
-                                    <a th:href="@{/urls/{id}/analytics(id=${click.shortUrlId})}" th:text="${click.shortCode}">code</a>
-                                </td>
-                                <td><code th:text="${click.ipAddress}">IP</code></td>
-                                <td class="text-truncate" style="max-width: 200px;" th:text="${click.referer != null && !click.referer.isEmpty() ? click.referer : 'Direct'}">Referrer</td>
-                                <td class="text-truncate" style="max-width: 250px;" th:text="${click.userAgent}">User Agent</td>
-                            </tr>
+                                <tr th:each="click : ${recentClicks}">
+                                    <td class="text-secondary" th:text="${click.clickedAt != null ? #temporals.format(click.clickedAt, 'yyyy-MM-dd HH:mm ''UTC''') : ''}">Time</td>
+                                    <td>
+                                        <a class="fw-bold text-primary text-decoration-none" th:href="@{/urls/{id}/analytics(id=${click.shortUrlId})}" th:text="${click.shortCode}">code</a>
+                                    </td>
+                                    <td><code class="px-2 py-1 bg-light text-dark rounded" th:text="${click.ipAddress}">IP</code></td>
+                                    <td class="text-truncate text-secondary" style="max-width: 200px;" th:text="${click.referer != null && !click.referer.isEmpty() ? click.referer : 'Direct'}">Referrer</td>
+                                    <td class="text-truncate text-secondary" style="max-width: 250px;" th:text="${click.userAgent}">User Agent</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
-                <div class="empty empty-state" th:if="${#lists.isEmpty(recentClicks)}">
-                    <div class="empty-icon"><i class="ti ti-activity"></i></div>
-                    <p class="empty-title">No recent click activity</p>
-                    <p class="empty-subtitle text-muted">Clicks on your short links will appear here in real-time.</p>
+                <div class="empty-state" th:if="${#lists.isEmpty(recentClicks)}">
+                    <div class="empty-state-icon"><i class="ti ti-activity"></i></div>
+                    <div class="empty-state-title">No recent click activity</div>
+                    <p class="empty-state-description">Clicks on your short links will appear here in real-time.</p>
                 </div>
             </div>
         </div>
@@ -109,16 +163,56 @@
 
 <th:block layout:fragment="scripts">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script th:if="${!#lists.isEmpty(topUrls)}">
-        const topUrls = /*[[${topUrlsJson}]]*/ [];
+    <script th:inline="javascript" th:if="${!#lists.isEmpty(topUrls)}">
+        /*<![CDATA[*/
+        const topUrls = /*[[${topUrls}]]*/ [];
         const labels = topUrls.map(u => u.shortCode);
         const data = topUrls.map(u => u.totalClicks);
-        new Chart(document.getElementById('topUrlsChart'), {
+        
+        const ctx = document.getElementById('topUrlsChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 400, 0);
+        gradient.addColorStop(0, '#4299e1');
+        gradient.addColorStop(1, '#0891b2');
+
+        new Chart(ctx, {
             type: 'bar',
-            data: { labels, datasets: [{ label: 'Clicks', data, backgroundColor: '#206bc4' }] },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } } }
+            data: { 
+                labels, 
+                datasets: [{ 
+                    label: 'Clicks', 
+                    data, 
+                    backgroundColor: gradient,
+                    borderRadius: 6,
+                    borderSkipped: false
+                }] 
+            },
+            options: { 
+                indexAxis: 'y', 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: { family: 'Inter', weight: 'bold' },
+                        bodyFont: { family: 'Inter' },
+                        padding: 10,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(15, 23, 42, 0.04)' },
+                        ticks: { font: { family: 'Inter' }, color: '#64748b' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', weight: '500' }, color: '#475569' }
+                    }
+                }
+            }
         });
+        /*]]>*/
     </script>
 </th:block>
 </body>

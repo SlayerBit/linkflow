@@ -2,61 +2,194 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>LinkFlow — URL Shortener</title></head>
+<head><title>LinkFlow — Smart Link Shortener & Analytics</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="landing-hero text-center">
-        <h1 class="display-4 fw-bold">Shorten links. Track clicks. Stay in control.</h1>
-        <p class="lead text-muted mt-3 mx-auto" style="max-width: 640px;">
-            LinkFlow is a production-style URL shortener with analytics, rate limiting,
-            and role-based access — all backed by a modular Spring Boot API.
+    <div class="landing-hero text-center py-6">
+        <h1 class="hero-title fw-extrabold mb-3">Smart links. <span class="hero-gradient-text">Real-time insights.</span></h1>
+        <p class="lead text-muted mt-3 mx-auto" style="max-width: 640px; font-size: 1.15rem; line-height: 1.6;">
+            LinkFlow simplifies link shortening and performance tracking. Create custom, secure links and monitor click metrics in a single workspace.
         </p>
-        <div class="mt-4">
-            <a th:href="@{/register}" class="btn btn-primary btn-lg me-2">Get started</a>
-            <a th:href="@{/login}" class="btn btn-outline-primary btn-lg">Sign in</a>
+        <div class="mt-4 pt-2">
+            <a th:href="@{/register}" class="btn btn-primary btn-lg px-4 py-2 me-3 shadow-sm" style="border-radius: 8px; font-weight: 600;">Get started free <i class="ti ti-arrow-right ms-1"></i></a>
+            <a th:href="@{/login}" class="btn btn-outline-primary btn-lg px-4 py-2" style="border-radius: 8px; font-weight: 600;">Sign in</a>
         </div>
     </div>
 
-    <div class="row g-4 mt-2 mb-5">
+    <!-- Feature Grid -->
+    <div class="row g-4 mt-4 mb-6">
         <div class="col-md-4">
-            <div class="card">
+            <div class="card card-hoverable feature-card card-cyan h-100">
                 <div class="card-body">
-                    <div class="feature-icon mb-3"><i class="ti ti-link"></i></div>
-                    <h3 class="card-title">Short URLs</h3>
-                    <p class="text-muted">Create short links with optional custom aliases and expiry dates.</p>
+                    <div class="feature-icon-circle bg-cyan-lt"><i class="ti ti-link"></i></div>
+                    <h3 class="card-title fw-bold fs-3">Link Management</h3>
+                    <p class="text-muted">Generate clean short links with custom aliases, automatic QR codes, and custom expiration dates.</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card">
+            <div class="card card-hoverable feature-card card-green h-100">
                 <div class="card-body">
-                    <div class="feature-icon mb-3"><i class="ti ti-chart-bar"></i></div>
-                    <h3 class="card-title">Analytics</h3>
-                    <p class="text-muted">Track total clicks and top-performing links across your account.</p>
+                    <div class="feature-icon-circle bg-green-lt"><i class="ti ti-chart-line"></i></div>
+                    <h3 class="card-title fw-bold fs-3">Click Analytics</h3>
+                    <p class="text-muted">Track total clicks, recent access times, and visitor details as redirects occur.</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card">
+            <div class="card card-hoverable feature-card card-red h-100">
                 <div class="card-body">
-                    <div class="feature-icon mb-3"><i class="ti ti-shield-check"></i></div>
-                    <h3 class="card-title">Secure &amp; rate-limited</h3>
-                    <p class="text-muted">JWT auth, Redis-backed rate limits, and server-side session management.</p>
+                    <div class="feature-icon-circle bg-red-lt"><i class="ti ti-shield-lock"></i></div>
+                    <h3 class="card-title fw-bold fs-3">Security &amp; Control</h3>
+                    <p class="text-muted">Keep redirects fast and secure with active link statuses and secure user dashboards.</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card mb-5">
-        <div class="card-body">
-            <h3 class="card-title">How redirects work</h3>
-            <p class="text-muted">
-                Short links resolve through the API gateway at
-                <code>/r/{shortCode}</code> (e.g. <code>http://localhost:8080/r/abc123</code>).
-                The gateway forwards the request to the backend, which returns an HTTP 302 redirect
-                to the original URL. This web UI does not intercept redirects — it only manages
-                your links via the REST API.
-            </p>
+    <!-- Dashboard Preview Mockup -->
+    <div class="text-center my-6">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="landing-mockup p-4 bg-white border shadow-lg rounded-3">
+                    <!-- Top Window bar -->
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="avatar avatar-xs bg-cyan-lt text-cyan" style="width: 24px; height: 24px; border-radius: 6px;"><i class="ti ti-layout-dashboard fs-4"></i></span>
+                            <span class="fw-bold" style="color: #1e293b; font-size: 0.95rem;">LinkFlow Dashboard Preview</span>
+                        </div>
+                        <div class="d-flex gap-1.5 align-items-center">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background-color: #ef4444; display: inline-block;"></span>
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background-color: #f59e0b; display: inline-block;"></span>
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background-color: #10b981; display: inline-block;"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Inside Mockup Content -->
+                    <div class="row g-4 text-start">
+                        <!-- Left pane: Mock Link list -->
+                        <div class="col-md-8">
+                            <div class="card border-0 bg-transparent mb-0">
+                                <div class="card-header px-0 bg-transparent border-0 d-flex justify-content-between align-items-center mb-2">
+                                    <h4 class="card-title fw-bold text-dark mb-0"><i class="ti ti-list me-1 text-cyan"></i> Active Links</h4>
+                                    <span class="badge bg-cyan-lt text-cyan fw-semibold">Dashboard Preview</span>
+                                </div>
+                                <div class="table-responsive border rounded-3 bg-white">
+                                    <table class="table table-vcenter card-table mb-0" style="font-size: 0.875rem;">
+                                        <thead>
+                                            <tr class="bg-light text-muted fw-bold">
+                                                <th class="py-2 px-3">Short URL</th>
+                                                <th class="py-2 px-3">Destination</th>
+                                                <th class="py-2 px-3">Status</th>
+                                                <th class="py-2 px-3">Activity</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="border-bottom">
+                                                <td class="px-3 py-2.5"><code class="text-cyan fw-semibold bg-cyan-lt px-1.5 py-0.5 rounded">lnkf.co/campaign</code></td>
+                                                <td class="px-3 py-2.5 text-muted text-truncate" style="max-width: 200px;">https://yourwebsite.com/summer-promo</td>
+                                                <td class="px-3 py-2.5"><span class="badge bg-emerald-lt text-emerald border-0">Active</span></td>
+                                                <td class="px-3 py-2.5 text-secondary"><i class="ti ti-activity text-cyan me-1"></i> Tracking</td>
+                                            </tr>
+                                            <tr class="border-bottom">
+                                                <td class="px-3 py-2.5"><code class="text-cyan fw-semibold bg-cyan-lt px-1.5 py-0.5 rounded">lnkf.co/newsletter</code></td>
+                                                <td class="px-3 py-2.5 text-muted text-truncate" style="max-width: 200px;">https://yourwebsite.com/blog/june</td>
+                                                <td class="px-3 py-2.5"><span class="badge bg-emerald-lt text-emerald border-0">Active</span></td>
+                                                <td class="px-3 py-2.5 text-secondary"><i class="ti ti-activity text-cyan me-1"></i> Tracking</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-3 py-2.5"><code class="text-cyan fw-semibold bg-cyan-lt px-1.5 py-0.5 rounded">lnkf.co/docs</code></td>
+                                                <td class="px-3 py-2.5 text-muted text-truncate" style="max-width: 200px;">https://docs.yourwebsite.com/intro</td>
+                                                <td class="px-3 py-2.5"><span class="badge bg-emerald-lt text-emerald border-0">Active</span></td>
+                                                <td class="px-3 py-2.5 text-secondary"><i class="ti ti-activity text-cyan me-1"></i> Tracking</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right pane: Features / stats overview (visual highlights instead of fake absolute counts) -->
+                        <div class="col-md-4 d-flex flex-column justify-content-between">
+                            <div class="card border-0 bg-transparent h-100 mb-0">
+                                <div class="card-header px-0 bg-transparent border-0 mb-2">
+                                    <h4 class="card-title fw-bold text-dark mb-0"><i class="ti ti-device-analytics me-1 text-green"></i> Live Telemetry</h4>
+                                </div>
+                                <div class="card-body p-0 d-flex flex-column gap-3">
+                                    <div class="p-3 border rounded-3 bg-light">
+                                        <div class="text-secondary small fw-bold text-uppercase mb-1" style="letter-spacing: 0.05em;">Link Referrers</div>
+                                        <div class="d-flex align-items-center justify-content-between mt-2">
+                                            <span class="small text-dark fw-semibold"><i class="ti ti-brand-twitter text-cyan me-1"></i> Social Media</span>
+                                            <span class="badge bg-green-lt border-0 text-green fw-bold">Active</span>
+                                        </div>
+                                        <div class="d-flex align-items-center justify-content-between mt-1.5">
+                                            <span class="small text-dark fw-semibold"><i class="ti ti-mail text-cyan me-1"></i> Email Campaigns</span>
+                                            <span class="badge bg-green-lt border-0 text-green fw-bold">Active</span>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 border rounded-3 bg-light">
+                                        <div class="text-secondary small fw-bold text-uppercase mb-1" style="letter-spacing: 0.05em;">Redirection Analytics</div>
+                                        <ul class="list-unstyled mb-0 mt-2 small text-dark d-flex flex-column gap-1.5">
+                                            <li class="d-flex align-items-center gap-1.5">
+                                                <i class="ti ti-circle-check text-green fs-4"></i> IP addresses protected for privacy
+                                            </li>
+                                            <li class="d-flex align-items-center gap-1.5">
+                                                <i class="ti ti-circle-check text-green fs-4"></i> Geographic source mapping
+                                            </li>
+                                            <li class="d-flex align-items-center gap-1.5">
+                                                <i class="ti ti-circle-check text-green fs-4"></i> User-agent analytics tracked
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- How redirects work section -->
+    <div class="card mb-6 overflow-hidden">
+        <div class="row g-0">
+            <div class="col-lg-4 bg-primary-lt p-5 d-flex flex-column justify-content-center" style="background-color: rgba(26, 109, 219, 0.03) !important;">
+                <h3 class="fw-bold fs-2 text-dark mb-3"><i class="ti ti-help-circle text-primary me-2"></i>How it works</h3>
+                <p class="text-muted mb-0">
+                    Get started with LinkFlow and begin monitoring redirect click performance in minutes.
+                </p>
+            </div>
+            <div class="col-lg-8 p-5">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="badge bg-cyan-lt p-2 fs-3" style="width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;">1</span>
+                            <div>
+                                <h4 class="font-weight-bold mb-1 text-dark">Shorten URL</h4>
+                                <p class="text-muted mb-0 small">Register and enter your destination link to receive an instantly shareable short code.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="badge bg-green-lt p-2 fs-3" style="width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;">2</span>
+                            <div>
+                                <h4 class="font-weight-bold mb-1 text-dark">Share QR or Link</h4>
+                                <p class="text-muted mb-0 small">Distribute the shortened link directly or download the generated high-quality QR code.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="badge bg-purple-lt p-2 fs-3" style="width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;">3</span>
+                            <div>
+                                <h4 class="font-weight-bold mb-1 text-dark">Track Insights</h4>
+                                <p class="text-muted mb-0 small">Observe click telemetry details, referrers, and timestamps from your user dashboard.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

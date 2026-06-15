@@ -4,31 +4,31 @@
 <body>
 <th:block th:fragment="adminNav" sec:authorize="hasRole('ADMIN')">
     <li class="nav-item">
-        <a class="nav-link" th:href="@{/admin}" th:classappend="${activeNav == 'admin-dashboard'} ? ' active'">
+        <a class="nav-link nav-link-blue" th:href="@{/admin}" th:classappend="${activeNav == 'admin-dashboard'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-dashboard"></i></span>
             <span class="nav-link-title">Admin Dashboard</span>
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" th:href="@{/admin/users}" th:classappend="${activeNav == 'admin-users'} ? ' active'">
+        <a class="nav-link nav-link-purple" th:href="@{/admin/users}" th:classappend="${activeNav == 'admin-users'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-users"></i></span>
             <span class="nav-link-title">Users</span>
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" th:href="@{/admin/urls}" th:classappend="${activeNav == 'admin-urls'} ? ' active'">
+        <a class="nav-link nav-link-cyan" th:href="@{/admin/urls}" th:classappend="${activeNav == 'admin-urls'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-world"></i></span>
             <span class="nav-link-title">All URLs</span>
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" th:href="@{/admin/analytics}" th:classappend="${activeNav == 'admin-analytics'} ? ' active'">
+        <a class="nav-link nav-link-green" th:href="@{/admin/analytics}" th:classappend="${activeNav == 'admin-analytics'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span>
             <span class="nav-link-title">Analytics</span>
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" th:href="@{/admin/system}" th:classappend="${activeNav == 'admin-system'} ? ' active'">
+        <a class="nav-link nav-link-amber" th:href="@{/admin/system}" th:classappend="${activeNav == 'admin-system'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-server"></i></span>
             <span class="nav-link-title">System</span>
         </a>

@@ -191,11 +191,14 @@ public class RedirectService {
 
     private void validateRedirectable(boolean deleted, boolean active,
                                       java.time.Instant expiresAt, String shortCode) {
-        if (deleted || !active) {
+        if (deleted) {
             throw new UrlDeactivatedException(shortCode);
         }
         if (expiresAt != null && expiresAt.isBefore(java.time.Instant.now())) {
             throw new UrlExpiredException(shortCode);
+        }
+        if (!active) {
+            throw new UrlDeactivatedException(shortCode);
         }
     }
 

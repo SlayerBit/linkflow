@@ -2,48 +2,52 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="alerts">
-    <div class="alert alert-success alert-dismissible" role="alert"
+    <div class="alert alert-success alert-premium alert-dismissible d-flex align-items-center" role="alert"
          th:if="${successMessage}">
+        <i class="ti ti-circle-check fs-2 me-2"></i>
         <div th:text="${successMessage}">Success</div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-    <div class="alert alert-danger alert-dismissible" role="alert"
+    <div class="alert alert-danger alert-premium alert-dismissible d-flex align-items-center" role="alert"
          th:if="${errorMessage}">
+        <i class="ti ti-alert-circle fs-2 me-2"></i>
         <div th:text="${errorMessage}">Error</div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-    <div class="alert alert-warning alert-dismissible" role="alert"
+    <div class="alert alert-warning alert-premium alert-dismissible d-flex align-items-center" role="alert"
          th:if="${param.error != null and param.error[0] == 'access_denied'}">
+        <i class="ti ti-alert-triangle fs-2 me-2"></i>
         <div>You do not have permission to access that page.</div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-    <div class="alert alert-danger alert-dismissible" role="alert"
+    <div class="alert alert-danger alert-premium alert-dismissible d-flex align-items-center" role="alert"
          th:if="${param.error != null and param.error[0] != 'access_denied'}">
+        <i class="ti ti-alert-circle fs-2 me-2"></i>
         <div th:text="${param.error[0]}">Error</div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 </div>
 
-<div th:fragment="pagination(page, baseUrl, sortBy, direction)" class="d-flex justify-content-between align-items-center mt-3">
-    <div class="text-muted">
-        Page <span th:text="${page.page + 1}">1</span> of <span th:text="${page.totalPages}">1</span>
-        (<span th:text="${page.totalElements}">0</span> total)
+<div th:fragment="pagination(page, baseUrl, sortBy, direction)" class="d-flex justify-content-between align-items-center mt-4 p-3 bg-white border rounded" style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02); border-radius: 10px;">
+    <div class="text-secondary small fw-medium">
+        Page <span class="text-dark fw-bold" th:text="${page.page + 1}">1</span> of <span class="text-dark fw-bold" th:text="${page.totalPages}">1</span>
+        (<span class="text-primary fw-bold" th:text="${page.totalElements}">0</span> total entries)
     </div>
     <ul class="pagination m-0" th:if="${page.totalPages > 1}">
         <li class="page-item" th:classappend="${page.page == 0} ? ' disabled'">
             <a class="page-link" th:if="${page.page > 0}"
-               th:href="@{${baseUrl}(page=${page.page - 1}, sortBy=${sortBy}, direction=${direction})}">Previous</a>
-            <span class="page-link" th:if="${page.page == 0}">Previous</span>
+               th:href="@{${baseUrl}(page=${page.page - 1}, sortBy=${sortBy}, direction=${direction})}" style="border-radius: 6px 0 0 6px;">Previous</a>
+            <span class="page-link" th:if="${page.page == 0}" style="border-radius: 6px 0 0 6px;">Previous</span>
         </li>
         <li class="page-item" th:each="p : ${#numbers.sequence(0, page.totalPages - 1)}"
             th:classappend="${p == page.page} ? ' active'">
-            <a class="page-link" th:href="@{${baseUrl}(page=${p}, sortBy=${sortBy}, direction=${direction})}"
+            <a class="page-link font-weight-bold" th:href="@{${baseUrl}(page=${p}, sortBy=${sortBy}, direction=${direction})}"
                th:text="${p + 1}">1</a>
         </li>
         <li class="page-item" th:classappend="${page.page >= page.totalPages - 1} ? ' disabled'">
             <a class="page-link" th:if="${page.page < page.totalPages - 1}"
-               th:href="@{${baseUrl}(page=${page.page + 1}, sortBy=${sortBy}, direction=${direction})}">Next</a>
-            <span class="page-link" th:if="${page.page >= page.totalPages - 1}">Next</span>
+               th:href="@{${baseUrl}(page=${page.page + 1}, sortBy=${sortBy}, direction=${direction})}" style="border-radius: 0 6px 6px 0;">Next</a>
+            <span class="page-link" th:if="${page.page >= page.totalPages - 1}" style="border-radius: 0 6px 6px 0;">Next</span>
         </li>
     </ul>
 </div>

@@ -2,73 +2,122 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>System</title></head>
+<head><title>System Health &amp; Observability — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none"><h2 class="page-title">System Health &amp; Observability</h2></div>
+    <div class="page-header d-print-none mb-4">
+        <h2 class="page-title fw-bold text-dark fs-2">System Health &amp; Observability</h2>
+    </div>
 
-    <div class="row row-deck row-cards mb-4">
-        <div class="col-sm-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="subheader">Overall status</div>
-                    <div class="h2">
-                        <span class="badge" th:classappend="${health.get('status').asText() == 'UP'} ? ' bg-green' : ' bg-red'"
-                              th:text="${health.get('status').asText()}">UP</span>
+    <!-- Health Badges Grid -->
+    <div class="row row-deck row-cards mb-4 g-3">
+        <div class="col-sm-6 col-lg-4">
+            <div class="card stat-card bg-white py-3 px-4" th:classappend="${health.get('status').asText() == 'UP'} ? 'card-emerald' : 'card-red'">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Overall Status</div>
+                        <div class="h2 fw-bold text-dark mb-0">
+                            <span class="badge" th:classappend="${health.get('status').asText() == 'UP'} ? ' bg-green-lt text-green' : ' bg-red-lt text-red'"
+                                  th:text="${health.get('status').asText()}">UP</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-icon ms-auto" th:classappend="${health.get('status').asText() == 'UP'} ? 'bg-emerald-lt' : 'bg-red-lt'">
+                        <i class="ti" th:classappend="${health.get('status').asText() == 'UP'} ? 'ti-heartbeat' : 'ti-heart-broken'"></i>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-lg-3" th:if="${health.has('components') and health.get('components').has('db')}">
-            <div class="card">
-                <div class="card-body">
-                    <div class="subheader">Database</div>
-                    <span class="badge" th:classappend="${health.get('components').get('db').get('status').asText() == 'UP'} ? ' bg-green' : ' bg-red'"
-                          th:text="${health.get('components').get('db').get('status').asText()}">UP</span>
+        <div class="col-sm-6 col-lg-4" th:if="${health.has('components') and health.get('components').has('db')}">
+            <div class="card stat-card bg-white py-3 px-4" th:classappend="${health.get('components').get('db').get('status').asText() == 'UP'} ? 'card-emerald' : 'card-red'">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Postgres Database</div>
+                        <div class="h2 fw-bold text-dark mb-0">
+                            <span class="badge" th:classappend="${health.get('components').get('db').get('status').asText() == 'UP'} ? ' bg-green-lt text-green' : ' bg-red-lt text-red'"
+                                  th:text="${health.get('components').get('db').get('status').asText()}">UP</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-icon ms-auto" th:classappend="${health.get('components').get('db').get('status').asText() == 'UP'} ? 'bg-emerald-lt' : 'bg-red-lt'">
+                        <i class="ti ti-database"></i>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-lg-3" th:if="${health.has('components') and health.get('components').has('redis')}">
-            <div class="card">
-                <div class="card-body">
-                    <div class="subheader">Redis</div>
-                    <span class="badge" th:classappend="${health.get('components').get('redis').get('status').asText() == 'UP'} ? ' bg-green' : ' bg-red'"
-                          th:text="${health.get('components').get('redis').get('status').asText()}">UP</span>
+        <div class="col-sm-6 col-lg-4" th:if="${health.has('components') and health.get('components').has('redis')}">
+            <div class="card stat-card bg-white py-3 px-4" th:classappend="${health.get('components').get('redis').get('status').asText() == 'UP'} ? 'card-emerald' : 'card-red'">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Redis Cache</div>
+                        <div class="h2 fw-bold text-dark mb-0">
+                            <span class="badge" th:classappend="${health.get('components').get('redis').get('status').asText() == 'UP'} ? ' bg-green-lt text-green' : ' bg-red-lt text-red'"
+                                  th:text="${health.get('components').get('redis').get('status').asText()}">UP</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-icon ms-auto" th:classappend="${health.get('components').get('redis').get('status').asText() == 'UP'} ? 'bg-emerald-lt' : 'bg-red-lt'">
+                        <i class="ti ti-bolt"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row row-deck row-cards mb-4">
+    <!-- Observability & Rate limits -->
+    <div class="row row-deck row-cards mb-4 g-4">
         <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header"><h3 class="card-title">Observability links</h3></div>
+            <div class="card bg-white">
+                <div class="card-header">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                        <i class="ti ti-device-desktop-analytics"></i> Observability Links
+                    </h3>
+                </div>
                 <div class="card-body">
                     <ul class="list-unstyled mb-0">
-                        <li class="mb-2"><a th:href="${grafanaUrl}" target="_blank"><i class="ti ti-chart-dots"></i> Grafana</a></li>
-                        <li class="mb-2"><a th:href="${prometheusUrl}" target="_blank"><i class="ti ti-database"></i> Prometheus</a></li>
-                        <li><a th:href="${gatewayUrl + '/actuator/health'}" target="_blank"><i class="ti ti-heartbeat"></i> Gateway health</a></li>
+                        <li class="mb-3 d-flex align-items-center gap-2">
+                            <span class="avatar avatar-xs bg-purple-lt"><i class="ti ti-chart-dots"></i></span>
+                            <a th:href="${grafanaUrl}" target="_blank" class="fw-semibold text-primary text-decoration-none">Grafana Dashboard <i class="ti ti-external-link ms-1 small"></i></a>
+                        </li>
+                        <li class="mb-3 d-flex align-items-center gap-2">
+                            <span class="avatar avatar-xs bg-green-lt"><i class="ti ti-database"></i></span>
+                            <a th:href="${prometheusUrl}" target="_blank" class="fw-semibold text-primary text-decoration-none">Prometheus Console <i class="ti ti-external-link ms-1 small"></i></a>
+                        </li>
+                        <li class="d-flex align-items-center gap-2">
+                            <span class="avatar avatar-xs bg-cyan-lt"><i class="ti ti-heartbeat"></i></span>
+                            <a th:href="${gatewayUrl + '/actuator/health'}" target="_blank" class="fw-semibold text-primary text-decoration-none">Gateway Actuator Health <i class="ti ti-external-link ms-1 small"></i></a>
+                        </li>
                     </ul>
                 </div>
             </div>
         </div>
         <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header"><h3 class="card-title">Rate limit configuration</h3></div>
+            <div class="card bg-white stat-card card-amber">
+                <div class="card-header">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-amber mb-0">
+                        <i class="ti ti-gauge"></i> Rate Limit Configuration
+                    </h3>
+                </div>
                 <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-6">Authenticated users</dt>
-                        <dd class="col-sm-6" th:text="${userRpm} + ' req/min'">100 req/min</dd>
-                        <dt class="col-sm-6">Anonymous IPs</dt>
-                        <dd class="col-sm-6" th:text="${ipRpm} + ' req/min'">200 req/min</dd>
-                    </dl>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                            <span class="text-secondary fw-medium">Authenticated Users Limit</span>
+                            <span class="badge bg-amber-lt text-amber fw-bold fs-3" th:text="${userRpm} + ' RPM'">100 RPM</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-secondary fw-medium">Anonymous Guest IP Limit</span>
+                            <span class="badge bg-amber-lt text-amber fw-bold fs-3" th:text="${ipRpm} + ' RPM'">200 RPM</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header"><h3 class="card-title">Raw health response</h3></div>
+    <!-- Raw details -->
+    <div class="card bg-white">
+        <div class="card-header">
+            <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                <i class="ti ti-braces"></i> Raw Health JSON Payload
+            </h3>
+        </div>
         <div class="card-body">
             <pre class="mb-0 health-pre" th:text="${health.toPrettyString()}">{}</pre>
         </div>

@@ -2,49 +2,70 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>URL Analytics</title></head>
+<head><title>Link Analytics — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none">
-        <div class="page-pretitle"><a th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a></div>
-        <h2 class="page-title">Analytics</h2>
+    <div class="page-header d-print-none mb-4">
+        <div class="page-pretitle text-muted text-uppercase small fw-bold" style="letter-spacing: 0.05em;">
+            <a th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}" class="text-secondary text-decoration-none">code</a>
+        </div>
+        <h2 class="page-title fw-bold text-dark fs-2">Redirect Link Analytics</h2>
     </div>
 
-    <div class="row row-deck row-cards">
+    <!-- Stat cards -->
+    <div class="row row-deck row-cards mb-4 g-3">
         <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <div class="subheader">Total clicks</div>
-                    <div class="h1" th:text="${analytics.totalClicks}">0</div>
+            <div class="card stat-card card-green bg-white py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Total Clickthroughs</div>
+                        <div class="h2 fw-bold text-dark mb-0" th:text="${analytics.totalClicks}">0</div>
+                    </div>
+                    <div class="stat-card-icon bg-green-lt ms-auto">
+                        <i class="ti ti-mouse-click"></i>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <div class="subheader">Last accessed</div>
-                    <div class="h3" th:text="${analytics.lastAccessedAt != null ? #temporals.format(analytics.lastAccessedAt, 'yyyy-MM-dd HH:mm ''UTC''') : 'Never'}">Never</div>
+            <div class="card stat-card card-blue bg-white py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Last Accessed</div>
+                        <div class="h3 fw-semibold text-secondary mb-0" th:text="${analytics.lastAccessedAt != null ? #temporals.format(analytics.lastAccessedAt, 'yyyy-MM-dd HH:mm ''UTC''') : 'Never'}">Never</div>
+                    </div>
+                    <div class="stat-card-icon bg-blue-lt ms-auto">
+                        <i class="ti ti-clock"></i>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <div class="subheader">Short URL</div>
-                    <code class="text-break" th:text="${url.shortUrl}">short</code>
+            <div class="card stat-card card-cyan bg-white py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Short Redirect URL</div>
+                        <code class="text-break px-2 py-1 bg-light text-primary rounded fw-bold" th:text="${url.shortUrl}">short</code>
+                    </div>
+                    <div class="stat-card-icon bg-cyan-lt ms-auto">
+                        <i class="ti ti-link"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card mt-4">
+    <!-- Trend line chart -->
+    <div class="card bg-white">
         <div class="card-header d-flex align-items-center">
-            <h3 class="card-title">Clicks Over Time</h3>
+            <h3 class="card-title fw-bold text-dark section-header-title color-cyan mb-0">
+                <i class="ti ti-chart-line"></i> Click Trends Over Time
+            </h3>
             <div class="ms-auto">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary btn-trend-range" id="btn-trend-7" onclick="renderChart(7)">7D</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary btn-trend-range" id="btn-trend-30" onclick="renderChart(30)">30D</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary btn-trend-range" id="btn-trend-90" onclick="renderChart(90)">90D</button>
+                <div class="btn-group" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <button type="button" class="btn btn-sm btn-light border btn-trend-range" id="btn-trend-7" onclick="renderChart(7)" style="font-weight: 600;">7D</button>
+                    <button type="button" class="btn btn-sm btn-light border btn-trend-range" id="btn-trend-30" onclick="renderChart(30)" style="font-weight: 600;">30D</button>
+                    <button type="button" class="btn btn-sm btn-light border btn-trend-range" id="btn-trend-90" onclick="renderChart(90)" style="font-weight: 600;">90D</button>
                 </div>
             </div>
         </div>
@@ -103,6 +124,10 @@
             }
 
             const ctx = document.getElementById('clickTrendChart').getContext('2d');
+            const lineGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            lineGradient.addColorStop(0, 'rgba(8, 145, 178, 0.15)');
+            lineGradient.addColorStop(1, 'rgba(8, 145, 178, 0)');
+
             currentChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -110,38 +135,56 @@
                     datasets: [{
                         label: 'Clicks',
                         data: dataPoints,
-                        borderColor: '#206bc4',
-                        backgroundColor: 'rgba(32, 107, 196, 0.08)',
+                        borderColor: '#0891b2',
+                        backgroundColor: lineGradient,
                         fill: true,
-                        tension: 0.2,
-                        borderWidth: 2,
-                        pointRadius: days > 30 ? 1 : 3,
-                        pointHoverRadius: 5
+                        tension: 0.3,
+                        borderWidth: 3,
+                        pointRadius: days > 30 ? 1 : 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#0891b2',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleFont: { family: 'Inter', weight: 'bold' },
+                            bodyFont: { family: 'Inter' },
+                            padding: 10,
+                            cornerRadius: 8
+                        }
                     },
                     scales: {
                         x: {
-                            grid: { display: false }
+                            grid: { color: 'rgba(15, 23, 42, 0.04)' },
+                            ticks: { font: { family: 'Inter' }, color: '#64748b' }
                         },
                         y: {
                             beginAtZero: true,
-                            ticks: { precision: 0 }
+                            grid: { color: 'rgba(15, 23, 42, 0.04)' },
+                            ticks: { precision: 0, font: { family: 'Inter' }, color: '#64748b' }
                         }
                     }
                 }
             });
 
             document.querySelectorAll('.btn-trend-range').forEach(btn => {
-                btn.classList.remove('active');
+                btn.classList.remove('btn-primary');
+                btn.classList.remove('text-white');
+                btn.classList.add('btn-light');
             });
             const activeBtn = document.getElementById('btn-trend-' + days);
-            if (activeBtn) activeBtn.classList.add('active');
+            if (activeBtn) {
+                activeBtn.classList.remove('btn-light');
+                activeBtn.classList.add('btn-primary');
+                activeBtn.classList.add('text-white');
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {

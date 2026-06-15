@@ -7,8 +7,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${pageTitle != null ? pageTitle + ' — LinkFlow' : 'LinkFlow'}">LinkFlow</title>
+    <meta name="description" content="LinkFlow is a production-grade URL shortener with real-time analytics, rate-limiting, and admin dashboards.">
     <meta name="_csrf" th:content="${_csrf.token}" th:if="${_csrf}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}" th:if="${_csrf}"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/css/tabler.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.27.0/dist/tabler-icons.min.css">
     <link rel="stylesheet" th:href="@{/css/custom.css}">
@@ -24,16 +28,19 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <h1 class="navbar-brand navbar-brand-autodark">
-                <a th:href="@{/dashboard}">LinkFlow</a>
+                <a th:href="@{/dashboard}" class="d-flex align-items-center text-decoration-none">
+                    <i class="ti ti-link fs-2 text-primary"></i>
+                    <span>LinkFlow</span>
+                </a>
             </h1>
             <div class="collapse navbar-collapse" id="sidebar-menu">
                 <ul class="navbar-nav pt-lg-3">
                     <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-                        <span class="nav-link disabled text-uppercase small">Admin</span>
+                        <span class="nav-link disabled text-uppercase small" style="font-size: 0.65rem; letter-spacing: 0.05em; color: #64748b;">Admin</span>
                     </li>
                     <th:block sec:authorize="hasRole('ADMIN')" th:replace="~{layout/sidebar-admin :: adminNav}"></th:block>
                     <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-                        <span class="nav-link disabled text-uppercase small mt-2">User</span>
+                        <span class="nav-link disabled text-uppercase small mt-2" style="font-size: 0.65rem; letter-spacing: 0.05em; color: #64748b;">User</span>
                     </li>
                     <th:block th:replace="~{layout/sidebar-user :: userNav}"></th:block>
                 </ul>
@@ -42,7 +49,7 @@
     </aside>
 
     <div class="page-wrapper" th:if="${auth != null}">
-        <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none">
+        <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none" style="background-color: #ffffff; border-bottom: 1px solid rgba(15, 23, 42, 0.06);">
             <div class="container-xl">
                 <div class="navbar-nav flex-row order-md-last ms-auto">
                     <div class="nav-item dropdown">
@@ -50,7 +57,7 @@
                            aria-label="Open user menu">
                             <span class="avatar avatar-sm bg-primary-lt"><i class="ti ti-user"></i></span>
                             <div class="d-none d-xl-block ps-2">
-                                <div th:text="${auth.displayName()}">User</div>
+                                <div th:text="${auth.displayName()}" style="font-weight: 600; color: #1e293b;">User</div>
                                 <div class="mt-1 small text-muted" th:text="${auth.email()}">email</div>
                             </div>
                         </a>
@@ -70,22 +77,45 @@
                 <div layout:fragment="content"></div>
             </div>
         </div>
+        <footer class="footer footer-transparent d-print-none py-3 mt-auto" style="border-top: 1px solid rgba(15, 23, 42, 0.06); background-color: #ffffff;">
+            <div class="container-xl">
+                <div class="row text-center align-items-center flex-row-reverse">
+                    <div class="col-lg-auto ms-lg-auto">
+                        <ul class="list-inline list-inline-dots mb-0">
+                            <li class="list-inline-item"><a href="https://github.com/SlayerBit/linkflow" class="link-secondary" target="_blank" rel="noopener">GitHub</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+                        <ul class="list-inline list-inline-dots mb-0">
+                            <li class="list-inline-item">
+                                Copyright &copy; 2026
+                                <a th:href="@{/}" class="link-secondary">LinkFlow</a>.
+                                All rights reserved.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <!-- Public: top navbar only -->
-    <header class="navbar navbar-expand-md navbar-light d-print-none" th:if="${auth == null}">
+    <header class="navbar navbar-expand-md navbar-light d-print-none" th:if="${auth == null}" style="background-color: #ffffff; border-bottom: 1px solid rgba(15, 23, 42, 0.06);">
         <div class="container-xl">
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#public-nav"
                     aria-controls="public-nav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <h1 class="navbar-brand navbar-brand-autodark">
-                <a th:href="@{/}">LinkFlow</a>
+                <a th:href="@{/}" class="d-flex align-items-center text-decoration-none">
+                    <i class="ti ti-link fs-2 text-primary me-2"></i>
+                    <span style="font-weight: 800; color: #1e293b; letter-spacing: -0.03em;">LinkFlow</span>
+                </a>
             </h1>
             <div class="collapse navbar-collapse" id="public-nav">
                 <div class="navbar-nav flex-row order-md-last ms-auto">
-                    <a class="nav-link" th:href="@{/login}">Login</a>
-                    <a class="nav-link" th:href="@{/register}">Register</a>
+                    <a class="nav-link" th:href="@{/login}" style="font-weight: 500; color: #475569;">Login</a>
+                    <a class="nav-link" th:href="@{/register}" style="font-weight: 500; color: #475569;">Register</a>
                 </div>
             </div>
         </div>

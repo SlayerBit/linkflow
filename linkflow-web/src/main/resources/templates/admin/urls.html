@@ -2,36 +2,61 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>All URLs</title></head>
+<head><title>All URLs Management — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none"><h2 class="page-title">All URLs</h2></div>
+    <div class="page-header d-print-none mb-4">
+        <h2 class="page-title fw-bold text-dark fs-2">All URLs Management</h2>
+    </div>
 
-    <div class="card" th:if="${!#lists.isEmpty(urls.content)}">
+    <div class="card bg-white" th:if="${!#lists.isEmpty(urls.content)}">
+        <div class="card-header">
+            <h3 class="card-title fw-bold text-dark section-header-title color-cyan mb-0">
+                <i class="ti ti-world"></i> Platform Shortened Links
+            </h3>
+        </div>
         <div class="table-responsive">
             <table class="table table-vcenter card-table table-hover">
-                <thead><tr><th>Code</th><th>Original</th><th>Status</th><th>Created</th><th></th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Short Code</th>
+                        <th>Original Target URL</th>
+                        <th>Status</th>
+                        <th>Created Date</th>
+                        <th class="w-1">Actions</th>
+                    </tr>
+                </thead>
                 <tbody>
-                <tr th:each="url : ${urls.content}">
-                    <td th:text="${url.shortCode}">code</td>
-                    <td class="text-truncate" style="max-width:240px" th:text="${url.originalUrl}">original</td>
-                    <td><span class="badge" th:classappend="${url.active} ? ' bg-green' : ' bg-red'"
-                              th:text="${url.active} ? 'Active' : 'Inactive'">Active</span></td>
-                    <td th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd')}">date</td>
-                    <td class="text-end">
-                        <form th:if="${url.active}" th:action="@{/admin/urls/{id}/deactivate(id=${url.id})}" method="post" class="d-inline"
-                              onsubmit="return confirm('Deactivate this URL?');">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Deactivate</button>
-                        </form>
-                    </td>
-                </tr>
+                    <tr th:each="url : ${urls.content}">
+                        <td class="fw-bold text-dark" th:text="${url.shortCode}">code</td>
+                        <td class="text-truncate text-secondary" style="max-width:240px" th:text="${url.originalUrl}">original</td>
+                        <td>
+                            <span th:if="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())}" 
+                                  class="badge bg-warning-lt text-warning">Expired</span>
+                            <span th:if="${!(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" 
+                                  class="badge" th:classappend="${url.active} ? ' bg-green-lt text-green' : ' bg-red-lt text-red'"
+                                  th:text="${url.active} ? 'Active' : 'Inactive'">Active</span>
+                        </td>
+                        <td class="text-secondary" th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd')}">date</td>
+                        <td class="text-end">
+                            <form th:if="${url.active}" th:action="@{/admin/urls/{id}/deactivate(id=${url.id})}" method="post" class="d-inline"
+                                  onsubmit="return confirm('Deactivate this URL?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius: 6px;">Deactivate</button>
+                            </form>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <div class="empty empty-state" th:if="${#lists.isEmpty(urls.content)}">
-        <p class="empty-title">No URLs found</p>
+    <div class="card bg-white empty-state" th:if="${#lists.isEmpty(urls.content)}">
+        <div class="empty-state-icon"><i class="ti ti-link-off"></i></div>
+        <div class="empty-state-title">No links created yet</div>
+        <p class="empty-state-description">Shortened links created by users will appear here.</p>
+        <div class="empty-state-actions mt-3">
+            <a th:href="@{/urls/new}" class="btn btn-primary px-3 shadow-sm" style="border-radius: 8px;">Create Link</a>
+        </div>
     </div>
 
     <div th:replace="~{fragments/alerts :: pagination(${urls}, '/admin/urls', ${sortBy}, ${direction})}"></div>

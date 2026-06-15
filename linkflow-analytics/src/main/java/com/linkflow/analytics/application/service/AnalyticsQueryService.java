@@ -95,6 +95,7 @@ public class AnalyticsQueryService {
                 .totalUrls(statsRepository.countTotalUrls())
                 .totalClicks(statsRepository.countTotalClicks())
                 .activeUrls(statsRepository.countActiveUrls())
+                .inactiveUrls(statsRepository.countInactiveUrls())
                 .expiredUrls(statsRepository.countExpiredUrls())
                 .deletedUrls(statsRepository.countDeletedUrls())
                 .build();

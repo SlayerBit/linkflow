@@ -2,101 +2,205 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>Admin Dashboard</title></head>
+<head><title>Admin Dashboard — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none"><h2 class="page-title">Admin Dashboard</h2></div>
+    <div class="page-header d-print-none mb-4">
+        <h2 class="page-title fw-bold text-dark fs-2">Admin Dashboard</h2>
+    </div>
 
-    <div class="row row-deck row-cards mb-4">
-        <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card"><div class="card-body">
-                <div class="subheader">Total users</div><div class="h1" th:text="${stats.totalUsers}">0</div>
-            </div></div>
+    <!-- Metric Grid -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-md-4">
+            <div class="card stat-card card-purple bg-white py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Total Users</div>
+                        <div class="h2 fw-bold text-dark mb-0" th:text="${stats.totalUsers}">0</div>
+                    </div>
+                    <div class="stat-card-icon bg-purple-lt ms-auto">
+                        <i class="ti ti-users"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card"><div class="card-body">
-                <div class="subheader">Total URLs</div><div class="h1" th:text="${stats.totalUrls}">0</div>
-            </div></div>
+        <div class="col-sm-6 col-md-4">
+            <div class="card stat-card card-cyan bg-white py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Total URLs</div>
+                        <div class="h2 fw-bold text-dark mb-0" th:text="${stats.totalUrls}">0</div>
+                    </div>
+                    <div class="stat-card-icon bg-cyan-lt ms-auto">
+                        <i class="ti ti-link"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card"><div class="card-body">
-                <div class="subheader">Total clicks</div><div class="h1" th:text="${stats.totalClicks}">0</div>
-            </div></div>
+        <div class="col-sm-6 col-md-4">
+            <div class="card stat-card card-green bg-white py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Total Redirect Clicks</div>
+                        <div class="h2 fw-bold text-dark mb-0" th:text="${stats.totalClicks}">0</div>
+                    </div>
+                    <div class="stat-card-icon bg-green-lt ms-auto">
+                        <i class="ti ti-chart-line"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card"><div class="card-body">
-                <div class="subheader">Active URLs</div><div class="h1" th:text="${stats.activeUrls}">0</div>
-            </div></div>
+        <div class="col-sm-6 col-md-4">
+            <div class="card stat-card card-emerald bg-white py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Active URLs</div>
+                        <div class="h2 fw-bold text-dark mb-0" th:text="${stats.activeUrls}">0</div>
+                    </div>
+                    <div class="stat-card-icon bg-emerald-lt ms-auto">
+                        <i class="ti ti-circle-check"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card"><div class="card-body">
-                <div class="subheader">Expired URLs</div><div class="h1" th:text="${stats.expiredUrls}">0</div>
-            </div></div>
+        <div class="col-sm-6 col-md-4">
+            <div class="card stat-card card-amber bg-white py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Expired URLs</div>
+                        <div class="h2 fw-bold text-dark mb-0" th:text="${stats.expiredUrls}">0</div>
+                    </div>
+                    <div class="stat-card-icon bg-amber-lt ms-auto">
+                        <i class="ti ti-clock"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card"><div class="card-body">
-                <div class="subheader">Deleted URLs</div><div class="h1" th:text="${stats.deletedUrls}">0</div>
-            </div></div>
+        <div class="col-sm-6 col-md-4">
+            <div class="card stat-card card-red bg-white py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Deleted URLs</div>
+                        <div class="h2 fw-bold text-dark mb-0" th:text="${stats.deletedUrls}">0</div>
+                    </div>
+                    <div class="stat-card-icon bg-red-lt ms-auto">
+                        <i class="ti ti-trash"></i>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header"><h3 class="card-title">Top URLs (system-wide)</h3></div>
-        <div class="card-body">
+    <!-- Chart -->
+    <div class="card bg-white mb-4">
+        <div class="card-header">
+            <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                <i class="ti ti-chart-bar"></i> Top Links
+            </h3>
+        </div>
+        <div class="card-body d-flex flex-column justify-content-center">
             <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}">
                 <canvas id="adminTopChart"></canvas>
             </div>
-            <p class="text-muted mb-0" th:if="${#lists.isEmpty(topUrls)}">No data yet.</p>
+            <div class="empty-state" th:if="${#lists.isEmpty(topUrls)}">
+                <div class="empty-state-icon"><i class="ti ti-chart-pie"></i></div>
+                <div class="empty-state-title">No click metrics</div>
+                <p class="empty-state-description">System redirects will appear here once links gain traffic.</p>
+            </div>
         </div>
     </div>
 
-    <div class="card mt-4">
+    <!-- Recent Activity -->
+    <div class="card bg-white">
         <div class="card-header">
-            <h3 class="card-title">Platform Recent Activity Feed</h3>
+            <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
+                <i class="ti ti-activity"></i> Recent Activity
+            </h3>
         </div>
         <div class="card-body p-0" th:if="${!#lists.isEmpty(recentClicks)}">
             <div class="table-responsive">
                 <table class="table table-vcenter card-table table-hover">
                     <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Code</th>
-                        <th>IP Address (Unmasked)</th>
-                        <th>Referrer</th>
-                        <th>User Agent</th>
-                    </tr>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Code</th>
+                            <th>IP Address (Unmasked)</th>
+                            <th>Referrer</th>
+                            <th>User Agent</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="click : ${recentClicks}">
-                        <td th:text="${click.clickedAt != null ? #temporals.format(click.clickedAt, 'yyyy-MM-dd HH:mm ''UTC''') : ''}">Time</td>
-                        <td th:text="${click.shortCode}">code</td>
-                        <td><code th:text="${click.ipAddress}">IP</code></td>
-                        <td class="text-truncate" style="max-width: 200px;" th:text="${click.referer != null && !click.referer.isEmpty() ? click.referer : 'Direct'}">Referrer</td>
-                        <td class="text-truncate" style="max-width: 250px;" th:text="${click.userAgent}">User Agent</td>
-                    </tr>
+                        <tr th:each="click : ${recentClicks}">
+                            <td class="text-secondary" th:text="${click.clickedAt != null ? #temporals.format(click.clickedAt, 'yyyy-MM-dd HH:mm ''UTC''') : ''}">Time</td>
+                            <td class="fw-bold text-dark" th:text="${click.shortCode}">code</td>
+                            <td><code class="px-2 py-1 bg-light text-dark rounded" th:text="${click.ipAddress}">IP</code></td>
+                            <td class="text-truncate text-secondary" style="max-width: 200px;" th:text="${click.referer != null && !click.referer.isEmpty() ? click.referer : 'Direct'}">Referrer</td>
+                            <td class="text-truncate text-secondary" style="max-width: 250px;" th:text="${click.userAgent}">User Agent</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-        <div class="empty empty-state" th:if="${#lists.isEmpty(recentClicks)}">
-            <div class="empty-icon"><i class="ti ti-activity"></i></div>
-            <p class="empty-title">No system-wide clicks recorded yet</p>
+        <div class="empty-state" th:if="${#lists.isEmpty(recentClicks)}">
+            <div class="empty-state-icon"><i class="ti ti-activity"></i></div>
+            <div class="empty-state-title">No click activities yet</div>
+            <p class="empty-state-description">Global click redirects will log here in real-time.</p>
         </div>
     </div>
 </div>
 
 <th:block layout:fragment="scripts">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script th:if="${!#lists.isEmpty(topUrls)}">
-        const topUrls = /*[[${topUrlsJson}]]*/ [];
-        new Chart(document.getElementById('adminTopChart'), {
+    <script th:inline="javascript" th:if="${!#lists.isEmpty(topUrls)}">
+        /*<![CDATA[*/
+        const topUrls = /*[[${topUrls}]]*/ [];
+        const labels = topUrls.map(u => u.shortCode);
+        const data = topUrls.map(u => u.totalClicks);
+        
+        const ctx = document.getElementById('adminTopChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 400, 0);
+        gradient.addColorStop(0, '#1a6ddb');
+        gradient.addColorStop(1, '#7c3aed');
+
+        new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: topUrls.map(u => u.shortCode),
-                datasets: [{ label: 'Clicks', data: topUrls.map(u => u.totalClicks), backgroundColor: '#206bc4' }]
+                labels,
+                datasets: [{ 
+                    label: 'Clicks', 
+                    data, 
+                    backgroundColor: gradient,
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
             },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            options: { 
+                indexAxis: 'y', 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: { family: 'Inter', weight: 'bold' },
+                        bodyFont: { family: 'Inter' },
+                        padding: 10,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(15, 23, 42, 0.04)' },
+                        ticks: { font: { family: 'Inter' }, color: '#64748b' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', weight: '500' }, color: '#475569' }
+                    }
+                }
+            }
         });
+        /*]]>*/
     </script>
 </th:block>
 </body>
