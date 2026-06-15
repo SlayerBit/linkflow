@@ -10,6 +10,7 @@ COPY linkflow-analytics/pom.xml linkflow-analytics/
 COPY linkflow-observability/pom.xml linkflow-observability/
 COPY linkflow-app/pom.xml linkflow-app/
 COPY linkflow-gateway/pom.xml linkflow-gateway/
+COPY linkflow-web/pom.xml linkflow-web/
 RUN apk add --no-cache maven
 RUN mvn -B -pl linkflow-app -am dependency:go-offline -DskipTests
 

@@ -67,9 +67,6 @@ services:
       LINKFLOW_GATEWAY_URL: http://linkflow-gateway:8080
       LINKFLOW_PROMETHEUS_URL: http://linkflow-app:8081/actuator/prometheus
       SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
-    depends_on:
-      linkflow-gateway:
-        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health | grep -q UP"]
       interval: 10s
