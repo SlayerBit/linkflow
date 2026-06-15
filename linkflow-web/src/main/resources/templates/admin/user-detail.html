@@ -5,30 +5,35 @@
 <head><title>User Details</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none">
-        <div class="page-pretitle"><a th:href="@{/admin/users}">Users</a></div>
-        <h2 class="page-title" th:text="${user.email}">user</h2>
+    <div class="page-header d-print-none mb-4">
+        <div class="mb-1">
+            <a th:href="@{/admin/users}" class="text-secondary small text-decoration-none">
+                <i class="ti ti-arrow-left me-1"></i> Back to Users
+            </a>
+        </div>
+        <h2 class="page-title fw-bold text-dark fs-2" th:text="${user.email}">user</h2>
     </div>
 
-    <div class="card">
+    <div class="card bg-white">
+        <div class="card-header">
+            <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
+                <i class="ti ti-user"></i> User Profile
+            </h3>
+        </div>
         <div class="card-body">
-            <dl class="row">
-                <dt class="col-sm-3">ID</dt><dd class="col-sm-9"><code th:text="${user.id}">id</code></dd>
-                <dt class="col-sm-3">Email</dt><dd class="col-sm-9" th:text="${user.email}">email</dd>
-                <dt class="col-sm-3">First name</dt><dd class="col-sm-9" th:text="${user.firstName}">first</dd>
-                <dt class="col-sm-3">Last name</dt><dd class="col-sm-9" th:text="${user.lastName != null ? user.lastName : '—'}">last</dd>
-                <dt class="col-sm-3">Roles</dt>
+            <dl class="row mb-0 gy-3">
+                <dt class="col-sm-3 text-secondary fw-semibold">ID</dt><dd class="col-sm-9"><code class="px-2 py-1 bg-light text-dark rounded" th:text="${user.id}">id</code></dd>
+                <dt class="col-sm-3 text-secondary fw-semibold">Email</dt><dd class="col-sm-9 text-dark" th:text="${user.email}">email</dd>
+                <dt class="col-sm-3 text-secondary fw-semibold">First name</dt><dd class="col-sm-9 text-dark" th:text="${user.firstName}">first</dd>
+                <dt class="col-sm-3 text-secondary fw-semibold">Last name</dt><dd class="col-sm-9 text-dark" th:text="${user.lastName != null ? user.lastName : '—'}">last</dd>
+                <dt class="col-sm-3 text-secondary fw-semibold">Roles</dt>
                 <dd class="col-sm-9">
-                    <span th:each="role : ${user.roles}" class="badge bg-blue-lt me-1" th:text="${role}">USER</span>
+                    <span th:each="role : ${user.roles}" class="badge bg-purple-lt text-purple me-1 fw-bold" th:text="${role}">USER</span>
                 </dd>
-                <dt class="col-sm-3">Created</dt><dd class="col-sm-9" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd HH:mm ''UTC''')}">date</dd>
-                <dt class="col-sm-3">Updated</dt><dd class="col-sm-9" th:text="${#temporals.format(user.updatedAt, 'yyyy-MM-dd HH:mm ''UTC''')}">date</dd>
+                <dt class="col-sm-3 text-secondary fw-semibold">Created</dt><dd class="col-sm-9 text-dark" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd HH:mm ''UTC''')}">date</dd>
+                <dt class="col-sm-3 text-secondary fw-semibold">Updated</dt><dd class="col-sm-9 text-dark" th:text="${#temporals.format(user.updatedAt, 'yyyy-MM-dd HH:mm ''UTC''')}">date</dd>
             </dl>
         </div>
-    </div>
-
-    <div class="alert alert-info mt-3">
-        Per-user URL listing is not available — the backend only exposes user profile data for admin user detail.
     </div>
 </div>
 </body>

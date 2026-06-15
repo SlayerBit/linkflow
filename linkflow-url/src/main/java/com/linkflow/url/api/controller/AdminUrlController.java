@@ -54,4 +54,11 @@ public class AdminUrlController {
         UrlResponse response = urlService.adminDeactivateUrl(id);
         return ResponseEntity.ok(ApiResponse.of(response));
     }
+
+    @PatchMapping("/{id}/reactivate")
+    @Operation(summary = "Reactivate short URL (admin)")
+    public ResponseEntity<ApiResponse<UrlResponse>> reactivateUrl(@PathVariable UUID id) {
+        UrlResponse response = urlService.adminReactivateUrl(id);
+        return ResponseEntity.ok(ApiResponse.of(response));
+    }
 }

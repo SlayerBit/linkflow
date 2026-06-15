@@ -74,15 +74,15 @@
                     <ul class="list-unstyled mb-0">
                         <li class="mb-3 d-flex align-items-center gap-2">
                             <span class="avatar avatar-xs bg-purple-lt"><i class="ti ti-chart-dots"></i></span>
-                            <a th:href="${grafanaUrl}" target="_blank" class="fw-semibold text-primary text-decoration-none">Grafana Dashboard <i class="ti ti-external-link ms-1 small"></i></a>
+                            <a id="link-grafana" th:href="${grafanaUrl}" target="_blank" class="fw-semibold text-primary text-decoration-none">Grafana Dashboard <i class="ti ti-external-link ms-1 small"></i></a>
                         </li>
                         <li class="mb-3 d-flex align-items-center gap-2">
                             <span class="avatar avatar-xs bg-green-lt"><i class="ti ti-database"></i></span>
-                            <a th:href="${prometheusUrl}" target="_blank" class="fw-semibold text-primary text-decoration-none">Prometheus Console <i class="ti ti-external-link ms-1 small"></i></a>
+                            <a id="link-prometheus" th:href="${prometheusUrl}" target="_blank" class="fw-semibold text-primary text-decoration-none">Prometheus Console <i class="ti ti-external-link ms-1 small"></i></a>
                         </li>
                         <li class="d-flex align-items-center gap-2">
                             <span class="avatar avatar-xs bg-cyan-lt"><i class="ti ti-heartbeat"></i></span>
-                            <a th:href="${gatewayUrl + '/actuator/health'}" target="_blank" class="fw-semibold text-primary text-decoration-none">Gateway Actuator Health <i class="ti ti-external-link ms-1 small"></i></a>
+                            <a id="link-gateway" th:href="${gatewayUrl + '/actuator/health'}" target="_blank" class="fw-semibold text-primary text-decoration-none">Gateway Actuator Health <i class="ti ti-external-link ms-1 small"></i></a>
                         </li>
                     </ul>
                 </div>
@@ -123,5 +123,31 @@
         </div>
     </div>
 </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const checkLink = (linkId, url) => {
+                const el = document.getElementById(linkId);
+                if (!el) return;
+                
+                fetch(url, { mode: 'no-cors', method: 'HEAD' })
+                    .catch(() => {
+                        // Connection refused or network error -> unavailable
+                        el.innerHTML = '<span class="text-muted"><i class="ti ti-alert-circle text-warning"></i> Service unavailable in this environment</span>';
+                        el.removeAttribute('href');
+                        el.removeAttribute('target');
+                        el.classList.remove('text-primary');
+                    });
+            };
+            
+            checkLink('link-grafana', document.getElementById('link-grafana')?.href);
+            checkLink('link-prometheus', document.getElementById('link-prometheus')?.href);
+            checkLink('link-gateway', document.getElementById('link-gateway')?.href);
+        });
+    </script>
+</th:block>
+
 </body>
 </html>

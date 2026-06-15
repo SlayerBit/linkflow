@@ -16,6 +16,12 @@
                 <h2 class="page-title fw-bold text-dark fs-2" th:text="${url.shortCode}">code</h2>
             </div>
             <div class="col-auto d-flex align-items-center gap-2">
+                <form th:if="${!url.active && !(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" th:action="@{/urls/{id}/reactivate(id=${url.id})}" method="post" class="d-inline mb-0"
+                      onsubmit="return confirm('Reactivate this URL?');">
+                    <button type="submit" class="btn btn-outline-success px-3" style="border-radius: 8px; font-weight: 600;">
+                        <i class="ti ti-check me-1"></i> Reactivate
+                    </button>
+                </form>
                 <a th:href="@{/urls/{id}/edit(id=${url.id})}" class="btn btn-outline-primary px-3" style="border-radius: 8px; font-weight: 600;">
                     <i class="ti ti-edit me-1"></i> Edit Link
                 </a>

@@ -52,6 +52,10 @@
                         <td class="text-secondary" th:text="${url.expiresAt != null ? #temporals.format(url.expiresAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
                         <td class="text-secondary" th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd')}">date</td>
                         <td class="text-end table-actions">
+                            <form th:if="${!url.active && !(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" th:action="@{/urls/{id}/reactivate(id=${url.id})}" method="post" class="d-inline"
+                                  onsubmit="return confirm('Reactivate this URL?');">
+                                <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius: 6px;">Reactivate</button>
+                            </form>
                             <a th:href="@{/urls/{id}(id=${url.id})}" class="btn btn-sm btn-light" style="border-radius: 6px;">View</a>
                             <a th:href="@{/urls/{id}/analytics(id=${url.id})}" class="btn btn-sm btn-outline-primary" style="border-radius: 6px;">Analytics</a>
                         </td>

@@ -5,28 +5,37 @@
 <head><title>Edit URL</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none">
-        <div class="page-pretitle"><a th:href="@{/urls}">My URLs</a></div>
-        <h2 class="page-title">Edit — <span th:text="${url.shortCode}">code</span></h2>
+    <div class="page-header d-print-none mb-4">
+        <div class="mb-1">
+            <a th:href="@{/urls/{id}(id=${url.id})}" class="text-secondary small text-decoration-none">
+                <i class="ti ti-arrow-left me-1"></i> Back to Details
+            </a>
+        </div>
+        <h2 class="page-title fw-bold text-dark fs-2">Edit — <span th:text="${url.shortCode}">code</span></h2>
     </div>
     <div class="row">
         <div class="col-lg-8">
-            <div class="card">
+            <div class="card bg-white">
+                <div class="card-header">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
+                        <i class="ti ti-edit"></i> Edit Link Options
+                    </h3>
+                </div>
                 <div class="card-body">
                     <form th:action="@{/urls/{id}/edit(id=${url.id})}" th:object="${updateUrlForm}" method="post">
                         <div class="mb-3">
-                            <label class="form-label">Expires at (UTC)</label>
-                            <input type="datetime-local" class="form-control" th:field="*{expiresAt}">
-                            <div class="form-hint">Leave blank to keep current expiry unchanged.</div>
+                            <label class="form-label fw-semibold text-secondary">Expires At (UTC)</label>
+                            <input type="datetime-local" class="form-control" th:field="*{expiresAt}" style="border-radius: 8px;">
+                            <div class="form-hint text-muted mt-1">Leave blank to keep current expiry unchanged.</div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-check form-switch">
+                        <div class="mb-4">
+                            <label class="form-check form-switch mb-0">
                                 <input class="form-check-input" type="checkbox" th:field="*{active}">
-                                <span class="form-check-label">Active</span>
+                                <span class="form-check-label fw-semibold text-secondary">Active Status</span>
                             </label>
                         </div>
-                        <button type="submit" class="btn btn-primary">Save changes</button>
-                        <a th:href="@{/urls/{id}(id=${url.id})}" class="btn btn-link">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-3" style="border-radius: 8px; font-weight: 600;">Save Changes</button>
+                        <a th:href="@{/urls/{id}(id=${url.id})}" class="btn btn-link text-secondary text-decoration-none ms-2">Cancel</a>
                     </form>
                 </div>
             </div>

@@ -161,6 +161,33 @@ public class UrlService {
     }
 
     @Transactional
+    public UrlResponse adminReactivateUrl(UUID id) {
+        ShortUrl shortUrl = shortUrlRepository.findByIdAndNotDeleted(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Short URL", id.toString()));
+        if (shortUrl.isExpired()) {
+            throw new InvalidUrlException("Cannot reactivate an expired URL");
+        }
+        shortUrl.setActive(true);
+        shortUrl = shortUrlRepository.save(shortUrl);
+        invalidateCaches(shortUrl.getShortCode());
+        log.info("Short URL reactivated by admin: id={}", id);
+        return toResponse(shortUrl);
+    }
+
+    @Transactional
+    public UrlResponse reactivateUrl(UUID id) {
+        ShortUrl shortUrl = findOwnedUrl(id);
+        if (shortUrl.isExpired()) {
+            throw new InvalidUrlException("Cannot reactivate an expired URL");
+        }
+        shortUrl.setActive(true);
+        shortUrl = shortUrlRepository.save(shortUrl);
+        invalidateCaches(shortUrl.getShortCode());
+        log.info("Short URL reactivated: id={}", id);
+        return toResponse(shortUrl);
+    }
+
+    @Transactional
     public int deactivateExpiredUrls() {
         List<ShortUrl> expired = shortUrlRepository.findExpiredActive(Instant.now());
         for (ShortUrl shortUrl : expired) {

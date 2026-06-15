@@ -109,4 +109,20 @@ public class UrlApiClient {
         );
         return response.data();
     }
+
+    public UrlResponse adminReactivate(String accessToken, UUID id) {
+        var response = backendClient.exchangeForBody(
+                backendClient.patch("/api/v1/admin/urls/" + id + "/reactivate", accessToken).body(Map.of()),
+                new ParameterizedTypeReference<ApiResponse<UrlResponse>>() {}
+        );
+        return response.data();
+    }
+
+    public UrlResponse reactivate(String accessToken, UUID id) {
+        var response = backendClient.exchangeForBody(
+                backendClient.patch("/api/v1/urls/" + id + "/reactivate", accessToken).body(Map.of()),
+                new ParameterizedTypeReference<ApiResponse<UrlResponse>>() {}
+        );
+        return response.data();
+    }
 }

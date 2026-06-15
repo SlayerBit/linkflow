@@ -152,6 +152,17 @@ public class UrlController {
         return "redirect:/urls";
     }
 
+    @PostMapping("/{id}/reactivate")
+    public String reactivate(@PathVariable UUID id,
+                             HttpSession session,
+                             RedirectAttributes redirectAttributes) {
+        apiCallHelper.withTokenRefresh(session, auth ->
+                urlApiClient.reactivate(auth.accessToken(), id)
+        );
+        redirectAttributes.addFlashAttribute("successMessage", "URL reactivated successfully.");
+        return "redirect:/urls/" + id;
+    }
+
     @GetMapping("/{id}/analytics")
     public String analytics(@PathVariable UUID id, HttpSession session, Model model) throws JsonProcessingException {
         UrlResponse url = apiCallHelper.withTokenRefresh(session, auth ->

@@ -10,44 +10,78 @@
     </div>
     
     <div class="row g-4">
-        <div class="col-lg-8">
+        <!-- Sidebar Column: Summary & Stats -->
+        <div class="col-lg-4">
+            <!-- Profile Summary Card -->
             <div class="card mb-4 bg-white stat-card card-purple">
-                <div class="card-body d-flex align-items-center gap-4">
-                    <span class="avatar avatar-xl bg-purple-lt rounded-circle"><i class="ti ti-user fs-1"></i></span>
-                    <div class="flex-grow-1">
-                        <div class="h2 fw-bold text-dark mb-1" th:text="${user.firstName + ' ' + (user.lastName != null ? user.lastName : '')}">John Doe</div>
-                        <div class="text-secondary mb-2" th:text="${user.email}">email</div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted small">Access Level:</span>
-                            <span th:each="role : ${user.roles}" class="badge bg-purple-lt text-purple fw-bold" th:text="${role}">USER</span>
-                        </div>
+                <div class="card-body text-center py-4 px-3">
+                    <span class="avatar avatar-xl bg-purple-lt rounded-circle mb-3" style="width: 5rem; height: 5rem; font-size: 2.25rem;">
+                        <i class="ti ti-user"></i>
+                    </span>
+                    <h3 class="fw-bold text-dark mb-1" th:text="${user.firstName + ' ' + (user.lastName != null ? user.lastName : '')}">John Doe</h3>
+                    <div class="text-secondary small mb-3" th:text="${user.email}">email</div>
+                    
+                    <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                        <span th:each="role : ${user.roles}" 
+                              class="badge bg-purple-lt text-purple fw-bold px-2.5 py-1"
+                              th:text="${role == 'ROLE_ADMIN' || role == 'ADMIN' ? 'Administrator' : (role == 'ROLE_USER' || role == 'USER' ? 'User' : role)}">USER</span>
                     </div>
-                </div>
-                <div class="card-footer bg-light py-2 px-4 border-top" style="font-size: 0.8rem; color: #64748b;">
-                    <i class="ti ti-calendar me-1"></i> Member since <span class="fw-semibold" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">date</span>
+                    
+                    <div class="text-muted small border-top pt-3 mt-3">
+                        <i class="ti ti-calendar me-1"></i> Member since <span class="fw-semibold" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">date</span>
+                    </div>
                 </div>
             </div>
             
+            <!-- Statistics Card -->
+            <div class="card bg-white mb-4">
+                <div class="card-header py-3">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                        <i class="ti ti-chart-bar"></i> Account Stats
+                    </h3>
+                </div>
+                <div class="card-body py-3">
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                            <span class="text-secondary fw-semibold">Total URLs</span>
+                            <span class="badge bg-blue-lt text-blue fw-bold fs-4" th:text="${totalUrls}">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                            <span class="text-secondary fw-semibold">Active URLs</span>
+                            <span class="badge bg-green-lt text-green fw-bold fs-4" th:text="${activeUrls}">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-secondary fw-semibold">Total Clicks</span>
+                            <span class="badge bg-purple-lt text-purple fw-bold fs-4" th:text="${totalClicks}">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Form Column -->
+        <div class="col-lg-8">
             <div class="card bg-white">
-                <div class="card-header">
+                <div class="card-header py-3">
                     <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
-                        <i class="ti ti-settings"></i> Update Profile Details
+                        <i class="ti ti-settings"></i> Edit Profile Details
                     </h3>
                 </div>
                 <div class="card-body">
                     <form th:action="@{/profile}" th:object="${updateProfileForm}" method="post">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label" style="font-weight: 500;">First name</label>
-                                <input type="text" class="form-control" th:field="*{firstName}" required style="border-radius: 8px; padding: 0.6rem 0.8rem;">
+                                <label class="form-label fw-semibold text-secondary mb-2">First Name</label>
+                                <input type="text" class="form-control" th:field="*{firstName}" required placeholder="First name" style="border-radius: 8px;">
                                 <div class="text-danger small mt-1" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label" style="font-weight: 500;">Last name</label>
-                                <input type="text" class="form-control" th:field="*{lastName}" style="border-radius: 8px; padding: 0.6rem 0.8rem;">
+                                <label class="form-label fw-semibold text-secondary mb-2">Last Name</label>
+                                <input type="text" class="form-control" th:field="*{lastName}" placeholder="Last name" style="border-radius: 8px;">
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}"></div>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary px-4 py-2 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Save Changes</button>
+                        <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Save Changes</button>
                     </form>
                 </div>
             </div>

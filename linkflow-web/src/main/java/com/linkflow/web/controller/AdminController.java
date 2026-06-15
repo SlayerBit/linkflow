@@ -123,6 +123,17 @@ public class AdminController {
         return "redirect:/admin/urls";
     }
 
+    @PostMapping("/urls/{id}/reactivate")
+    public String reactivateUrl(@PathVariable UUID id,
+                                HttpSession session,
+                                RedirectAttributes redirectAttributes) {
+        apiCallHelper.withTokenRefresh(session, auth ->
+                urlApiClient.adminReactivate(auth.accessToken(), id)
+        );
+        redirectAttributes.addFlashAttribute("successMessage", "URL reactivated.");
+        return "redirect:/admin/urls";
+    }
+
     @GetMapping("/analytics")
     public String analytics(HttpSession session, Model model) throws JsonProcessingException {
         SystemStatsResponse stats = apiCallHelper.withTokenRefresh(session, auth ->
@@ -160,7 +171,7 @@ public class AdminController {
         model.addAttribute("health", health);
         model.addAttribute("grafanaUrl", webClientConfig.getGrafanaUrl());
         model.addAttribute("prometheusUrl", webClientConfig.getPrometheusUrl());
-        model.addAttribute("gatewayUrl", webClientConfig.getGatewayUrl());
+        model.addAttribute("gatewayUrl", webClientConfig.getPublicGatewayUrl());
         model.addAttribute("userRpm", webClientConfig.getRateLimit().getUserRpm());
         model.addAttribute("ipRpm", webClientConfig.getRateLimit().getIpRpm());
         model.addAttribute("pageTitle", "System Health");

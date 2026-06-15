@@ -90,6 +90,13 @@ public class UrlController {
         return ResponseEntity.ok(ApiResponse.empty());
     }
 
+    @PatchMapping("/{id}/reactivate")
+    @Operation(summary = "Reactivate short URL")
+    public ResponseEntity<ApiResponse<UrlResponse>> reactivateUrl(@PathVariable UUID id) {
+        UrlResponse response = urlService.reactivateUrl(id);
+        return ResponseEntity.ok(ApiResponse.of(response));
+    }
+
     @GetMapping(value = "/{id}/qr", produces = MediaType.IMAGE_PNG_VALUE)
     @Operation(summary = "Get QR code for short URL")
     public ResponseEntity<byte[]> getQrCode(@PathVariable UUID id) {

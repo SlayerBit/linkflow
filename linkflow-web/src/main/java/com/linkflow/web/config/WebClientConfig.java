@@ -14,8 +14,9 @@ import org.springframework.web.client.RestClient;
 public class WebClientConfig {
 
     private String gatewayUrl = "http://127.0.0.1:8080";
+    private String publicGatewayUrl = "http://localhost:8080";
     private String grafanaUrl = "http://localhost:3000";
-    private String prometheusUrl = "http://localhost:8080/actuator/prometheus";
+    private String prometheusUrl = "http://localhost:9090";
     private RateLimit rateLimit = new RateLimit();
 
     @Getter
