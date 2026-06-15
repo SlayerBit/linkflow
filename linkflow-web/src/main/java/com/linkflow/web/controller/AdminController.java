@@ -8,6 +8,7 @@ import com.linkflow.web.client.ApiCallHelper;
 import com.linkflow.web.client.UrlApiClient;
 import com.linkflow.web.client.UserApiClient;
 import com.linkflow.web.config.WebClientConfig;
+import com.linkflow.web.dto.analytics.ClickTrendResponse;
 import com.linkflow.web.dto.analytics.SystemStatsResponse;
 import com.linkflow.web.dto.analytics.TopUrlResponse;
 import com.linkflow.web.dto.common.PagedResponse;
@@ -48,9 +49,13 @@ public class AdminController {
         List<TopUrlResponse> topUrls = apiCallHelper.withTokenRefresh(session, auth ->
                 analyticsApiClient.getAdminTopUrls(auth.accessToken(), 10)
         );
+        List<com.linkflow.web.dto.analytics.ClickEventResponse> recentClicks = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getSystemRecentClicks(auth.accessToken(), 10)
+        );
         model.addAttribute("stats", stats);
         model.addAttribute("topUrls", topUrls);
         model.addAttribute("topUrlsJson", objectMapper.writeValueAsString(topUrls));
+        model.addAttribute("recentClicks", recentClicks);
         model.addAttribute("pageTitle", "Admin Dashboard");
         model.addAttribute("activeNav", "admin-dashboard");
         model.addAttribute("adminSection", true);
@@ -126,10 +131,23 @@ public class AdminController {
         List<TopUrlResponse> topUrls = apiCallHelper.withTokenRefresh(session, auth ->
                 analyticsApiClient.getAdminTopUrls(auth.accessToken(), 10)
         );
+        List<ClickTrendResponse> trend7d = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getSystemClickTrend(auth.accessToken(), 7)
+        );
+        List<ClickTrendResponse> trend30d = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getSystemClickTrend(auth.accessToken(), 30)
+        );
+        List<ClickTrendResponse> trend90d = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getSystemClickTrend(auth.accessToken(), 90)
+        );
+
         model.addAttribute("stats", stats);
         model.addAttribute("topUrls", topUrls);
         model.addAttribute("topUrlsJson", objectMapper.writeValueAsString(topUrls));
         model.addAttribute("statsJson", objectMapper.writeValueAsString(stats));
+        model.addAttribute("trend7dJson", objectMapper.writeValueAsString(trend7d));
+        model.addAttribute("trend30dJson", objectMapper.writeValueAsString(trend30d));
+        model.addAttribute("trend90dJson", objectMapper.writeValueAsString(trend90d));
         model.addAttribute("pageTitle", "System Analytics");
         model.addAttribute("activeNav", "admin-analytics");
         model.addAttribute("adminSection", true);

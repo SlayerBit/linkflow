@@ -48,4 +48,30 @@ public class AdminAnalyticsController {
         List<ClickEventResponse> clicks = analyticsQueryService.getRecentClicksForUrlAsAdmin(id, limit);
         return ResponseEntity.ok(ApiResponse.of(clicks));
     }
+
+    @GetMapping("/urls/{id}/click-trend")
+    @Operation(summary = "Get click trend for any URL (admin)")
+    public ResponseEntity<ApiResponse<List<com.linkflow.analytics.api.dto.ClickTrendResponse>>> getClickTrend(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "30") int days) {
+        List<com.linkflow.analytics.api.dto.ClickTrendResponse> trend = analyticsQueryService.getClickTrendForUrlAsAdmin(id, days);
+        return ResponseEntity.ok(ApiResponse.of(trend));
+    }
+
+    @GetMapping("/click-trend")
+    @Operation(summary = "Get system-wide click trend (admin)")
+    public ResponseEntity<ApiResponse<List<com.linkflow.analytics.api.dto.ClickTrendResponse>>> getSystemClickTrend(
+            @RequestParam(defaultValue = "30") int days) {
+        List<com.linkflow.analytics.api.dto.ClickTrendResponse> trend = analyticsQueryService.getSystemClickTrend(days);
+        return ResponseEntity.ok(ApiResponse.of(trend));
+    }
+
+    @GetMapping("/recent-clicks")
+    @Operation(summary = "Get platform-wide recent click events (admin)")
+    public ResponseEntity<ApiResponse<List<ClickEventResponse>>> getSystemRecentClicks(
+            @RequestParam(defaultValue = "10") int limit) {
+        limit = Math.min(Math.max(limit, 1), 100);
+        List<ClickEventResponse> clicks = analyticsQueryService.getSystemRecentClicks(limit);
+        return ResponseEntity.ok(ApiResponse.of(clicks));
+    }
 }

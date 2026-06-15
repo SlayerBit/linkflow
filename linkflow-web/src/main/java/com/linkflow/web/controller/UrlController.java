@@ -19,6 +19,9 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.List;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -32,6 +35,7 @@ public class UrlController {
     private final ApiCallHelper apiCallHelper;
     private final UrlApiClient urlApiClient;
     private final AnalyticsApiClient analyticsApiClient;
+    private final ObjectMapper objectMapper;
 
     @GetMapping
     public String list(@RequestParam(defaultValue = "0") int page,
@@ -149,15 +153,28 @@ public class UrlController {
     }
 
     @GetMapping("/{id}/analytics")
-    public String analytics(@PathVariable UUID id, HttpSession session, Model model) {
+    public String analytics(@PathVariable UUID id, HttpSession session, Model model) throws JsonProcessingException {
         UrlResponse url = apiCallHelper.withTokenRefresh(session, auth ->
                 urlApiClient.getById(auth.accessToken(), id)
         );
         UrlAnalyticsResponse analytics = apiCallHelper.withTokenRefresh(session, auth ->
                 analyticsApiClient.getUrlAnalytics(auth.accessToken(), id)
         );
+        List<com.linkflow.web.dto.analytics.ClickTrendResponse> trend7d = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getClickTrend(auth.accessToken(), id, 7)
+        );
+        List<com.linkflow.web.dto.analytics.ClickTrendResponse> trend30d = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getClickTrend(auth.accessToken(), id, 30)
+        );
+        List<com.linkflow.web.dto.analytics.ClickTrendResponse> trend90d = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getClickTrend(auth.accessToken(), id, 90)
+        );
+
         model.addAttribute("url", url);
         model.addAttribute("analytics", analytics);
+        model.addAttribute("trend7dJson", objectMapper.writeValueAsString(trend7d));
+        model.addAttribute("trend30dJson", objectMapper.writeValueAsString(trend30d));
+        model.addAttribute("trend90dJson", objectMapper.writeValueAsString(trend90d));
         model.addAttribute("pageTitle", "URL Analytics");
         model.addAttribute("activeNav", "urls");
         return "user/url-analytics";

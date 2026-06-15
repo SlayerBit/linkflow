@@ -64,6 +64,47 @@
             </div>
         </div>
     </div>
+
+    <div class="row row-deck row-cards">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Recent Activity Feed</h3>
+                </div>
+                <div class="card-body p-0" th:if="${!#lists.isEmpty(recentClicks)}">
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table table-hover">
+                            <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Code</th>
+                                <th>IP Address</th>
+                                <th>Referrer</th>
+                                <th>User Agent</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="click : ${recentClicks}">
+                                <td th:text="${click.clickedAt != null ? #temporals.format(click.clickedAt, 'yyyy-MM-dd HH:mm ''UTC''') : ''}">Time</td>
+                                <td>
+                                    <a th:href="@{/urls/{id}/analytics(id=${click.shortUrlId})}" th:text="${click.shortCode}">code</a>
+                                </td>
+                                <td><code th:text="${click.ipAddress}">IP</code></td>
+                                <td class="text-truncate" style="max-width: 200px;" th:text="${click.referer != null && !click.referer.isEmpty() ? click.referer : 'Direct'}">Referrer</td>
+                                <td class="text-truncate" style="max-width: 250px;" th:text="${click.userAgent}">User Agent</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="empty empty-state" th:if="${#lists.isEmpty(recentClicks)}">
+                    <div class="empty-icon"><i class="ti ti-activity"></i></div>
+                    <p class="empty-title">No recent click activity</p>
+                    <p class="empty-subtitle text-muted">Clicks on your short links will appear here in real-time.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <th:block layout:fragment="scripts">

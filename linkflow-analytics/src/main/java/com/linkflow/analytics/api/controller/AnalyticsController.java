@@ -45,4 +45,22 @@ public class AnalyticsController {
         List<ClickEventResponse> clicks = analyticsQueryService.getRecentClicksForUrl(id, limit);
         return ResponseEntity.ok(ApiResponse.of(clicks));
     }
+
+    @GetMapping("/api/v1/urls/{id}/analytics/click-trend")
+    @Operation(summary = "Get click trend for a specific URL (owner only)")
+    public ResponseEntity<ApiResponse<List<com.linkflow.analytics.api.dto.ClickTrendResponse>>> getClickTrend(
+            @PathVariable("id") UUID id,
+            @RequestParam(defaultValue = "30") int days) {
+        List<com.linkflow.analytics.api.dto.ClickTrendResponse> trend = analyticsQueryService.getClickTrendForUrl(id, days);
+        return ResponseEntity.ok(ApiResponse.of(trend));
+    }
+
+    @GetMapping("/api/v1/analytics/recent-clicks")
+    @Operation(summary = "Get recent clicks across all user's URLs")
+    public ResponseEntity<ApiResponse<List<ClickEventResponse>>> getRecentClicksForAll(
+            @RequestParam(defaultValue = "10") int limit) {
+        limit = Math.min(Math.max(limit, 1), 100);
+        List<ClickEventResponse> clicks = analyticsQueryService.getRecentClicksForUser(limit);
+        return ResponseEntity.ok(ApiResponse.of(clicks));
+    }
 }

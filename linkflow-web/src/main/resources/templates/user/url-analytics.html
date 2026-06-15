@@ -37,9 +37,117 @@
         </div>
     </div>
 
-    <div class="alert alert-info mt-4">
-        Click-over-time charts are not available — the backend only exposes aggregate totals per URL.
+    <div class="card mt-4">
+        <div class="card-header d-flex align-items-center">
+            <h3 class="card-title">Clicks Over Time</h3>
+            <div class="ms-auto">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-trend-range" id="btn-trend-7" onclick="renderChart(7)">7D</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-trend-range" id="btn-trend-30" onclick="renderChart(30)">30D</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-trend-range" id="btn-trend-90" onclick="renderChart(90)">90D</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-container" style="position: relative; height: 320px;">
+                <canvas id="clickTrendChart"></canvas>
+            </div>
+        </div>
     </div>
 </div>
+
+<th:block layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:inline="javascript">
+        const trends = {
+            7: /*[[${trend7dJson}]]*/ '[]',
+            30: /*[[${trend30dJson}]]*/ '[]',
+            90: /*[[${trend90dJson}]]*/ '[]'
+        };
+
+        const data7d = JSON.parse(trends[7]);
+        const data30d = JSON.parse(trends[30]);
+        const data90d = JSON.parse(trends[90]);
+
+        function getPaddedData(trendData, days) {
+            const labels = [];
+            const dataMap = {};
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                labels.push(dateStr);
+                dataMap[dateStr] = 0;
+            }
+            trendData.forEach(item => {
+                if (dataMap[item.date] !== undefined) {
+                    dataMap[item.date] = item.clicks;
+                }
+            });
+            const dataPoints = labels.map(l => dataMap[l]);
+            return { labels, dataPoints };
+        }
+
+        let currentChart = null;
+
+        function renderChart(days) {
+            let rawData;
+            if (days === 7) rawData = data7d;
+            else if (days === 90) rawData = data90d;
+            else rawData = data30d;
+
+            const { labels, dataPoints } = getPaddedData(rawData, days);
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            const ctx = document.getElementById('clickTrendChart').getContext('2d');
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Clicks',
+                        data: dataPoints,
+                        borderColor: '#206bc4',
+                        backgroundColor: 'rgba(32, 107, 196, 0.08)',
+                        fill: true,
+                        tension: 0.2,
+                        borderWidth: 2,
+                        pointRadius: days > 30 ? 1 : 3,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+
+            document.querySelectorAll('.btn-trend-range').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById('btn-trend-' + days);
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderChart(30);
+        });
+    </script>
+</th:block>
 </body>
 </html>

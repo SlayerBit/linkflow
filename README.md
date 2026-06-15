@@ -64,7 +64,7 @@ Canonical design: [docs/system-design.md](docs/system-design.md)
 - Register / login / refresh / logout with JWT + rotating refresh tokens
 - Create short URLs (single + bulk) with optional `Idempotency-Key`
 - Public redirect at `GET /r/{shortCode}` with Redis cache-aside
-- Per-URL and system analytics (aggregate counts + recent click events)
+- Per-URL and system analytics (aggregate counts, 7d/30d/90d daily click trends, and recent activity feeds with IP address masking for user privacy)
 - QR code PNG generation (ZXing)
 - Per-user and per-IP rate limiting with `X-RateLimit-*` headers
 - Admin endpoints for users (including disable/enable/delete), URLs, analytics, and system stats
@@ -222,7 +222,7 @@ Docker Compose deploys app + gateway + observability on a single host. Kubernete
 - **Modular monolith:** feature modules compile independently but deploy as one JAR; cross-module calls use ports in `linkflow-common` (`UserLookupPort`, `ClickTrackingPort`)
 - **Gateway:** single public entry, correlation IDs, future cross-cutting concerns without touching business code
 - **Redis:** redirect cache (15 min), Lua rate limiter, alias creation locks — each with different TTL semantics
-- **Analytics:** `@Async` click tracking so redirects stay fast; aggregates in `url_analytics`, raw events in `click_events` with paginated recent-click APIs
+- **Analytics:** `@Async` click tracking to Redis buffers/flusher; daily click trends (7d/30d/90d ranges) and user/admin activity feeds (with IP masking for standard users) queried via JPA projections from PostgreSQL
 - **Idempotency:** `idempotency_records` table keyed by `(user_id, endpoint, idempotency_key)`
 
 Prep guide: [docs/interview-prep.md](docs/interview-prep.md)

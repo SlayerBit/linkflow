@@ -335,10 +335,11 @@ sequenceDiagram
 
     Note over ReadApi: Read paths (sync)
     ReadApi->>UrlAnalytics: aggregate counts
-    ReadApi->>ClickEvents: recent events (paginated, max 100)
+    ReadApi->>ClickEvents: recent events & feeds (with IP masking for users)
+    ReadApi->>ClickEvents: daily click trends (7d/30d/90d ranges)
 ```
 
-**Product decision:** Aggregate counts plus **recent click listing** are exposed. Time-series rollups, geo breakdown, and referer analytics dashboards are **deliberate non-goals** for v1. See [feature-matrix.md](feature-matrix.md).
+**Product decision:** Aggregate counts, recent activity feeds (with IP masking for user security), and daily click trends (7d/30d/90d) are exposed. Advanced geo breakdown and browser OS charts are deliberate non-goals for this tier. See [feature-matrix.md](feature-matrix.md).
 
 ---
 
@@ -467,7 +468,7 @@ Schema detail: [database-design.md](database-design.md)
 | Kubernetes manifests | Compose-first local/demo deployment; K8s left to consumer environments |
 | Spring Session Redis | In-memory sessions sufficient for single-instance web; document sticky-session requirement |
 | Runtime role assignment API | Two fixed roles; set at registration/bootstrap only |
-| Time-series analytics API | Aggregate + recent clicks cover v1; rollups add scope without demo value |
+| Advanced geo/device analytics | Geolocation/OS breakdown left to telemetry; daily click trends (7d/30d/90d) and feeds are implemented |
 | Email verification / OAuth | Out of scope for architecture demo |
 | HTTPS in repository | Terminate TLS at load balancer or reverse proxy |
 

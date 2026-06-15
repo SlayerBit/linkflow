@@ -12,6 +12,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ClickEventResponse {
     private final UUID id;
+    private final UUID shortUrlId;
+    private final String shortCode;
     private final Instant clickedAt;
     private final String ipAddress;
     private final String userAgent;

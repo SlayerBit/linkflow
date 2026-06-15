@@ -19,12 +19,12 @@ class ActuatorExposureIT extends AbstractIntegrationTest {
     @Test
     void prometheusEndpointIsDeniedWhenMetricsNotPublic() throws Exception {
         mockMvc.perform(get("/actuator/prometheus"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void swaggerUiIsDeniedInProdProfile() throws Exception {
         mockMvc.perform(get("/swagger-ui/index.html"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }

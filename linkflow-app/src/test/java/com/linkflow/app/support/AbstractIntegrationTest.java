@@ -25,15 +25,20 @@ public abstract class AbstractIntegrationTest {
     protected static final String JWT_SECRET =
             "dGVzdC1zZWNyZXQta2V5LWZvci1pbnRlZ3JhdGlvbi10ZXN0cy1taW5pbXVtLTY0LWNoYXJz";
 
-    @Container
     protected static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("linkflow")
             .withUsername("linkflow")
             .withPassword("linkflow");
 
-    @Container
     protected static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
             .withExposedPorts(6379);
+
+    static {
+        if (org.testcontainers.DockerClientFactory.instance().isDockerAvailable()) {
+            POSTGRES.start();
+            REDIS.start();
+        }
+    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {

@@ -330,9 +330,38 @@ Controllers: `AnalyticsController`, `AdminAnalyticsController`
 | Authentication | Bearer |
 | Authorization | Owner only |
 
-**Response item fields:** `id`, `clickedAt`, `ipAddress`, `userAgent`, `referer`
+**Response item fields:** `id`, `shortUrlId`, `shortCode`, `clickedAt`, `ipAddress` (masked for users), `userAgent`, `referer`
 
-**Business purpose:** Recent raw click events for a URL (newest first). Not a time-series rollup API.
+**Business purpose:** Recent raw click events for a specific URL (newest first).
+
+---
+
+### GET `/api/v1/urls/{id}/analytics/click-trend`
+
+| Field | Value |
+|-------|-------|
+| Response DTO | `List<ClickTrendResponse>` |
+| Query param | `days` (7, 30, or 90; default 30) |
+| Authentication | Bearer |
+| Authorization | Owner only |
+
+**Response item fields:** `date` (YYYY-MM-DD), `clicks`
+
+**Business purpose:** Click counts aggregated daily over the specified range (7, 30, or 90 days) for a specific URL.
+
+---
+
+### GET `/api/v1/analytics/recent-clicks`
+
+| Field | Value |
+|-------|-------|
+| Response DTO | `List<ClickEventResponse>` |
+| Query param | `limit` (default 10, min 1, max 100) |
+| Authentication | Bearer |
+
+**Response item fields:** `id`, `shortUrlId`, `shortCode`, `clickedAt`, `ipAddress` (masked for users), `userAgent`, `referer`
+
+**Business purpose:** Latest click events across all URLs owned by the current authenticated user.
 
 ---
 
@@ -377,6 +406,50 @@ Controllers: `AnalyticsController`, `AdminAnalyticsController`
 | Authentication | `ROLE_ADMIN` |
 | Response DTO | `List<ClickEventResponse>` |
 | Query param | `limit` (default 20, max 100) |
+
+**Response item fields:** `id`, `shortUrlId`, `shortCode`, `clickedAt`, `ipAddress` (unmasked raw IP), `userAgent`, `referer`
+
+---
+
+### GET `/api/v1/admin/analytics/urls/{id}/click-trend`
+
+| Field | Value |
+|-------|-------|
+| Authentication | `ROLE_ADMIN` |
+| Response DTO | `List<ClickTrendResponse>` |
+| Query param | `days` (7, 30, or 90; default 30) |
+
+**Response item fields:** `date` (YYYY-MM-DD), `clicks`
+
+**Business purpose:** Daily aggregated clicks over the specified range (7, 30, or 90 days) for any specific URL.
+
+---
+
+### GET `/api/v1/admin/analytics/click-trend`
+
+| Field | Value |
+|-------|-------|
+| Authentication | `ROLE_ADMIN` |
+| Response DTO | `List<ClickTrendResponse>` |
+| Query param | `days` (7, 30, or 90; default 30) |
+
+**Response item fields:** `date` (YYYY-MM-DD), `clicks`
+
+**Business purpose:** Daily aggregated clicks system-wide across all users over the specified range (7, 30, or 90 days).
+
+---
+
+### GET `/api/v1/admin/analytics/recent-clicks`
+
+| Field | Value |
+|-------|-------|
+| Authentication | `ROLE_ADMIN` |
+| Response DTO | `List<ClickEventResponse>` |
+| Query param | `limit` (default 10, min 1, max 100) |
+
+**Response item fields:** `id`, `shortUrlId`, `shortCode`, `clickedAt`, `ipAddress` (unmasked raw IP), `userAgent`, `referer`
+
+**Business purpose:** Latest click events system-wide across all users and short URLs.
 
 ---
 

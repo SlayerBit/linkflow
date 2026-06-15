@@ -33,10 +33,14 @@ public class DashboardController {
         List<TopUrlResponse> topUrls = apiCallHelper.withTokenRefresh(session, auth ->
                 analyticsApiClient.getTopUrls(auth.accessToken(), 5)
         );
+        List<com.linkflow.web.dto.analytics.ClickEventResponse> recentClicks = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getRecentClicks(auth.accessToken(), 10)
+        );
 
         model.addAttribute("recentUrls", recentUrls.content());
         model.addAttribute("topUrls", topUrls);
         model.addAttribute("topUrlsJson", objectMapper.writeValueAsString(topUrls));
+        model.addAttribute("recentClicks", recentClicks);
         model.addAttribute("pageTitle", "Dashboard");
         model.addAttribute("activeNav", "dashboard");
         return "user/dashboard";

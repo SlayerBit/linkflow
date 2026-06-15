@@ -235,7 +235,7 @@ redis-cli -h 127.0.0.1 ping
 | `linkflow-user` | User profiles, admin users |
 | `linkflow-url` | Short URLs, redirects, QR |
 | `linkflow-rate-limit` | Redis rate limiter |
-| `linkflow-analytics` | Click tracking |
+| `linkflow-analytics` | Click tracking, daily trends (7d/30d/90d), recent activity feeds (with IP masking for user privacy) |
 | `linkflow-observability` | Actuator, metrics |
 | `linkflow-app` | Runnable backend (8081) |
 | `linkflow-gateway` | API gateway (8080) |

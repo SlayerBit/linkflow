@@ -21,6 +21,8 @@ Maps each feature to code entry points, persistence, and security. Verified agai
 | Click tracking | Record analytics | (internal) | — | `ClickTrackingService` | `ClickEventRepository`, `UrlAnalyticsRepository` | `click_events`, `url_analytics` | Stream (buffer), Hash (counter), Set (active) | Async on redirect |
 | Per-URL analytics | Owner stats | `GET /api/v1/urls/{id}/analytics` | `AnalyticsController` | `AnalyticsQueryService` | `UrlAnalyticsRepository` | `url_analytics`, `short_urls` | — | Owner check |
 | Recent click events | Owner click history | `GET /api/v1/urls/{id}/analytics/clicks` | `AnalyticsController` | `AnalyticsQueryService` | `ClickEventRepository` | `click_events` | — | Owner check |
+| Click trend graph (user) | Daily clicks over time | `GET /api/v1/urls/{id}/analytics/click-trend` | `AnalyticsController` | `AnalyticsQueryService` | `ClickEventRepository` | `click_events` | — | Owner check |
+| Recent activity feed (user) | User clicks history | `GET /api/v1/analytics/recent-clicks` | `AnalyticsController` | `AnalyticsQueryService` | `ClickEventRepository` | `click_events`, `short_urls` | — | Authenticated; IP masking |
 | Top URLs (user) | Rank by clicks | `GET /api/v1/analytics/top` | `AnalyticsController` | `AnalyticsQueryService` | `UrlAnalyticsRepository` | `url_analytics` | — | Authenticated |
 | Admin list users | Operator view | `GET /api/v1/admin/users` | `AdminUserController` | `UserService` | `UserRepository` | `users` | — | ROLE_ADMIN |
 | Admin user detail | Single user | `GET /api/v1/admin/users/{id}` | `AdminUserController` | `UserService` | `UserRepository` | `users` | — | ROLE_ADMIN |
@@ -32,6 +34,9 @@ Maps each feature to code entry points, persistence, and security. Verified agai
 | System stats | Platform metrics | `GET /api/v1/admin/analytics/stats` | `AdminAnalyticsController` | `AnalyticsQueryService` | `StatsRepository` | multiple | — | ROLE_ADMIN |
 | System top URLs | Platform ranking | `GET /api/v1/admin/analytics/top` | `AdminAnalyticsController` | `AnalyticsQueryService` | `UrlAnalyticsRepository` | `url_analytics` | — | ROLE_ADMIN |
 | Admin click history | Any URL clicks | `GET /api/v1/admin/analytics/urls/{id}/clicks` | `AdminAnalyticsController` | `AnalyticsQueryService` | `ClickEventRepository` | `click_events` | — | ROLE_ADMIN |
+| Admin click trend | Daily clicks per URL | `GET /api/v1/admin/analytics/urls/{id}/click-trend` | `AdminAnalyticsController` | `AnalyticsQueryService` | `ClickEventRepository` | `click_events` | — | ROLE_ADMIN |
+| System click trend | Daily clicks platform-wide | `GET /api/v1/admin/analytics/click-trend` | `AdminAnalyticsController` | `AnalyticsQueryService` | `ClickEventRepository` | `click_events` | — | ROLE_ADMIN |
+| System recent clicks | Platform-wide click feed | `GET /api/v1/admin/analytics/recent-clicks` | `AdminAnalyticsController` | `AnalyticsQueryService` | `ClickEventRepository` | `click_events`, `short_urls` | — | ROLE_ADMIN; unmasked raw IP |
 | Rate limiting | Abuse protection | (filter) | — | `RateLimitService` | — | — | Lua sliding-window sorted sets | All non-excluded paths |
 | Expiry cleanup | Deactivate expired | (scheduled) | — | `UrlService` | `ShortUrlRepository`, `IdempotencyRecordRepository` | `short_urls`, `idempotency_records` | — | Internal job |
 | Admin bootstrap | First admin | (startup) | — | `AdminBootstrap` | `UserRepository` | `users`, `user_roles` | — | Env-gated |
@@ -48,7 +53,7 @@ Maps each feature to code entry points, persistence, and security. Verified agai
 | Feature | Status |
 |---------|--------|
 | Admin list URLs for specific user | Not planned for v1 |
-| Click time-series rollups / charts API | Not planned — use recent clicks + aggregates |
+| Advanced browser/OS charts & geo maps | Not planned — daily aggregated click trends (7d/30d/90d) and recent click feeds are implemented |
 | Runtime role assignment API | Roles fixed at registration/bootstrap |
 | Email verification | Not implemented |
 | OAuth2 / SSO | Not implemented |
