@@ -8,6 +8,11 @@ import com.linkflow.web.dto.common.PagedResponse;
 import com.linkflow.web.dto.url.CreateUrlForm;
 import com.linkflow.web.dto.url.UpdateUrlForm;
 import com.linkflow.web.dto.url.UrlResponse;
+import com.linkflow.web.dto.url.BulkCreateUrlForm;
+import com.linkflow.web.dto.url.BulkCreateUrlResponse;
+import com.linkflow.web.client.BackendApiException;
+import java.util.ArrayList;
+import java.util.Map;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -91,6 +96,66 @@ public class UrlController {
         );
         redirectAttributes.addFlashAttribute("successMessage", "URL created successfully.");
         return "redirect:/urls/" + created.id();
+    }
+
+    @GetMapping("/bulk")
+    public String bulkCreateForm(Model model) {
+        model.addAttribute("bulkCreateUrlForm", new BulkCreateUrlForm());
+        model.addAttribute("pageTitle", "Bulk Create URLs");
+        model.addAttribute("activeNav", "urls-bulk");
+        return "user/url-bulk";
+    }
+
+    @PostMapping("/bulk")
+    public String bulkCreate(@Valid @ModelAttribute("bulkCreateUrlForm") BulkCreateUrlForm form,
+                             BindingResult bindingResult,
+                             HttpSession session,
+                             Model model) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("pageTitle", "Bulk Create URLs");
+            model.addAttribute("activeNav", "urls-bulk");
+            return "user/url-bulk";
+        }
+
+        String urlsText = form.getUrlsText();
+        String[] lines = urlsText.split("\\r?\\n");
+        List<Map<String, Object>> requestUrls = new ArrayList<>();
+        
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (!trimmed.isEmpty()) {
+                requestUrls.add(Map.of("originalUrl", trimmed));
+            }
+        }
+
+        if (requestUrls.isEmpty()) {
+            bindingResult.rejectValue("urlsText", "error.bulkCreateUrlForm", "Please enter at least one valid URL");
+            model.addAttribute("pageTitle", "Bulk Create URLs");
+            model.addAttribute("activeNav", "urls-bulk");
+            return "user/url-bulk";
+        }
+
+        if (requestUrls.size() > 100) {
+            bindingResult.rejectValue("urlsText", "error.bulkCreateUrlForm", "Maximum 100 URLs per bulk request");
+            model.addAttribute("pageTitle", "Bulk Create URLs");
+            model.addAttribute("activeNav", "urls-bulk");
+            return "user/url-bulk";
+        }
+
+        try {
+            String idempotencyKey = UUID.randomUUID().toString();
+            BulkCreateUrlResponse response = apiCallHelper.withTokenRefresh(session, auth ->
+                    urlApiClient.bulkCreate(auth.accessToken(), requestUrls, idempotencyKey)
+            );
+            model.addAttribute("results", response.urls());
+            model.addAttribute("successMessage", "Successfully shortened " + response.count() + " URLs!");
+        } catch (BackendApiException ex) {
+            model.addAttribute("errorMessage", "Failed to create URLs: " + ex.getMessage());
+        }
+
+        model.addAttribute("pageTitle", "Bulk Create URLs");
+        model.addAttribute("activeNav", "urls-bulk");
+        return "user/url-bulk";
     }
 
     @GetMapping("/{id}")

@@ -1,5 +1,6 @@
 server:
   port: 8082
+  forward-headers-strategy: framework
   servlet:
     session:
       timeout: 30m
@@ -11,6 +12,14 @@ server:
 spring:
   application:
     name: linkflow-web
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+  session:
+    store-type: redis
+    redis:
+      namespace: linkflow:web:session
   thymeleaf:
     cache: false
     prefix: classpath:/templates/
@@ -20,6 +29,7 @@ linkflow:
   web:
     gateway-url: ${LINKFLOW_GATEWAY_URL:http://127.0.0.1:8080}
     public-gateway-url: ${LINKFLOW_PUBLIC_GATEWAY_URL:http://localhost:8080}
+    backend-app-url: ${LINKFLOW_BACKEND_APP_URL:http://127.0.0.1:8081}
     grafana-url: ${LINKFLOW_GRAFANA_URL:http://localhost:3000}
     prometheus-url: ${LINKFLOW_PUBLIC_PROMETHEUS_URL:http://localhost:9090}
     rate-limit:

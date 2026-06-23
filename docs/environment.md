@@ -23,6 +23,9 @@
 | `LINKFLOW_SECURITY_SWAGGER_PUBLIC` | `true` | Allow Swagger without auth (dev default) |
 | `LINKFLOW_SECURITY_ACTUATOR_PUBLIC` | `true` | Allow all actuator paths without auth (dev default) |
 | `LINKFLOW_SECURITY_METRICS_PUBLIC` | `false` | Allow Prometheus/metrics without auth (dev default) |
+| `LINKFLOW_SECURITY_EMAIL_VERIFICATION_REQUIRED` | `true` | Require email verification before login |
+| `LINKFLOW_SECURITY_EXPOSE_DEV_TOKENS` | `false` | Return verification/reset tokens in API JSON (**never enable in production**) |
+| `LINKFLOW_URL_EXPIRED_CLEANUP_CRON` | `0 0 * * * *` | Cron for expired URL + idempotency cleanup |
 | `LINKFLOW_METRICS_PUBLIC` | `false` | **Prod profile only** — overrides `metrics-public` (Compose sets `true` for demo) |
 | `LINKFLOW_BOOTSTRAP_ADMIN_ENABLED` | `false` | Enable admin bootstrap |
 | `LINKFLOW_BOOTSTRAP_ADMIN_EMAIL` | — | Bootstrap admin email |

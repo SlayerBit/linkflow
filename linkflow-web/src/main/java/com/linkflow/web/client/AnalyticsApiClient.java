@@ -27,6 +27,14 @@ public class AnalyticsApiClient {
         return response.data();
     }
 
+    public UrlAnalyticsResponse getAdminUrlAnalytics(String accessToken, UUID urlId) {
+        var response = backendClient.exchangeForBody(
+                backendClient.get("/api/v1/admin/analytics/urls/" + urlId, accessToken),
+                new ParameterizedTypeReference<ApiResponse<UrlAnalyticsResponse>>() {}
+        );
+        return response.data();
+    }
+
     public List<TopUrlResponse> getTopUrls(String accessToken, int limit) {
         String uri = backendClient.buildUri("/api/v1/analytics/top", "limit", limit);
         var response = backendClient.exchangeForBody(
@@ -91,6 +99,15 @@ public class AnalyticsApiClient {
 
     public List<ClickEventResponse> getSystemRecentClicks(String accessToken, int limit) {
         String uri = backendClient.buildUri("/api/v1/admin/analytics/recent-clicks", "limit", limit);
+        var response = backendClient.exchangeForBody(
+                backendClient.get(uri, accessToken),
+                new ParameterizedTypeReference<ApiResponse<List<ClickEventResponse>>>() {}
+        );
+        return response.data();
+    }
+
+    public List<ClickEventResponse> getAdminRecentClicks(String accessToken, UUID urlId, int limit) {
+        String uri = backendClient.buildUri("/api/v1/admin/analytics/urls/" + urlId + "/clicks", "limit", limit);
         var response = backendClient.exchangeForBody(
                 backendClient.get(uri, accessToken),
                 new ParameterizedTypeReference<ApiResponse<List<ClickEventResponse>>>() {}

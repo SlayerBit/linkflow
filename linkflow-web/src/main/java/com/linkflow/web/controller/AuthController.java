@@ -5,6 +5,7 @@ import com.linkflow.web.client.BackendApiException;
 import com.linkflow.web.client.UserApiClient;
 import com.linkflow.web.dto.auth.LoginForm;
 import com.linkflow.web.dto.auth.RegisterForm;
+import com.linkflow.web.dto.auth.RegisterResponse;
 import com.linkflow.web.dto.auth.TokenResponse;
 import com.linkflow.web.dto.user.UserResponse;
 import com.linkflow.web.session.SessionManager;
@@ -16,6 +17,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -52,6 +54,13 @@ public class AuthController {
             );
             return "redirect:/dashboard";
         } catch (BackendApiException ex) {
+            if ("EMAIL_NOT_VERIFIED".equals(ex.getErrorCode())) {
+                model.addAttribute("errorMessage", "Your email is not verified. Please verify your email before logging in.");
+                model.addAttribute("showVerifyLink", true);
+                model.addAttribute("loginForm", form);
+                model.addAttribute("pageTitle", "Login");
+                return "public/login";
+            }
             model.addAttribute("errorMessage", ex.getMessage());
             model.addAttribute("loginForm", form);
             model.addAttribute("pageTitle", "Login");
@@ -62,7 +71,8 @@ public class AuthController {
     @PostMapping("/register")
     public String register(@Valid @ModelAttribute RegisterForm form,
                            BindingResult bindingResult,
-                           Model model) {
+                           Model model,
+                           RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("registerForm", form);
             model.addAttribute("pageTitle", "Register");
@@ -70,16 +80,15 @@ public class AuthController {
         }
 
         try {
-            authApiClient.register(
+            RegisterResponse response = authApiClient.register(
                     form.getEmail(),
                     form.getPassword(),
                     form.getFirstName(),
                     form.getLastName()
             );
-            model.addAttribute("successMessage", "Registration successful. Please log in.");
-            model.addAttribute("loginForm", new LoginForm());
-            model.addAttribute("pageTitle", "Login");
-            return "public/login";
+            // Redirect to verify-email page with simulation token
+            return "redirect:/verify-email?token=" + (response.verificationToken() != null ? response.verificationToken() : "")
+                    + "&email=" + form.getEmail();
         } catch (BackendApiException ex) {
             model.addAttribute("errorMessage", ex.getMessage());
             model.addAttribute("registerForm", form);
@@ -100,4 +109,67 @@ public class AuthController {
         sessionManager.clearSession(session);
         return "redirect:/";
     }
+
+    @PostMapping("/verify-email")
+    public String verifyEmail(@RequestParam String token, Model model) {
+        try {
+            authApiClient.verifyEmail(token);
+            model.addAttribute("successMessage", "Email verified successfully! You can now log in.");
+        } catch (BackendApiException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            model.addAttribute("token", token);
+        }
+        model.addAttribute("pageTitle", "Verify Email");
+        return "public/verify-email";
+    }
+
+    @PostMapping("/forgot-password")
+    public String forgotPassword(@RequestParam String email, Model model) {
+        try {
+            String resetToken = authApiClient.forgotPassword(email);
+            // Simulation: show the token in the UI banner
+            model.addAttribute("resetToken", resetToken);
+        } catch (BackendApiException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+        }
+        model.addAttribute("pageTitle", "Forgot Password");
+        return "public/forgot-password";
+    }
+
+    @PostMapping("/reset-password")
+    public String resetPassword(@RequestParam String token,
+                                @RequestParam String newPassword,
+                                @RequestParam String confirmPassword,
+                                Model model) {
+        if (!newPassword.equals(confirmPassword)) {
+            model.addAttribute("errorMessage", "Passwords do not match.");
+            model.addAttribute("token", token);
+            model.addAttribute("pageTitle", "Reset Password");
+            return "public/reset-password";
+        }
+        try {
+            authApiClient.resetPassword(token, newPassword);
+            model.addAttribute("successMessage", "Password reset successfully! You can now log in with your new password.");
+        } catch (BackendApiException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            model.addAttribute("token", token);
+        }
+        model.addAttribute("pageTitle", "Reset Password");
+        return "public/reset-password";
+    }
+
+    @PostMapping("/verify-email-change")
+    public String verifyEmailChange(@RequestParam String token, Model model, HttpSession session) {
+        try {
+            userApiClient.verifyEmailChange(token);
+            model.addAttribute("successMessage", "Email updated successfully! Please log back in.");
+            sessionManager.clearSession(session);
+        } catch (BackendApiException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            model.addAttribute("token", token);
+        }
+        model.addAttribute("pageTitle", "Verify Email Change");
+        return "public/verify-email-change";
+    }
 }
+

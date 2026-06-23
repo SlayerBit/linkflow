@@ -52,6 +52,18 @@
                             <p class="text-muted mb-4">Enter your account credentials to continue</p>
                             
                             <div class="alert alert-warning alert-premium mb-3" th:if="${param.expired}">Your session has expired. Please sign in again.</div>
+                            <div class="alert alert-danger alert-premium d-flex align-items-center mb-3" th:if="${errorMessage}">
+                                <i class="ti ti-alert-circle fs-2 me-2"></i>
+                                <div th:text="${errorMessage}">Error</div>
+                            </div>
+                            <div class="alert alert-info alert-premium d-flex align-items-center mb-3" th:if="${showVerifyLink}">
+                                <i class="ti ti-mail-check fs-2 me-2"></i>
+                                <div>Need to verify your email? <a th:href="@{/verify-email}" class="fw-semibold">Verify Email</a></div>
+                            </div>
+                            <div class="alert alert-success alert-premium d-flex align-items-center mb-3" th:if="${successMessage}">
+                                <i class="ti ti-circle-check fs-2 me-2"></i>
+                                <div th:text="${successMessage}">Success</div>
+                            </div>
                             
                             <form th:action="@{/login}" th:object="${loginForm}" method="post">
                                 <div class="mb-3">
@@ -59,8 +71,11 @@
                                     <input type="email" class="form-control" th:field="*{email}" placeholder="name@example.com" required style="border-radius: 8px; padding: 0.6rem 0.8rem;">
                                     <div class="text-danger small mt-1" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
                                 </div>
-                                <div class="mb-4">
-                                    <label class="form-label" style="font-weight: 500;">Password</label>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <label class="form-label" style="font-weight: 500;">Password</label>
+                                        <a th:href="@{/forgot-password}" class="small text-decoration-none" style="font-weight: 500;">Forgot password?</a>
+                                    </div>
                                     <input type="password" class="form-control" th:field="*{password}" placeholder="Enter your password" required style="border-radius: 8px; padding: 0.6rem 0.8rem;">
                                     <div class="text-danger small mt-1" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
                                 </div>

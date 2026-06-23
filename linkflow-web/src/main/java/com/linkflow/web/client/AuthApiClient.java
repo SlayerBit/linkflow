@@ -54,4 +54,37 @@ public class AuthApiClient {
                 new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
         );
     }
+
+    public void verifyEmail(String token) {
+        Map<String, String> body = Map.of("token", token);
+        backendClient.exchangeForBody(
+                backendClient.postPublic("/api/v1/auth/verify-email").body(body),
+                new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
+        );
+    }
+
+    public String forgotPassword(String email) {
+        Map<String, String> body = Map.of("email", email);
+        var response = backendClient.exchangeForBody(
+                backendClient.postPublic("/api/v1/auth/forgot-password").body(body),
+                new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
+        );
+        return response.data().get("token");
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        Map<String, String> body = Map.of("token", token, "newPassword", newPassword);
+        backendClient.exchangeForBody(
+                backendClient.postPublic("/api/v1/auth/reset-password").body(body),
+                new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
+        );
+    }
+
+    public void changePassword(String accessToken, String currentPassword, String newPassword) {
+        Map<String, String> body = Map.of("currentPassword", currentPassword, "newPassword", newPassword);
+        backendClient.exchangeForBody(
+                backendClient.post("/api/v1/auth/change-password", accessToken).body(body),
+                new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
+        );
+    }
 }

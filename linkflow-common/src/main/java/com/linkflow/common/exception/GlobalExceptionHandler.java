@@ -4,6 +4,7 @@ import com.linkflow.common.api.ApiErrorResponse;
 import com.linkflow.common.api.CorrelationIdContext;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -107,6 +108,17 @@ public class GlobalExceptionHandler {
                 CorrelationIdContext.getId()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation: {}", ex.getMessage());
+        ApiErrorResponse response = ApiErrorResponse.of(
+                "CONFLICT",
+                "The request conflicts with existing data",
+                CorrelationIdContext.getId()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(Exception.class)

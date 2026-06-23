@@ -42,6 +42,10 @@ public class User extends AuditableEntity {
     private boolean enabled = true;
 
     @Builder.Default
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Builder.Default
     @Column(nullable = false)
     private boolean deleted = false;
 

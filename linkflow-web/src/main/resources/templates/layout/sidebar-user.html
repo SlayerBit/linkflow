@@ -15,6 +15,12 @@
         </a>
     </li>
     <li class="nav-item">
+        <a class="nav-link nav-link-green" th:href="@{/urls/bulk}" th:classappend="${activeNav == 'urls-bulk'} ? ' active'">
+            <span class="nav-link-icon"><i class="ti ti-bolt"></i></span>
+            <span class="nav-link-title">Bulk Shorten</span>
+        </a>
+    </li>
+    <li class="nav-item">
         <a class="nav-link nav-link-purple" th:href="@{/profile}" th:classappend="${activeNav == 'profile'} ? ' active'">
             <span class="nav-link-icon"><i class="ti ti-user"></i></span>
             <span class="nav-link-title">Profile</span>

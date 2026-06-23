@@ -36,7 +36,8 @@ Start here for a guided path through the repository documentation. Each topic ha
 | Document | Purpose |
 |----------|---------|
 | [module-dependency-map.md](module-dependency-map.md) | Maven, package, and runtime dependencies |
-| [production-readiness-audit.md](production-readiness-audit.md) | Gap analysis and prioritized risks |
+| [production-readiness-audit.md](production-readiness-audit.md) | **Superseded** → see [AUDIT-REPORT.md](AUDIT-REPORT.md) |
+| [AUDIT-REPORT.md](AUDIT-REPORT.md) | **Latest audit** — source-code audit, fixes, and readiness assessment |
 | [adr/](adr/) | Architecture Decision Records |
 
 ## Secondary / legacy pointers

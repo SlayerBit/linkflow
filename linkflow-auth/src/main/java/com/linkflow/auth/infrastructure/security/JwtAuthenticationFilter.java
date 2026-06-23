@@ -3,6 +3,7 @@ package com.linkflow.auth.infrastructure.security;
 import com.linkflow.auth.application.service.JwtService;
 import com.linkflow.common.security.SecurityConstants;
 import com.linkflow.common.security.UserPrincipal;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +18,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
@@ -29,6 +32,7 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final TokenRevocationService tokenRevocationService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -38,7 +42,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null && jwtService.validateToken(token)) {
             try {
-                UUID userId = jwtService.getUserIdFromToken(token);
+                Claims claims = jwtService.parseToken(token);
+                String tokenType = claims.get(SecurityConstants.CLAIM_TOKEN_TYPE, String.class);
+                if (!SecurityConstants.TOKEN_TYPE_ACCESS.equals(tokenType)) {
+                    log.debug("Rejected non-access JWT tokenType={}", tokenType);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                UUID userId = UUID.fromString(claims.get(SecurityConstants.CLAIM_USER_ID, String.class));
+                Date issuedAt = claims.getIssuedAt();
+                if (issuedAt != null && tokenRevocationService.isTokenRevoked(userId, issuedAt.toInstant())) {
+                    log.debug("Rejected revoked access token for userId={}", userId);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 String email = jwtService.getEmailFromToken(token);
                 Set<String> roles = jwtService.getRolesFromToken(token);
 

@@ -11,28 +11,118 @@
                 <i class="ti ti-arrow-left me-1"></i> Back to Users
             </a>
         </div>
-        <h2 class="page-title fw-bold text-dark fs-2" th:text="${user.email}">user</h2>
+        <div class="d-flex align-items-center gap-3">
+            <h2 class="page-title fw-bold text-dark fs-2 mb-0" th:text="${user.email()}">user</h2>
+            <span th:if="${user.enabled()}" class="badge bg-green-lt text-green fw-bold px-2 py-1">Enabled</span>
+            <span th:unless="${user.enabled()}" class="badge bg-red-lt text-red fw-bold px-2 py-1">Disabled</span>
+        </div>
     </div>
 
-    <div class="card bg-white">
-        <div class="card-header">
-            <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
-                <i class="ti ti-user"></i> User Profile
-            </h3>
+    <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+    <div class="row g-4">
+        <!-- User Profile Card -->
+        <div class="col-lg-8">
+            <div class="card bg-white">
+                <div class="card-header">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
+                        <i class="ti ti-user"></i> User Profile
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0 gy-3">
+                        <dt class="col-sm-3 text-secondary fw-semibold">ID</dt><dd class="col-sm-9"><code class="px-2 py-1 bg-light text-dark rounded" th:text="${user.id()}">id</code></dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">Email</dt><dd class="col-sm-9 text-dark" th:text="${user.email()}">email</dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">First name</dt><dd class="col-sm-9 text-dark" th:text="${user.firstName()}">first</dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">Last name</dt><dd class="col-sm-9 text-dark" th:text="${user.lastName() != null ? user.lastName() : '—'}">last</dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">Status</dt>
+                        <dd class="col-sm-9">
+                            <span th:if="${user.enabled()}" class="badge bg-green-lt text-green fw-bold">Enabled</span>
+                            <span th:unless="${user.enabled()}" class="badge bg-red-lt text-red fw-bold">Disabled</span>
+                        </dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">Roles</dt>
+                        <dd class="col-sm-9">
+                            <span th:each="role : ${user.roles()}" class="badge bg-purple-lt text-purple me-1 fw-bold" th:text="${role}">USER</span>
+                        </dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">Created</dt><dd class="col-sm-9 text-dark" th:text="${#temporals.format(user.createdAt(), 'yyyy-MM-dd HH:mm ''UTC''')}">date</dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">Updated</dt><dd class="col-sm-9 text-dark" th:text="${#temporals.format(user.updatedAt(), 'yyyy-MM-dd HH:mm ''UTC''')}">date</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Role Management Card -->
+            <div class="card bg-white mt-4">
+                <div class="card-header py-3">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                        <i class="ti ti-shield"></i> Role Management
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{'/admin/users/' + ${user.id()} + '/roles'}" method="post">
+                        <div class="mb-3">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="roles" value="USER" id="roleUser"
+                                       th:checked="${user.roles().contains('USER') or user.roles().contains('ROLE_USER')}">
+                                <label class="form-check-label fw-semibold" for="roleUser">USER</label>
+                                <small class="text-muted d-block">Standard user permissions</small>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="roles" value="ADMIN" id="roleAdmin"
+                                       th:checked="${user.roles().contains('ADMIN') or user.roles().contains('ROLE_ADMIN')}">
+                                <label class="form-check-label fw-semibold" for="roleAdmin">ADMIN</label>
+                                <small class="text-muted d-block">Full administrative permissions</small>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4" style="border-radius: 8px; font-weight: 600;">
+                            <i class="ti ti-check me-1"></i> Update Roles
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <dl class="row mb-0 gy-3">
-                <dt class="col-sm-3 text-secondary fw-semibold">ID</dt><dd class="col-sm-9"><code class="px-2 py-1 bg-light text-dark rounded" th:text="${user.id}">id</code></dd>
-                <dt class="col-sm-3 text-secondary fw-semibold">Email</dt><dd class="col-sm-9 text-dark" th:text="${user.email}">email</dd>
-                <dt class="col-sm-3 text-secondary fw-semibold">First name</dt><dd class="col-sm-9 text-dark" th:text="${user.firstName}">first</dd>
-                <dt class="col-sm-3 text-secondary fw-semibold">Last name</dt><dd class="col-sm-9 text-dark" th:text="${user.lastName != null ? user.lastName : '—'}">last</dd>
-                <dt class="col-sm-3 text-secondary fw-semibold">Roles</dt>
-                <dd class="col-sm-9">
-                    <span th:each="role : ${user.roles}" class="badge bg-purple-lt text-purple me-1 fw-bold" th:text="${role}">USER</span>
-                </dd>
-                <dt class="col-sm-3 text-secondary fw-semibold">Created</dt><dd class="col-sm-9 text-dark" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd HH:mm ''UTC''')}">date</dd>
-                <dt class="col-sm-3 text-secondary fw-semibold">Updated</dt><dd class="col-sm-9 text-dark" th:text="${#temporals.format(user.updatedAt, 'yyyy-MM-dd HH:mm ''UTC''')}">date</dd>
-            </dl>
+
+        <!-- Actions Sidebar -->
+        <div class="col-lg-4">
+            <div class="card bg-white">
+                <div class="card-header py-3">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-red mb-0">
+                        <i class="ti ti-settings"></i> Account Actions
+                    </h3>
+                </div>
+                <div class="card-body d-flex flex-column gap-3">
+                    <!-- Disable / Enable -->
+                    <div th:if="${user.enabled()}">
+                        <form th:action="@{'/admin/users/' + ${user.id()} + '/disable'}" method="post"
+                              onsubmit="return confirm('Are you sure you want to disable this user? They will be logged out immediately.')">
+                            <button type="submit" class="btn btn-warning w-100 fw-bold" style="border-radius: 8px;">
+                                <i class="ti ti-user-off me-1"></i> Disable User
+                            </button>
+                        </form>
+                        <small class="text-muted d-block mt-1">Prevents login and revokes active sessions.</small>
+                    </div>
+                    <div th:unless="${user.enabled()}">
+                        <form th:action="@{'/admin/users/' + ${user.id()} + '/enable'}" method="post">
+                            <button type="submit" class="btn btn-success w-100 fw-bold" style="border-radius: 8px;">
+                                <i class="ti ti-user-check me-1"></i> Enable User
+                            </button>
+                        </form>
+                        <small class="text-muted d-block mt-1">Re-enables login for this user account.</small>
+                    </div>
+
+                    <hr class="my-1">
+
+                    <!-- Delete -->
+                    <div>
+                        <form th:action="@{'/admin/users/' + ${user.id()} + '/delete'}" method="post"
+                              onsubmit="return confirm('⚠️ This will permanently soft-delete this user. Are you absolutely sure?')">
+                            <button type="submit" class="btn btn-danger w-100 fw-bold" style="border-radius: 8px;">
+                                <i class="ti ti-trash me-1"></i> Delete User
+                            </button>
+                        </form>
+                        <small class="text-muted d-block mt-1">Soft-deletes the user. Revokes all sessions.</small>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

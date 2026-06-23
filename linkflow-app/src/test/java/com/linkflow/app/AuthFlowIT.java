@@ -16,7 +16,7 @@ class AuthFlowIT extends AbstractIntegrationTest {
         String email = "auth-flow-" + System.nanoTime() + "@example.com";
         String password = "StrongP@ss1";
 
-        mockMvc.perform(post("/api/v1/auth/register")
+        String registerJson = mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -29,8 +29,36 @@ class AuthFlowIT extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.email").value(email))
-                .andExpect(jsonPath("$.data.roles[0]").value("USER"));
+                .andExpect(jsonPath("$.data.roles[0]").value("USER"))
+                .andReturn().getResponse().getContentAsString();
 
+        // First login attempt should fail with EmailNotVerifiedException (401 Unauthorized)
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "password": "%s"
+                                }
+                                """.formatted(email, password)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("EMAIL_NOT_VERIFIED"));
+
+        String verificationToken = JsonPath.read(registerJson, "$.data.verificationToken");
+        org.junit.jupiter.api.Assertions.assertNotNull(verificationToken);
+
+        // Verify the email
+        mockMvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "token": "%s"
+                                }
+                                """.formatted(verificationToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.message").value("Email verified successfully"));
+
+        // Now login should succeed
         TokenPair tokens = login(email, password);
         mockMvc.perform(post("/api/v1/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)

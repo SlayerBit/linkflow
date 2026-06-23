@@ -40,6 +40,7 @@ public class UserLookupAdapter implements UserLookupPort {
                 .firstName(command.firstName())
                 .lastName(command.lastName())
                 .enabled(true)
+                .emailVerified(command.emailVerified())
                 .deleted(false)
                 .build();
 
@@ -64,6 +65,39 @@ public class UserLookupAdapter implements UserLookupPort {
                 .map(this::toData);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public long countActiveUsers() {
+        return userRepository.countActive();
+    }
+
+    @Override
+    @Transactional
+    public void updatePasswordHash(UUID userId, String passwordHash) {
+        User user = userRepository.findByIdAndNotDeleted(userId)
+                .orElseThrow(() -> new com.linkflow.user.domain.exception.UserNotFoundException(userId.toString()));
+        user.setPasswordHash(passwordHash);
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void updateEmailVerified(UUID userId, boolean emailVerified) {
+        User user = userRepository.findByIdAndNotDeleted(userId)
+                .orElseThrow(() -> new com.linkflow.user.domain.exception.UserNotFoundException(userId.toString()));
+        user.setEmailVerified(emailVerified);
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void updateEmail(UUID userId, String newEmail) {
+        User user = userRepository.findByIdAndNotDeleted(userId)
+                .orElseThrow(() -> new com.linkflow.user.domain.exception.UserNotFoundException(userId.toString()));
+        user.setEmail(newEmail);
+        userRepository.save(user);
+    }
+
     private UserPrincipalData toData(User user) {
         Set<String> roleNames = roleService.resolveRoleNames(user.getRoleIds());
         return new UserPrincipalData(
@@ -73,7 +107,8 @@ public class UserLookupAdapter implements UserLookupPort {
                 user.getFirstName(),
                 user.getLastName(),
                 roleNames,
-                user.isEnabled()
+                user.isEnabled(),
+                user.isEmailVerified()
         );
     }
 }

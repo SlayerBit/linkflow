@@ -56,6 +56,15 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-spring</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-redis-spring</artifactId>
+        </dependency>
+
         <!-- OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>

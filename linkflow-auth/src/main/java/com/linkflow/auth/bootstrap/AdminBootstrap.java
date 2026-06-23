@@ -57,10 +57,12 @@ public class AdminBootstrap implements ApplicationRunner {
                 hashedPassword,
                 "Admin",
                 "User",
-                Set.of(SecurityConstants.ROLE_USER, SecurityConstants.ROLE_ADMIN)
+                Set.of(SecurityConstants.ROLE_USER, SecurityConstants.ROLE_ADMIN),
+                true
         );
 
-        userLookupPort.createUser(command);
-        log.info("Bootstrap admin user created: {}", adminEmail);
+        var admin = userLookupPort.createUser(command);
+        userLookupPort.updateEmailVerified(admin.id(), true);
+        log.info("Bootstrap admin user created and verified: {}", adminEmail);
     }
 }

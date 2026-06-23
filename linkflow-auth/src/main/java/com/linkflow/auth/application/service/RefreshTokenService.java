@@ -101,14 +101,31 @@ public class RefreshTokenService {
      * Revoke a refresh token (logout).
      */
     @Transactional
-    public void revokeRefreshToken(String rawToken) {
+    public java.util.Optional<UUID> revokeRefreshToken(String rawToken) {
         String tokenHash = hashToken(rawToken);
-        refreshTokenRepository.findByTokenHash(tokenHash)
-                .ifPresent(token -> {
+        return refreshTokenRepository.findByTokenHash(tokenHash)
+                .map(token -> {
                     token.revoke();
                     refreshTokenRepository.save(token);
                     log.info("Refresh token revoked for userId={}", token.getUserId());
+                    return token.getUserId();
                 });
+    }
+
+    @Transactional
+    public void revokeAllForUser(UUID userId) {
+        refreshTokenRepository.revokeAllByUserId(userId);
+        log.info("All refresh tokens revoked for userId={}", userId);
+    }
+
+    @Transactional
+    public int cleanupExpiredAndRevoked(java.time.Duration revokedRetention) {
+        Instant revokedCutoff = Instant.now().minus(revokedRetention);
+        int deleted = refreshTokenRepository.deleteExpiredOrRevoked(revokedCutoff, Instant.now());
+        if (deleted > 0) {
+            log.info("Cleaned up {} expired/revoked refresh tokens", deleted);
+        }
+        return deleted;
     }
 
     private String generateOpaqueToken() {

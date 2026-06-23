@@ -52,8 +52,9 @@ public class UrlService {
         UserPrincipal principal = getCurrentPrincipal();
 
         if (StringUtils.hasText(idempotencyKey)) {
+            String requestHash = idempotencyService.hashRequestBody(request);
             var cached = idempotencyService.findCached(
-                    principal.getId(), CREATE_ENDPOINT, idempotencyKey, UrlResponse.class);
+                    principal.getId(), CREATE_ENDPOINT, idempotencyKey, requestHash, UrlResponse.class);
             if (cached.isPresent()) {
                 return cached.get().body();
             }
@@ -63,7 +64,9 @@ public class UrlService {
         UrlResponse response = toResponse(shortUrl);
 
         if (StringUtils.hasText(idempotencyKey)) {
-            idempotencyService.store(principal.getId(), CREATE_ENDPOINT, idempotencyKey, 201, response);
+            storeIdempotentResult(
+                    principal.getId(), CREATE_ENDPOINT, idempotencyKey,
+                    idempotencyService.hashRequestBody(request), 201, response);
         }
 
         log.info("Short URL created: id={}, shortCode={}, ownerId={}",
@@ -76,7 +79,8 @@ public class UrlService {
         UserPrincipal principal = getCurrentPrincipal();
 
         var cached = idempotencyService.findCached(
-                principal.getId(), BULK_CREATE_ENDPOINT, idempotencyKey, BulkCreateUrlResponse.class);
+                principal.getId(), BULK_CREATE_ENDPOINT, idempotencyKey,
+                idempotencyService.hashRequestBody(request), BulkCreateUrlResponse.class);
         if (cached.isPresent()) {
             return cached.get().body();
         }
@@ -92,7 +96,9 @@ public class UrlService {
                 .count(responses.size())
                 .build();
 
-        idempotencyService.store(principal.getId(), BULK_CREATE_ENDPOINT, idempotencyKey, 201, response);
+        storeIdempotentResult(
+                principal.getId(), BULK_CREATE_ENDPOINT, idempotencyKey,
+                idempotencyService.hashRequestBody(request), 201, response);
         log.info("Bulk short URLs created: count={}, ownerId={}", responses.size(), principal.getId());
         return response;
     }
@@ -107,6 +113,13 @@ public class UrlService {
     @Transactional(readOnly = true)
     public UrlResponse getUrlById(UUID id) {
         ShortUrl shortUrl = findOwnedUrl(id);
+        return toResponse(shortUrl);
+    }
+
+    @Transactional(readOnly = true)
+    public UrlResponse getUrlByIdAsAdmin(UUID id) {
+        ShortUrl shortUrl = shortUrlRepository.findByIdAndNotDeleted(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Short URL", id.toString()));
         return toResponse(shortUrl);
     }
 
@@ -135,6 +148,13 @@ public class UrlService {
         shortUrlRepository.save(shortUrl);
         invalidateCaches(shortUrl.getShortCode());
         log.info("Short URL soft-deleted: id={}", id);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generateQrCodeAsAdmin(UUID id) {
+        ShortUrl shortUrl = shortUrlRepository.findByIdAndNotDeleted(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Short URL", id.toString()));
+        return qrCodeService.generatePng(shortUrl.getShortCode());
     }
 
     @Transactional(readOnly = true)
@@ -351,5 +371,14 @@ public class UrlService {
     private UserPrincipal getCurrentPrincipal() {
         return (UserPrincipal) SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();
+    }
+
+    private void storeIdempotentResult(UUID userId, String endpoint, String idempotencyKey,
+                                       String requestHash, int statusCode, Object responseBody) {
+        try {
+            idempotencyService.store(userId, endpoint, idempotencyKey, requestHash, statusCode, responseBody);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            log.debug("Idempotency record already stored concurrently for key={}", idempotencyKey);
+        }
     }
 }

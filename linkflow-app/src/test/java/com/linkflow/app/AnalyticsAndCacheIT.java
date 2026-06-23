@@ -1,5 +1,6 @@
 package com.linkflow.app;
 
+import com.linkflow.analytics.application.service.AnalyticsFlushService;
 import com.jayway.jsonpath.JsonPath;
 import com.linkflow.app.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,9 @@ class AnalyticsAndCacheIT extends AbstractIntegrationTest {
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private AnalyticsFlushService analyticsFlushService;
 
     private String accessToken;
 
@@ -54,7 +58,8 @@ class AnalyticsAndCacheIT extends AbstractIntegrationTest {
     }
 
     private void awaitClickCount(String urlId, int expected) throws Exception {
-        for (int attempt = 0; attempt < 30; attempt++) {
+        for (int attempt = 0; attempt < 50; attempt++) {
+            analyticsFlushService.flush();
             String json = mockMvc.perform(get("/api/v1/urls/" + urlId + "/analytics")
                             .header("Authorization", "Bearer " + accessToken))
                     .andExpect(status().isOk())
@@ -113,7 +118,8 @@ class AnalyticsAndCacheIT extends AbstractIntegrationTest {
     }
 
     private void awaitClickEvents(String urlId, int expected) throws Exception {
-        for (int attempt = 0; attempt < 30; attempt++) {
+        for (int attempt = 0; attempt < 50; attempt++) {
+            analyticsFlushService.flush();
             String json = mockMvc.perform(get("/api/v1/urls/" + urlId + "/analytics/clicks?limit=5")
                             .header("Authorization", "Bearer " + accessToken))
                     .andExpect(status().isOk())

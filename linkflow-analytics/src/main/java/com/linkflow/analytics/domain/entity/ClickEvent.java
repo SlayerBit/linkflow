@@ -34,6 +34,9 @@ public class ClickEvent {
     @Column(name = "clicked_at", nullable = false, updatable = false)
     private Instant clickedAt;
 
+    @Column(name = "stream_record_id", length = 64)
+    private String streamRecordId;
+
     @PrePersist
     public void prePersist() {
         if (clickedAt == null) {
