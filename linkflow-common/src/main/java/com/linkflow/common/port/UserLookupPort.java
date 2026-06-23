@@ -18,6 +18,14 @@ public interface UserLookupPort {
 
     Optional<UserPrincipalData> findById(UUID id);
 
+    long countActiveUsers();
+
+    void updatePasswordHash(UUID userId, String passwordHash);
+
+    void updateEmailVerified(UUID userId, boolean emailVerified);
+
+    void updateEmail(UUID userId, String newEmail);
+
     /**
      * Immutable data carrier for user principal information.
      */
@@ -28,7 +36,8 @@ public interface UserLookupPort {
             String firstName,
             String lastName,
             Set<String> roles,
-            boolean enabled
+            boolean enabled,
+            boolean emailVerified
     ) {}
 
     /**
@@ -39,6 +48,7 @@ public interface UserLookupPort {
             String passwordHash,
             String firstName,
             String lastName,
-            Set<String> roles
+            Set<String> roles,
+            boolean emailVerified
     ) {}
 }

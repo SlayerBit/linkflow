@@ -27,4 +27,36 @@ public class PublicController {
         model.addAttribute("pageTitle", "Register");
         return "public/register";
     }
+
+    @GetMapping("/verify-email")
+    public String verifyEmail(@org.springframework.web.bind.annotation.RequestParam(required = false) String token,
+                              @org.springframework.web.bind.annotation.RequestParam(required = false) String email,
+                              Model model) {
+        model.addAttribute("token", token != null ? token : "");
+        model.addAttribute("email", email != null ? email : "");
+        model.addAttribute("pageTitle", "Verify Email");
+        return "public/verify-email";
+    }
+
+    @GetMapping("/forgot-password")
+    public String forgotPassword(Model model) {
+        model.addAttribute("pageTitle", "Forgot Password");
+        return "public/forgot-password";
+    }
+
+    @GetMapping("/reset-password")
+    public String resetPassword(@org.springframework.web.bind.annotation.RequestParam(required = false) String token,
+                                Model model) {
+        model.addAttribute("token", token != null ? token : "");
+        model.addAttribute("pageTitle", "Reset Password");
+        return "public/reset-password";
+    }
+
+    @GetMapping("/verify-email-change")
+    public String verifyEmailChange(@org.springframework.web.bind.annotation.RequestParam(required = false) String token,
+                                    Model model) {
+        model.addAttribute("token", token != null ? token : "");
+        model.addAttribute("pageTitle", "Verify Email Change");
+        return "public/verify-email-change";
+    }
 }

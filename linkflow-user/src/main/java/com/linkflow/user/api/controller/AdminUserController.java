@@ -3,6 +3,7 @@ package com.linkflow.user.api.controller;
 import com.linkflow.common.api.ApiResponse;
 import com.linkflow.common.api.PagedResponse;
 import com.linkflow.user.api.dto.UserResponse;
+import com.linkflow.user.api.dto.UpdateRolesRequest;
 import com.linkflow.user.application.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -73,6 +74,15 @@ public class AdminUserController {
     @Operation(summary = "Soft-delete a user account (admin)")
     public ResponseEntity<ApiResponse<UserResponse>> softDeleteUser(@PathVariable UUID id) {
         UserResponse user = userService.softDeleteUser(id);
+        return ResponseEntity.ok(ApiResponse.of(user));
+    }
+
+    @PatchMapping("/{id}/roles")
+    @Operation(summary = "Update user roles (admin)")
+    public ResponseEntity<ApiResponse<UserResponse>> updateRoles(
+            @PathVariable UUID id,
+            @jakarta.validation.Valid @RequestBody UpdateRolesRequest request) {
+        UserResponse user = userService.updateUserRoles(id, request.getRoles());
         return ResponseEntity.ok(ApiResponse.of(user));
     }
 }

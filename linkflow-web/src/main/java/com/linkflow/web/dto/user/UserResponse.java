@@ -13,6 +13,7 @@ public record UserResponse(
         String firstName,
         String lastName,
         Set<String> roles,
+        boolean enabled,
         Instant createdAt,
         Instant updatedAt
 ) {

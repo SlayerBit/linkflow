@@ -37,6 +37,8 @@ class RedirectServiceTest {
     @Mock
     private RedisLockService redisLockService;
     @Mock
+    private RedirectCacheRefreshService redirectCacheRefreshService;
+    @Mock
     private HttpServletRequest request;
 
     private RedirectService redirectService;
@@ -44,7 +46,8 @@ class RedirectServiceTest {
     @BeforeEach
     void setUp() {
         redirectService = new RedirectService(
-                shortUrlRepository, urlCacheService, clickTrackingPort, redisLockService);
+                shortUrlRepository, urlCacheService, clickTrackingPort,
+                redisLockService, redirectCacheRefreshService);
     }
 
     // --- Fresh cache hit ---
@@ -79,7 +82,7 @@ class RedirectServiceTest {
 
         assertEquals("https://stale.example.com", url);
         verify(clickTrackingPort).trackClick(any());
-        // DB is NOT hit synchronously — refresh is async
+        verify(redirectCacheRefreshService).refreshCacheEntry("swr");
         verify(shortUrlRepository, never()).findByShortCode(any());
     }
 

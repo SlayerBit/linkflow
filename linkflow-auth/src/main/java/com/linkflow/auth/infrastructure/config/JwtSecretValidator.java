@@ -8,15 +8,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * Fails fast when the prod profile is active and JWT secret is missing or too short.
+ * Fails fast when the prod profile is active and JWT secret is missing, too short, or weak.
  */
 @Component
 @RequiredArgsConstructor
 public class JwtSecretValidator {
 
     private static final int MIN_SECRET_BYTES = 32;
+    private static final double MIN_UNIQUE_BYTE_RATIO = 0.25;
 
     private final JwtProperties jwtProperties;
     private final Environment environment;
@@ -43,5 +46,29 @@ public class JwtSecretValidator {
             throw new IllegalStateException(
                     "LINKFLOW_JWT_SECRET must decode to at least " + MIN_SECRET_BYTES + " bytes");
         }
+        if (hasWeakEntropy(decoded)) {
+            throw new IllegalStateException(
+                    "LINKFLOW_JWT_SECRET has insufficient entropy; use a cryptographically random 64-byte secret");
+        }
+    }
+
+    static boolean hasWeakEntropy(byte[] decoded) {
+        Set<Byte> uniqueBytes = new HashSet<>();
+        for (byte b : decoded) {
+            uniqueBytes.add(b);
+        }
+        double ratio = (double) uniqueBytes.size() / decoded.length;
+        if (ratio < MIN_UNIQUE_BYTE_RATIO) {
+            return true;
+        }
+        String asString = new String(decoded, java.nio.charset.StandardCharsets.US_ASCII);
+        return isSequentialPattern(asString);
+    }
+
+    private static boolean isSequentialPattern(String value) {
+        String lower = value.toLowerCase();
+        return lower.contains("abcdefghijklmnopqrstuvwxyz")
+                || lower.contains("0123456789")
+                || lower.chars().distinct().count() <= 8;
     }
 }

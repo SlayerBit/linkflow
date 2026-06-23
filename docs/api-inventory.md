@@ -303,6 +303,16 @@ Paged list of all URLs (`PagedResponse<UrlResponse>`).
 
 Force-deactivate URL (admin override).
 
+### GET `/api/v1/admin/urls/{id}/qr`
+
+| Field | Value |
+|-------|-------|
+| Response | `image/png` (raw bytes, not `ApiResponse`) |
+| Authentication | Bearer |
+| Authorization | `ROLE_ADMIN` |
+
+Returns QR code PNG for any URL regardless of owner.
+
 ---
 
 ## Analytics domain

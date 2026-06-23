@@ -9,6 +9,22 @@
         <h2 class="page-title fw-bold text-dark fs-2">My Profile</h2>
     </div>
     
+    <!-- Email Change Simulation Banner -->
+    <div class="alert alert-warning alert-premium d-flex align-items-start mb-4 shadow-sm" th:if="${emailChangeToken}">
+        <i class="ti ti-info-circle fs-2 me-3 mt-1 text-warning"></i>
+        <div>
+            <h4 class="alert-title fw-bold mb-1">Email Change Simulation Mode</h4>
+            <div class="text-secondary small">
+                An email change request has been generated for <strong><span th:text="${emailChangeNewEmail}">newemail</span></strong>.
+                Use the verification token below to complete the change.
+            </div>
+            <div class="mt-2 d-flex gap-2 align-items-center">
+                <code class="px-2 py-1 bg-dark text-white rounded font-monospace fs-5" th:text="${emailChangeToken}">token</code>
+                <a th:href="@{/verify-email-change(token=${emailChangeToken})}" class="btn btn-warning btn-sm fw-bold px-3" style="border-radius: 6px;">Verify Change</a>
+            </div>
+        </div>
+    </div>
+    
     <div class="row g-4">
         <!-- Sidebar Column: Summary & Stats -->
         <div class="col-lg-4">
@@ -82,6 +98,61 @@
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Change Password Card -->
+            <div class="card bg-white mt-4">
+                <div class="card-header py-3">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                        <i class="ti ti-lock"></i> Change Password
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/profile/change-password}" th:object="${changePasswordForm}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-secondary mb-2">Current Password</label>
+                            <input type="password" class="form-control" th:field="*{currentPassword}" required placeholder="Enter current password" style="border-radius: 8px;">
+                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('currentPassword')}" th:errors="*{currentPassword}"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-secondary mb-2">New Password</label>
+                                <input type="password" class="form-control" th:field="*{newPassword}" required placeholder="New password" style="border-radius: 8px;">
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('newPassword')}" th:errors="*{newPassword}"></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-secondary mb-2">Confirm New Password</label>
+                                <input type="password" class="form-control" th:field="*{confirmPassword}" required placeholder="Confirm new password" style="border-radius: 8px;">
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Update Password</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Change Email Card -->
+            <div class="card bg-white mt-4">
+                <div class="card-header py-3">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-green mb-0">
+                        <i class="ti ti-mail"></i> Change Email Address
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/profile/request-email-change}" th:object="${requestEmailChangeForm}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-secondary mb-2">New Email Address</label>
+                            <input type="email" class="form-control" th:field="*{newEmail}" required placeholder="Enter new email address" style="border-radius: 8px;">
+                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('newEmail')}" th:errors="*{newEmail}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-secondary mb-2">Current Password</label>
+                            <input type="password" class="form-control" th:field="*{currentPassword}" required placeholder="Verify with current password" style="border-radius: 8px;">
+                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('currentPassword')}" th:errors="*{currentPassword}"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Request Email Change</button>
                     </form>
                 </div>
             </div>

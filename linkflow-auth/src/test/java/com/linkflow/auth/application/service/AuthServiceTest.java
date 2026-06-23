@@ -4,6 +4,7 @@ import com.linkflow.auth.api.dto.LoginRequest;
 import com.linkflow.auth.api.dto.RegisterRequest;
 import com.linkflow.auth.domain.exception.InvalidCredentialsException;
 import com.linkflow.common.exception.ConflictException;
+import com.linkflow.common.port.TokenRevocationPort;
 import com.linkflow.common.port.UserLookupPort;
 import com.linkflow.common.port.UserLookupPort.UserPrincipalData;
 import com.linkflow.common.security.SecurityConstants;
@@ -33,12 +34,23 @@ class AuthServiceTest {
     private RefreshTokenService refreshTokenService;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private TokenRevocationPort tokenRevocationPort;
+    @Mock
+    private com.linkflow.auth.domain.repository.EmailVerificationTokenRepository emailVerificationTokenRepository;
+    @Mock
+    private com.linkflow.auth.domain.repository.PasswordResetTokenRepository passwordResetTokenRepository;
+    @Mock
+    private com.linkflow.auth.infrastructure.config.LinkflowSecurityProperties securityProperties;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userLookupPort, jwtService, refreshTokenService, passwordEncoder);
+        lenient().when(securityProperties.isEmailVerificationRequired()).thenReturn(true);
+        authService = new AuthService(
+                userLookupPort, jwtService, refreshTokenService, passwordEncoder, tokenRevocationPort,
+                emailVerificationTokenRepository, passwordResetTokenRepository, securityProperties);
     }
 
     @Test
@@ -48,7 +60,7 @@ class AuthServiceTest {
         UUID userId = UUID.randomUUID();
         when(userLookupPort.createUser(any())).thenReturn(new UserPrincipalData(
                 userId, "new@example.com", "hashed", "New", "User",
-                Set.of(SecurityConstants.ROLE_USER), true));
+                Set.of(SecurityConstants.ROLE_USER), true, true));
 
         RegisterRequest request = new RegisterRequest(
                 "new@example.com", "StrongP@ss1", "New", "User");
@@ -72,7 +84,7 @@ class AuthServiceTest {
         UUID userId = UUID.randomUUID();
         when(userLookupPort.findByEmail("user@example.com")).thenReturn(Optional.of(
                 new UserPrincipalData(userId, "user@example.com", "hash", "U", "S",
-                        Set.of(SecurityConstants.ROLE_USER), true)));
+                        Set.of(SecurityConstants.ROLE_USER), true, true)));
         when(passwordEncoder.matches("wrong", "hash")).thenReturn(false);
 
         assertThrows(InvalidCredentialsException.class,
@@ -84,7 +96,7 @@ class AuthServiceTest {
         UUID userId = UUID.randomUUID();
         when(userLookupPort.findByEmail("user@example.com")).thenReturn(Optional.of(
                 new UserPrincipalData(userId, "user@example.com", "hash", "U", "S",
-                        Set.of(SecurityConstants.ROLE_USER), true)));
+                        Set.of(SecurityConstants.ROLE_USER), true, true)));
         when(passwordEncoder.matches("StrongP@ss1", "hash")).thenReturn(true);
         when(jwtService.generateAccessToken(any())).thenReturn("access-jwt");
         when(refreshTokenService.createRefreshToken(userId)).thenReturn("refresh-opaque");

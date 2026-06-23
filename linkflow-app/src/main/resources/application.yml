@@ -1,5 +1,6 @@
 server:
   port: 8081
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -40,10 +41,19 @@ linkflow:
     auth-fail-closed: ${LINKFLOW_RATE_LIMIT_AUTH_FAIL_CLOSED:true}
   analytics:
     flush-interval-ms: ${LINKFLOW_ANALYTICS_FLUSH_INTERVAL_MS:30000}
+    click-events-retention-days: ${LINKFLOW_ANALYTICS_CLICK_EVENTS_RETENTION_DAYS:365}
+    click-events-retention-cron: ${LINKFLOW_ANALYTICS_CLICK_EVENTS_RETENTION_CRON:0 30 4 * * *}
+  auth:
+    refresh-token-revoked-retention-days: ${LINKFLOW_AUTH_REFRESH_TOKEN_REVOKED_RETENTION_DAYS:7}
+    refresh-token-cleanup-cron: ${LINKFLOW_AUTH_REFRESH_TOKEN_CLEANUP_CRON:0 15 3 * * *}
+  url:
+    expired-cleanup-cron: ${LINKFLOW_URL_EXPIRED_CLEANUP_CRON:0 0 * * * *}
   security:
     swagger-public: ${LINKFLOW_SECURITY_SWAGGER_PUBLIC:true}
     actuator-public: ${LINKFLOW_SECURITY_ACTUATOR_PUBLIC:true}
     metrics-public: ${LINKFLOW_SECURITY_METRICS_PUBLIC:false}
+    email-verification-required: ${LINKFLOW_SECURITY_EMAIL_VERIFICATION_REQUIRED:true}
+    expose-dev-tokens: ${LINKFLOW_SECURITY_EXPOSE_DEV_TOKENS:false}
   bootstrap:
     admin:
       enabled: ${LINKFLOW_BOOTSTRAP_ADMIN_ENABLED:false}
@@ -57,7 +67,7 @@ management:
         include: health,info,prometheus,metrics
   endpoint:
     health:
-      show-details: when_authorized
+      show-details: always
   metrics:
     tags:
       application: ${spring.application.name}

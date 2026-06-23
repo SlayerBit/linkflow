@@ -2,7 +2,7 @@ package com.linkflow.web.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -14,11 +14,15 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class ActuatorApiClient {
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+
+    public ActuatorApiClient(@Qualifier("backendRestClient") RestClient restClient, ObjectMapper objectMapper) {
+        this.restClient = restClient;
+        this.objectMapper = objectMapper;
+    }
 
     public JsonNode getHealth() {
         String body = restClient.get()
@@ -77,8 +81,7 @@ public class ActuatorApiClient {
             String limit,
             String remaining,
             String reset,
-            String message
-    ) {
+            String message) {
         public Map<String, Object> toMap() {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("requestNumber", requestNumber);

@@ -45,6 +45,7 @@
         <logstash-logback.version>8.0</logstash-logback.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <lombok.version>1.18.46</lombok.version>
+        <shedlock.version>6.2.0</shedlock.version>
     </properties>
 
     <dependencyManagement>
@@ -153,6 +154,17 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-spring</artifactId>
+                <version>${shedlock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-provider-redis-spring</artifactId>
+                <version>${shedlock.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -201,8 +213,8 @@
                         <configuration>
                             <rules>
                                 <requireJavaVersion>
-                                    <version>[21,22)</version>
-                                    <message>LinkFlow requires JDK 21 for builds.</message>
+                                    <version>[21,)</version>
+                                    <message>LinkFlow requires JDK 21 or above for builds.</message>
                                 </requireJavaVersion>
                             </rules>
                         </configuration>

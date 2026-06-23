@@ -13,6 +13,7 @@ public record RegisterResponse(
         String firstName,
         String lastName,
         Set<String> roles,
-        Instant createdAt
+        Instant createdAt,
+        String verificationToken
 ) {
 }

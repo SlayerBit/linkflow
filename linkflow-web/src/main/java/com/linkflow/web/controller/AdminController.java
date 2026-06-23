@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linkflow.web.client.ActuatorApiClient;
 import com.linkflow.web.client.AnalyticsApiClient;
 import com.linkflow.web.client.ApiCallHelper;
+import com.linkflow.web.client.BackendApiException;
 import com.linkflow.web.client.UrlApiClient;
 import com.linkflow.web.client.UserApiClient;
 import com.linkflow.web.config.WebClientConfig;
@@ -16,6 +17,9 @@ import com.linkflow.web.dto.url.UrlResponse;
 import com.linkflow.web.dto.user.UserResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -112,6 +116,49 @@ public class AdminController {
         return "admin/urls";
     }
 
+    @GetMapping("/urls/{id}")
+    public String urlDetail(@PathVariable UUID id, HttpSession session, Model model) throws JsonProcessingException {
+        UrlResponse url = apiCallHelper.withTokenRefresh(session, auth ->
+                urlApiClient.getAdminUrlById(auth.accessToken(), id)
+        );
+        com.linkflow.web.dto.analytics.UrlAnalyticsResponse analytics = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getAdminUrlAnalytics(auth.accessToken(), id)
+        );
+        List<ClickTrendResponse> trend7d = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getAdminClickTrend(auth.accessToken(), id, 7)
+        );
+        List<ClickTrendResponse> trend30d = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getAdminClickTrend(auth.accessToken(), id, 30)
+        );
+        List<ClickTrendResponse> trend90d = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getAdminClickTrend(auth.accessToken(), id, 90)
+        );
+        List<com.linkflow.web.dto.analytics.ClickEventResponse> recentClicks = apiCallHelper.withTokenRefresh(session, auth ->
+                analyticsApiClient.getAdminRecentClicks(auth.accessToken(), id, 20)
+        );
+
+        model.addAttribute("url", url);
+        model.addAttribute("analytics", analytics);
+        model.addAttribute("recentClicks", recentClicks);
+        model.addAttribute("trend7dJson", objectMapper.writeValueAsString(trend7d));
+        model.addAttribute("trend30dJson", objectMapper.writeValueAsString(trend30d));
+        model.addAttribute("trend90dJson", objectMapper.writeValueAsString(trend90d));
+        model.addAttribute("pageTitle", "URL Analytics Details");
+        model.addAttribute("activeNav", "admin-urls");
+        model.addAttribute("adminSection", true);
+        return "admin/url-detail";
+    }
+
+    @GetMapping("/urls/{id}/qr-proxy")
+    public ResponseEntity<byte[]> adminQrProxy(@PathVariable UUID id, HttpSession session) {
+        byte[] png = apiCallHelper.withTokenRefresh(session, auth ->
+                urlApiClient.getAdminQrCode(auth.accessToken(), id)
+        );
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE)
+                .body(png);
+    }
+
     @PostMapping("/urls/{id}/deactivate")
     public String deactivateUrl(@PathVariable UUID id,
                                 HttpSession session,
@@ -178,5 +225,72 @@ public class AdminController {
         model.addAttribute("activeNav", "admin-system");
         model.addAttribute("adminSection", true);
         return "admin/system";
+    }
+
+    @PostMapping("/users/{id}/disable")
+    public String disableUser(@PathVariable UUID id,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            apiCallHelper.withTokenRefresh(session, auth ->
+                    userApiClient.disableUser(auth.accessToken(), id)
+            );
+            redirectAttributes.addFlashAttribute("successMessage", "User disabled successfully.");
+        } catch (BackendApiException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/admin/users/" + id;
+    }
+
+    @PostMapping("/users/{id}/enable")
+    public String enableUser(@PathVariable UUID id,
+                             HttpSession session,
+                             RedirectAttributes redirectAttributes) {
+        try {
+            apiCallHelper.withTokenRefresh(session, auth ->
+                    userApiClient.enableUser(auth.accessToken(), id)
+            );
+            redirectAttributes.addFlashAttribute("successMessage", "User enabled successfully.");
+        } catch (BackendApiException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/admin/users/" + id;
+    }
+
+    @PostMapping("/users/{id}/delete")
+    public String deleteUser(@PathVariable UUID id,
+                             HttpSession session,
+                             RedirectAttributes redirectAttributes) {
+        try {
+            apiCallHelper.withTokenRefresh(session, auth -> {
+                userApiClient.deleteUser(auth.accessToken(), id);
+                return null;
+            });
+            redirectAttributes.addFlashAttribute("successMessage", "User deleted successfully.");
+            return "redirect:/admin/users";
+        } catch (BackendApiException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+            return "redirect:/admin/users/" + id;
+        }
+    }
+
+    @PostMapping("/users/{id}/roles")
+    public String updateRoles(@PathVariable UUID id,
+                              @RequestParam(required = false) java.util.Set<String> roles,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
+        if (roles == null || roles.isEmpty()) {
+            roles = java.util.Set.of("USER");
+        }
+        try {
+            java.util.Set<String> finalRoles = roles;
+            apiCallHelper.withTokenRefresh(session, auth ->
+                    userApiClient.updateUserRoles(auth.accessToken(), id, finalRoles)
+            );
+            redirectAttributes.addFlashAttribute("successMessage", "User roles updated successfully.");
+        } catch (BackendApiException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/admin/users/" + id;
     }
 }

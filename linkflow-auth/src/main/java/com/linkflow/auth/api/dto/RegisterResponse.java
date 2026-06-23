@@ -18,4 +18,5 @@ public class RegisterResponse {
     private final String lastName;
     private final Set<String> roles;
     private final Instant createdAt;
+    private final String verificationToken;
 }

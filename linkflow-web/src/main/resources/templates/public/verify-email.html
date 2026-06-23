@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Verify Email — LinkFlow</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="row justify-content-center py-4">
+        <div class="col-xl-5 col-lg-7">
+            <div class="card overflow-hidden" style="border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08); border-radius: 16px;">
+                <div class="card-body p-5 bg-white">
+                    <div class="text-center mb-4">
+                        <span class="avatar avatar-xl bg-green-lt rounded-circle mb-3" style="width: 5rem; height: 5rem; font-size: 2.25rem;">
+                            <i class="ti ti-mail-check"></i>
+                        </span>
+                        <h2 class="fw-bold text-dark mb-1">Verify Your Email</h2>
+                        <p class="text-muted">Enter the verification token sent to your email address</p>
+                    </div>
+
+                    <div class="alert alert-success alert-premium d-flex align-items-center mb-4" th:if="${successMessage}">
+                        <i class="ti ti-circle-check fs-2 me-2"></i>
+                        <div th:text="${successMessage}">Success</div>
+                    </div>
+                    <div class="alert alert-danger alert-premium d-flex align-items-center mb-4" th:if="${errorMessage}">
+                        <i class="ti ti-alert-circle fs-2 me-2"></i>
+                        <div th:text="${errorMessage}">Error</div>
+                    </div>
+
+                    <!-- Simulation Banner -->
+                    <div class="alert alert-warning alert-premium d-flex align-items-start mb-4" th:if="${token != null and !token.isEmpty()}">
+                        <i class="ti ti-info-circle fs-2 me-2 mt-1"></i>
+                        <div>
+                            <strong>Email Simulation Mode</strong><br>
+                            <span class="small">Since email delivery is not configured, your verification token is shown below. Copy and paste it into the field.</span>
+                            <div class="mt-2 p-2 bg-dark text-white rounded" style="font-family: monospace; word-break: break-all; font-size: 0.75rem;" th:text="${token}"></div>
+                        </div>
+                    </div>
+
+                    <form th:action="@{/verify-email}" method="post" th:if="${successMessage == null}">
+                        <div class="mb-4">
+                            <label class="form-label" style="font-weight: 500;">Verification Token</label>
+                            <input type="text" class="form-control" name="token" th:value="${token}" placeholder="Paste your verification token" required style="border-radius: 8px; padding: 0.6rem 0.8rem;">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Verify Email</button>
+                    </form>
+
+                    <div th:if="${successMessage != null}" class="text-center mt-3">
+                        <a th:href="@{/login}" class="btn btn-primary px-4 py-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Go to Login</a>
+                    </div>
+
+                    <p class="text-center text-muted mt-4 mb-0">
+                        <a th:href="@{/login}" class="fw-semibold text-decoration-none">Back to Login</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

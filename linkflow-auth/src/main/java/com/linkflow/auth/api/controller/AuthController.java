@@ -20,12 +20,24 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.linkflow.auth.infrastructure.config.LinkflowSecurityProperties securityProperties;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user")
     public ResponseEntity<ApiResponse<RegisterResponse>> register(
             @Valid @RequestBody RegisterRequest request) {
         RegisterResponse response = authService.register(request);
+        if (!securityProperties.isExposeDevTokens()) {
+            response = RegisterResponse.builder()
+                    .id(response.getId())
+                    .email(response.getEmail())
+                    .firstName(response.getFirstName())
+                    .lastName(response.getLastName())
+                    .roles(response.getRoles())
+                    .createdAt(response.getCreatedAt())
+                    .verificationToken(null)
+                    .build();
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(response));
     }
 
@@ -51,5 +63,45 @@ public class AuthController {
             @Valid @RequestBody LogoutRequest request) {
         authService.logout(request);
         return ResponseEntity.ok(ApiResponse.of(Map.of("message", "Logged out successfully")));
+    }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "Change password for the authenticated user")
+    public ResponseEntity<ApiResponse<Map<String, String>>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return ResponseEntity.ok(ApiResponse.of(Map.of("message", "Password changed successfully")));
+    }
+
+    @PostMapping("/verify-email")
+    @Operation(summary = "Verify user email using a registration token")
+    public ResponseEntity<ApiResponse<Map<String, String>>> verifyEmail(
+            @Valid @RequestBody VerifyEmailRequest request) {
+        authService.verifyEmail(request.getToken());
+        return ResponseEntity.ok(ApiResponse.of(Map.of("message", "Email verified successfully")));
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Request password reset token")
+    public ResponseEntity<ApiResponse<Map<String, String>>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+        var token = authService.requestPasswordReset(request.getEmail());
+        if (securityProperties.isExposeDevTokens() && token.isPresent()) {
+            return ResponseEntity.ok(ApiResponse.of(Map.of(
+                    "message", "If an account exists for that email, a reset link has been sent.",
+                    "token", token.get()
+            )));
+        }
+        return ResponseEntity.ok(ApiResponse.of(Map.of(
+                "message", "If an account exists for that email, a reset link has been sent."
+        )));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password using token")
+    public ResponseEntity<ApiResponse<Map<String, String>>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.of(Map.of("message", "Password reset successfully")));
     }
 }

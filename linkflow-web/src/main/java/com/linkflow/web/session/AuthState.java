@@ -1,5 +1,6 @@
 package com.linkflow.web.session;
 
+import java.io.Serializable;
 import java.util.Set;
 
 public record AuthState(
@@ -10,7 +11,7 @@ public record AuthState(
         String firstName,
         String lastName,
         Set<String> roles
-) {
+) implements Serializable {
 
     public boolean isAdmin() {
         return roles != null && roles.contains("ADMIN");

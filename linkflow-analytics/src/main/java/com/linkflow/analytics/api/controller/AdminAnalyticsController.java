@@ -3,6 +3,7 @@ package com.linkflow.analytics.api.controller;
 import com.linkflow.analytics.api.dto.ClickEventResponse;
 import com.linkflow.analytics.api.dto.SystemStatsResponse;
 import com.linkflow.analytics.api.dto.TopUrlResponse;
+import com.linkflow.analytics.api.dto.UrlAnalyticsResponse;
 import com.linkflow.analytics.application.service.AnalyticsQueryService;
 import com.linkflow.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -73,5 +74,12 @@ public class AdminAnalyticsController {
         limit = Math.min(Math.max(limit, 1), 100);
         List<ClickEventResponse> clicks = analyticsQueryService.getSystemRecentClicks(limit);
         return ResponseEntity.ok(ApiResponse.of(clicks));
+    }
+
+    @GetMapping("/urls/{id}")
+    @Operation(summary = "Get analytics stats for a specific URL (admin)")
+    public ResponseEntity<ApiResponse<UrlAnalyticsResponse>> getUrlAnalytics(@PathVariable("id") UUID id) {
+        UrlAnalyticsResponse analytics = analyticsQueryService.getUrlAnalyticsAsAdmin(id);
+        return ResponseEntity.ok(ApiResponse.of(analytics));
     }
 }

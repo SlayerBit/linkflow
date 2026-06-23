@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -60,5 +61,21 @@ public class AdminUrlController {
     public ResponseEntity<ApiResponse<UrlResponse>> reactivateUrl(@PathVariable UUID id) {
         UrlResponse response = urlService.adminReactivateUrl(id);
         return ResponseEntity.ok(ApiResponse.of(response));
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get short URL by ID (admin)")
+    public ResponseEntity<ApiResponse<UrlResponse>> getUrlById(@PathVariable UUID id) {
+        UrlResponse response = urlService.getUrlByIdAsAdmin(id);
+        return ResponseEntity.ok(ApiResponse.of(response));
+    }
+
+    @GetMapping(value = "/{id}/qr", produces = MediaType.IMAGE_PNG_VALUE)
+    @Operation(summary = "Get QR code PNG for any URL (admin)")
+    public ResponseEntity<byte[]> getQrCode(@PathVariable UUID id) {
+        byte[] png = urlService.generateQrCodeAsAdmin(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(png);
     }
 }

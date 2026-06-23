@@ -55,4 +55,53 @@ public class UserApiClient {
         );
         return response.data();
     }
+
+    public String requestEmailChange(String accessToken, String currentPassword, String newEmail) {
+        Map<String, String> body = Map.of("currentPassword", currentPassword, "newEmail", newEmail);
+        var response = backendClient.exchangeForBody(
+                backendClient.post("/api/v1/users/me/email-change-request", accessToken).body(body),
+                new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
+        );
+        return response.data().get("token");
+    }
+
+    public void verifyEmailChange(String token) {
+        Map<String, String> body = Map.of("token", token);
+        backendClient.exchangeForBody(
+                backendClient.postPublic("/api/v1/users/verify-email-change").body(body),
+                new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
+        );
+    }
+
+    public UserResponse disableUser(String accessToken, UUID id) {
+        var response = backendClient.exchangeForBody(
+                backendClient.patch("/api/v1/admin/users/" + id + "/disable", accessToken).body(Map.of()),
+                new ParameterizedTypeReference<ApiResponse<UserResponse>>() {}
+        );
+        return response.data();
+    }
+
+    public UserResponse enableUser(String accessToken, UUID id) {
+        var response = backendClient.exchangeForBody(
+                backendClient.patch("/api/v1/admin/users/" + id + "/enable", accessToken).body(Map.of()),
+                new ParameterizedTypeReference<ApiResponse<UserResponse>>() {}
+        );
+        return response.data();
+    }
+
+    public void deleteUser(String accessToken, UUID id) {
+        backendClient.exchangeForBody(
+                backendClient.delete("/api/v1/admin/users/" + id, accessToken),
+                new ParameterizedTypeReference<ApiResponse<UserResponse>>() {}
+        );
+    }
+
+    public UserResponse updateUserRoles(String accessToken, UUID id, java.util.Set<String> roles) {
+        Map<String, Object> body = Map.of("roles", roles);
+        var response = backendClient.exchangeForBody(
+                backendClient.patch("/api/v1/admin/users/" + id + "/roles", accessToken).body(body),
+                new ParameterizedTypeReference<ApiResponse<UserResponse>>() {}
+        );
+        return response.data();
+    }
 }

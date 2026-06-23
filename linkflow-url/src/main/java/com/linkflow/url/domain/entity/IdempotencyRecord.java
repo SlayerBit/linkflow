@@ -40,6 +40,9 @@ public class IdempotencyRecord {
     @Column(name = "response_body", nullable = false, columnDefinition = "TEXT")
     private String responseBody;
 
+    @Column(name = "request_body_hash", nullable = false, length = 64)
+    private String requestBodyHash;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

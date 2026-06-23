@@ -27,4 +27,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.deleted = false")
     long countActive();
+
+    @Query(value = """
+            SELECT COUNT(DISTINCT u.id)
+            FROM users u
+            INNER JOIN user_roles ur ON ur.user_id = u.id
+            INNER JOIN roles r ON r.id = ur.role_id
+            WHERE u.deleted = false AND u.enabled = true AND r.name = 'ADMIN'
+            """, nativeQuery = true)
+    long countActiveAdmins();
 }

@@ -28,6 +28,7 @@ services:
       LINKFLOW_BOOTSTRAP_ADMIN_ENABLED: ${LINKFLOW_BOOTSTRAP_ADMIN_ENABLED:-true}
       LINKFLOW_BOOTSTRAP_ADMIN_EMAIL: ${LINKFLOW_BOOTSTRAP_ADMIN_EMAIL:-admin@linkflow.local}
       LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD: ${LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD:-ChangeMeAdmin1!}
+      LINKFLOW_SECURITY_EXPOSE_DEV_TOKENS: "true"
     depends_on:
       redis:
         condition: service_healthy
@@ -46,9 +47,15 @@ services:
       - "8082:8082"
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       LINKFLOW_GATEWAY_URL: http://linkflow-gateway:8080
+      LINKFLOW_BACKEND_APP_URL: http://linkflow-app:8081
       LINKFLOW_PROMETHEUS_URL: http://linkflow-app:8081/actuator/prometheus
       SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
+    depends_on:
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health | grep -q UP"]
       interval: 10s

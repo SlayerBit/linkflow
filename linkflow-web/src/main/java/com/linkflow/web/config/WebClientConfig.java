@@ -15,6 +15,7 @@ public class WebClientConfig {
 
     private String gatewayUrl = "http://127.0.0.1:8080";
     private String publicGatewayUrl = "http://localhost:8080";
+    private String backendAppUrl = "http://127.0.0.1:8081";
     private String grafanaUrl = "http://localhost:3000";
     private String prometheusUrl = "http://localhost:9090";
     private RateLimit rateLimit = new RateLimit();
@@ -30,6 +31,13 @@ public class WebClientConfig {
     public RestClient restClient() {
         return RestClient.builder()
                 .baseUrl(gatewayUrl)
+                .build();
+    }
+
+    @Bean
+    public RestClient backendRestClient() {
+        return RestClient.builder()
+                .baseUrl(backendAppUrl)
                 .build();
     }
 }

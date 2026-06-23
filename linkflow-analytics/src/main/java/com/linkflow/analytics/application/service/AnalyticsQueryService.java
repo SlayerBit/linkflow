@@ -10,9 +10,10 @@ import com.linkflow.analytics.domain.entity.UrlAnalytics;
 import com.linkflow.analytics.domain.repository.ClickEventRepository;
 import com.linkflow.analytics.domain.repository.StatsRepository;
 import com.linkflow.analytics.domain.repository.UrlAnalyticsRepository;
-import com.linkflow.analytics.domain.repository.projection.TopUrlProjection;
 import com.linkflow.analytics.domain.repository.projection.RecentClickProjection;
 import com.linkflow.common.exception.ResourceNotFoundException;
+import com.linkflow.common.port.UrlStatsPort;
+import com.linkflow.common.port.UserLookupPort;
 import com.linkflow.common.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -32,10 +33,12 @@ public class AnalyticsQueryService {
     private final UrlAnalyticsRepository urlAnalyticsRepository;
     private final ClickEventRepository clickEventRepository;
     private final StatsRepository statsRepository;
+    private final UrlStatsPort urlStatsPort;
+    private final UserLookupPort userLookupPort;
 
     @Transactional(readOnly = true)
     public UrlAnalyticsResponse getUrlAnalytics(UUID shortUrlId) {
-        UUID ownerId = urlAnalyticsRepository.findOwnerIdByShortUrlId(shortUrlId)
+        UUID ownerId = urlStatsPort.findOwnerIdByShortUrlId(shortUrlId)
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL", shortUrlId.toString()));
 
         UUID currentUserId = getCurrentPrincipal().getId();
@@ -43,7 +46,26 @@ public class AnalyticsQueryService {
             throw new AccessDeniedException("You do not own this URL");
         }
 
-        String shortCode = urlAnalyticsRepository.findShortCodeByShortUrlId(shortUrlId)
+        String shortCode = urlStatsPort.findShortCodeByShortUrlId(shortUrlId)
+                .orElseThrow(() -> new ResourceNotFoundException("Short URL", shortUrlId.toString()));
+
+        UrlAnalytics analytics = urlAnalyticsRepository.findByShortUrlId(shortUrlId)
+                .orElse(UrlAnalytics.builder()
+                        .shortUrlId(shortUrlId)
+                        .totalClicks(0L)
+                        .build());
+
+        return UrlAnalyticsResponse.builder()
+                .shortUrlId(shortUrlId)
+                .shortCode(shortCode)
+                .totalClicks(analytics.getTotalClicks())
+                .lastAccessedAt(analytics.getLastAccessedAt())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public UrlAnalyticsResponse getUrlAnalyticsAsAdmin(UUID shortUrlId) {
+        String shortCode = urlStatsPort.findShortCodeByShortUrlId(shortUrlId)
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL", shortUrlId.toString()));
 
         UrlAnalytics analytics = urlAnalyticsRepository.findByShortUrlId(shortUrlId)
@@ -63,14 +85,14 @@ public class AnalyticsQueryService {
     @Transactional(readOnly = true)
     public List<TopUrlResponse> getTopUrlsForCurrentUser(int limit) {
         UUID ownerId = getCurrentPrincipal().getId();
-        return urlAnalyticsRepository.findTopByOwnerId(ownerId, limit).stream()
+        return urlStatsPort.findTopByOwnerId(ownerId, limit).stream()
                 .map(this::toTopUrlResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<TopUrlResponse> getSystemTopUrls(int limit) {
-        return urlAnalyticsRepository.findTopSystemWide(limit).stream()
+        return urlStatsPort.findTopSystemWide(limit).stream()
                 .map(this::toTopUrlResponse)
                 .toList();
     }
@@ -83,21 +105,21 @@ public class AnalyticsQueryService {
 
     @Transactional(readOnly = true)
     public List<ClickEventResponse> getRecentClicksForUrlAsAdmin(UUID shortUrlId, int limit) {
-        urlAnalyticsRepository.findShortCodeByShortUrlId(shortUrlId)
+        urlStatsPort.findShortCodeByShortUrlId(shortUrlId)
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL", shortUrlId.toString()));
-        return fetchRecentClicks(shortUrlId, limit);
+        return fetchRecentClicksWithRawIp(shortUrlId, limit);
     }
 
     @Transactional(readOnly = true)
     public SystemStatsResponse getSystemStats() {
         return SystemStatsResponse.builder()
-                .totalUsers(statsRepository.countActiveUsers())
-                .totalUrls(statsRepository.countTotalUrls())
+                .totalUsers(userLookupPort.countActiveUsers())
+                .totalUrls(urlStatsPort.countTotalUrls())
                 .totalClicks(statsRepository.countTotalClicks())
-                .activeUrls(statsRepository.countActiveUrls())
-                .inactiveUrls(statsRepository.countInactiveUrls())
-                .expiredUrls(statsRepository.countExpiredUrls())
-                .deletedUrls(statsRepository.countDeletedUrls())
+                .activeUrls(urlStatsPort.countActiveUrls())
+                .inactiveUrls(urlStatsPort.countInactiveUrls())
+                .expiredUrls(urlStatsPort.countExpiredUrls())
+                .deletedUrls(urlStatsPort.countDeletedUrls())
                 .build();
     }
 
@@ -115,7 +137,7 @@ public class AnalyticsQueryService {
 
     @Transactional(readOnly = true)
     public List<ClickTrendResponse> getClickTrendForUrlAsAdmin(UUID shortUrlId, int days) {
-        urlAnalyticsRepository.findShortCodeByShortUrlId(shortUrlId)
+        urlStatsPort.findShortCodeByShortUrlId(shortUrlId)
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL", shortUrlId.toString()));
         Instant startDate = calculateStartDate(days);
         return clickEventRepository.findClickTrendByUrl(shortUrlId, startDate).stream()
@@ -204,7 +226,7 @@ public class AnalyticsQueryService {
     }
 
     private void assertUrlOwner(UUID shortUrlId) {
-        UUID ownerId = urlAnalyticsRepository.findOwnerIdByShortUrlId(shortUrlId)
+        UUID ownerId = urlStatsPort.findOwnerIdByShortUrlId(shortUrlId)
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL", shortUrlId.toString()));
 
         UUID currentUserId = getCurrentPrincipal().getId();
@@ -213,13 +235,33 @@ public class AnalyticsQueryService {
         }
     }
 
-    private List<ClickEventResponse> fetchRecentClicks(UUID shortUrlId, int limit) {
+    private List<ClickEventResponse> fetchRecentClicksWithRawIp(UUID shortUrlId, int limit) {
         int cappedLimit = Math.min(Math.max(limit, 1), 100);
         return clickEventRepository
                 .findByShortUrlIdOrderByClickedAtDesc(shortUrlId, PageRequest.of(0, cappedLimit))
                 .stream()
                 .map(this::toClickEventResponse)
                 .toList();
+    }
+
+    private List<ClickEventResponse> fetchRecentClicks(UUID shortUrlId, int limit) {
+        int cappedLimit = Math.min(Math.max(limit, 1), 100);
+        return clickEventRepository
+                .findByShortUrlIdOrderByClickedAtDesc(shortUrlId, PageRequest.of(0, cappedLimit))
+                .stream()
+                .map(this::toClickEventResponseWithMaskedIpFromEntity)
+                .toList();
+    }
+
+    private ClickEventResponse toClickEventResponseWithMaskedIpFromEntity(ClickEvent event) {
+        return ClickEventResponse.builder()
+                .id(event.getId())
+                .shortUrlId(event.getShortUrlId())
+                .clickedAt(event.getClickedAt())
+                .ipAddress(maskIpAddress(event.getIpAddress()))
+                .userAgent(event.getUserAgent())
+                .referer(event.getReferer())
+                .build();
     }
 
     private ClickEventResponse toClickEventResponse(ClickEvent event) {
@@ -233,11 +275,11 @@ public class AnalyticsQueryService {
                 .build();
     }
 
-    private TopUrlResponse toTopUrlResponse(TopUrlProjection projection) {
+    private TopUrlResponse toTopUrlResponse(UrlStatsPort.TopUrlData data) {
         return TopUrlResponse.builder()
-                .shortUrlId(projection.getShortUrlId())
-                .shortCode(projection.getShortCode())
-                .totalClicks(projection.getTotalClicks())
+                .shortUrlId(data.shortUrlId())
+                .shortCode(data.shortCode())
+                .totalClicks(data.totalClicks())
                 .build();
     }
 

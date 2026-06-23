@@ -5,6 +5,7 @@ import com.linkflow.analytics.domain.repository.projection.ClickTrendProjection;
 import com.linkflow.analytics.domain.repository.projection.RecentClickProjection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -59,4 +60,10 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, UUID> {
             LIMIT :limit
             """, nativeQuery = true)
     List<RecentClickProjection> findRecentClicksProjectionSystemWide(@Param("limit") int limit);
+
+    boolean existsByStreamRecordId(String streamRecordId);
+
+    @Modifying
+    @Query("DELETE FROM ClickEvent c WHERE c.clickedAt < :cutoff")
+    int deleteOlderThan(@Param("cutoff") Instant cutoff);
 }

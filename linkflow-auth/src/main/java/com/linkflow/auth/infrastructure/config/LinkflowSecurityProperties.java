@@ -27,4 +27,15 @@ public class LinkflowSecurityProperties {
      * for internal scrapers (e.g. Docker Compose demo stack).
      */
     private boolean metricsPublic = false;
+
+    /**
+     * When true, email verification is required to log in.
+     */
+    private boolean emailVerificationRequired = true;
+
+    /**
+     * When true, opaque tokens (verification, password reset) are included in API responses.
+     * Intended for local/demo environments only; must remain false in production.
+     */
+    private boolean exposeDevTokens = false;
 }

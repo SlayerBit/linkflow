@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>URL Analytics & Details — LinkFlow Admin</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header d-print-none mb-4">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="mb-1">
+                    <a th:href="@{/admin/urls}" class="text-secondary small text-decoration-none">
+                        <i class="ti ti-arrow-left me-1"></i> Back to URLs
+                    </a>
+                </div>
+                <h2 class="page-title fw-bold text-dark fs-2">
+                    URL Details: <span class="ms-2 text-primary font-monospace" th:text="${url.shortCode}">code</span>
+                </h2>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <form th:if="${url.active && !(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" th:action="@{/admin/urls/{id}/deactivate(id=${url.id})}" method="post" class="d-inline mb-0"
+                      onsubmit="return confirm('Deactivate this URL?');">
+                    <button type="submit" class="btn btn-outline-danger px-3" style="border-radius: 8px; font-weight: 600;">
+                        <i class="ti ti-circle-x me-1"></i> Deactivate
+                    </button>
+                </form>
+                <form th:if="${!url.active && !(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" th:action="@{/admin/urls/{id}/reactivate(id=${url.id})}" method="post" class="d-inline mb-0"
+                      onsubmit="return confirm('Reactivate this URL?');">
+                    <button type="submit" class="btn btn-outline-success px-3" style="border-radius: 8px; font-weight: 600;">
+                        <i class="ti ti-circle-check me-1"></i> Reactivate
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Banners -->
+    <div class="alert alert-success alert-premium d-flex align-items-center mb-4" th:if="${successMessage}">
+        <i class="ti ti-circle-check fs-2 me-2"></i>
+        <div th:text="${successMessage}">Success</div>
+    </div>
+    <div class="alert alert-danger alert-premium d-flex align-items-center mb-4" th:if="${errorMessage}">
+        <i class="ti ti-alert-circle fs-2 me-2"></i>
+        <div th:text="${errorMessage}">Error</div>
+    </div>
+
+    <!-- Row 1: Target Configuration & QR Code -->
+    <div class="row row-deck row-cards g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card bg-white h-100">
+                <div class="card-header">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-cyan mb-0">
+                        <i class="ti ti-link"></i> Configuration & Target
+                    </h3>
+                </div>
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <dl class="row mb-0 gy-3">
+                        <dt class="col-sm-3 text-secondary fw-semibold">Short URL</dt>
+                        <dd class="col-sm-9 d-flex align-items-center gap-2">
+                            <code th:id="|short-url-${url.id}|" th:text="${url.shortUrl}" class="px-2 py-1 bg-light text-primary rounded fw-bold">short</code>
+                            <button type="button" class="btn btn-sm btn-light copy-btn"
+                                    th:attr="data-copy-url=${url.shortUrl}" style="border-radius: 6px;">
+                                <i class="ti ti-copy me-1"></i> Copy
+                            </button>
+                        </dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">Original URL</dt>
+                        <dd class="col-sm-9 text-truncate">
+                            <a th:href="${url.originalUrl}" th:text="${url.originalUrl}" target="_blank" class="fw-semibold text-primary text-decoration-none">original</a>
+                        </dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">Expiry Date</dt>
+                        <dd class="col-sm-9 text-dark" th:text="${url.expiresAt != null ? #temporals.format(url.expiresAt, 'yyyy-MM-dd HH:mm ''UTC''') : 'Never'}">Never</dd>
+                        <dt class="col-sm-3 text-secondary fw-semibold">Created Date</dt>
+                        <dd class="col-sm-9 text-dark" th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd HH:mm ''UTC''')}">date</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card bg-white h-100">
+                <div class="card-header">
+                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                        <i class="ti ti-qrcode"></i> QR Code Graphic
+                    </h3>
+                </div>
+                <div class="card-body text-center d-flex flex-column align-items-center justify-content-center py-4">
+                    <div class="p-2 border rounded bg-white shadow-sm mb-3">
+                        <img th:src="@{/admin/urls/{id}/qr-proxy(id=${url.id})}" alt="QR code" class="img-fluid" style="max-width:130px; display: block;">
+                    </div>
+                    <p class="small text-muted mb-0">Scan or share this code for direct access routing.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Metrics Row -->
+    <div class="row row-deck row-cards g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card stat-card card-green bg-white py-3 px-4 h-100">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Total Clickthroughs</div>
+                        <div class="h2 fw-bold text-dark mb-0" th:text="${analytics.totalClicks}">0</div>
+                    </div>
+                    <div class="stat-card-icon bg-green-lt ms-auto">
+                        <i class="ti ti-mouse-click"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card card-cyan bg-white py-3 px-4 h-100">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Last Redirect Access</div>
+                        <div class="h3 fw-semibold text-secondary mb-0" th:text="${analytics.lastAccessedAt != null ? #temporals.format(analytics.lastAccessedAt, 'yyyy-MM-dd HH:mm ''UTC''') : 'Never'}">Never</div>
+                    </div>
+                    <div class="stat-card-icon bg-cyan-lt ms-auto">
+                        <i class="ti ti-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card bg-white py-3 px-4 h-100"
+                 th:classappend="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())} ? 'card-amber' : (${url.active} ? 'card-emerald' : 'card-red')">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Link Status</div>
+                        <div class="h2 fw-bold mb-0">
+                            <span th:if="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())}" class="text-warning">Expired</span>
+                            <span th:if="${!(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}"
+                                  th:class="${url.active} ? 'text-emerald' : 'text-red'"
+                                  th:text="${url.active} ? 'Active' : 'Inactive'">Active</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-icon ms-auto"
+                         th:classappend="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())} ? 'bg-amber-lt text-warning' : (${url.active} ? 'bg-emerald-lt text-emerald' : 'bg-red-lt text-red')">
+                        <i th:class="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())} ? 'ti ti-clock text-warning' : (${url.active} ? 'ti ti-circle-check text-emerald' : 'ti ti-circle-x text-red')"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 3: Click Trends Chart -->
+    <div class="card bg-white mb-4">
+        <div class="card-header d-flex align-items-center">
+            <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
+                <i class="ti ti-chart-line"></i> Access Trend Analytics
+            </h3>
+            <div class="ms-auto">
+                <div class="btn-group" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <button type="button" class="btn btn-sm btn-light border btn-trend-range" id="btn-trend-7" onclick="renderChart(7)" style="font-weight: 600;">7D</button>
+                    <button type="button" class="btn btn-sm btn-light border btn-trend-range" id="btn-trend-30" onclick="renderChart(30)" style="font-weight: 600;">30D</button>
+                    <button type="button" class="btn btn-sm btn-light border btn-trend-range" id="btn-trend-90" onclick="renderChart(90)" style="font-weight: 600;">90D</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-container" style="position: relative; height: 300px;">
+                <canvas id="clickTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 4: Recent Click Logs -->
+    <div class="card bg-white">
+        <div class="card-header">
+            <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
+                <i class="ti ti-list"></i> Recent Click Logs (Admin)
+            </h3>
+        </div>
+        <div class="table-responsive" th:if="${!#lists.isEmpty(recentClicks)}">
+            <table class="table table-vcenter card-table table-hover">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>IP Address</th>
+                        <th>Referer</th>
+                        <th>User Agent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="click : ${recentClicks}">
+                        <td class="text-dark fw-medium" th:text="${#temporals.format(click.clickedAt, 'yyyy-MM-dd HH:mm:ss ''UTC''')}">time</td>
+                        <td>
+                            <code class="text-secondary font-monospace" th:text="${click.ipAddress}">127.0.0.1</code>
+                        </td>
+                        <td class="text-secondary text-truncate" style="max-width: 200px;" th:text="${click.referer != null && !click.referer.isBlank() ? click.referer : 'Direct'}">referer</td>
+                        <td class="text-muted small text-truncate" style="max-width: 350px;" th:text="${click.userAgent}">user agent</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-body text-center py-4" th:if="${#lists.isEmpty(recentClicks)}">
+            <span class="avatar avatar-md bg-light text-muted rounded-circle mb-2"><i class="ti ti-click"></i></span>
+            <p class="text-muted mb-0">No redirect activities logged for this URL yet.</p>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:inline="javascript">
+        const trends = {
+            7: /*[[${trend7dJson}]]*/ '[]',
+            30: /*[[${trend30dJson}]]*/ '[]',
+            90: /*[[${trend90dJson}]]*/ '[]'
+        };
+
+        const data7d = JSON.parse(trends[7]);
+        const data30d = JSON.parse(trends[30]);
+        const data90d = JSON.parse(trends[90]);
+
+        function getPaddedData(trendData, days) {
+            const labels = [];
+            const dataMap = {};
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                labels.push(dateStr);
+                dataMap[dateStr] = 0;
+            }
+            trendData.forEach(item => {
+                if (dataMap[item.date] !== undefined) {
+                    dataMap[item.date] = item.clicks;
+                }
+            });
+            const dataPoints = labels.map(l => dataMap[l]);
+            return { labels, dataPoints };
+        }
+
+        let currentChart = null;
+
+        function renderChart(days) {
+            let rawData;
+            if (days === 7) rawData = data7d;
+            else if (days === 90) rawData = data90d;
+            else rawData = data30d;
+
+            const { labels, dataPoints } = getPaddedData(rawData, days);
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            const ctx = document.getElementById('clickTrendChart').getContext('2d');
+            const lineGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            lineGradient.addColorStop(0, 'rgba(124, 58, 237, 0.15)');
+            lineGradient.addColorStop(1, 'rgba(124, 58, 237, 0)');
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Clicks',
+                        data: dataPoints,
+                        borderColor: '#7c3aed',
+                        backgroundColor: lineGradient,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: days > 30 ? 1 : 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#7c3aed',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleFont: { family: 'Inter', size: 12, weight: 'bold' },
+                            bodyFont: { family: 'Inter', size: 12 },
+                            padding: 10,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.raw + ' clicks';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(15, 23, 42, 0.03)', drawTicks: false },
+                            ticks: { precision: 0, font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                        }
+                    }
+                }
+            });
+
+            document.querySelectorAll('.btn-trend-range').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.remove('text-white');
+                btn.classList.add('btn-light');
+            });
+            const activeBtn = document.getElementById('btn-trend-' + days);
+            if (activeBtn) {
+                activeBtn.classList.remove('btn-light');
+                activeBtn.classList.add('btn-primary');
+                activeBtn.classList.add('text-white');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderChart(30);
+
+            // Copy short URL functionality
+            const copyBtn = document.querySelector('.copy-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', function() {
+                    const text = this.getAttribute('data-copy-url');
+                    navigator.clipboard.writeText(text).then(() => {
+                        const originalHTML = this.innerHTML;
+                        this.innerHTML = '<i class="ti ti-check me-1"></i> Copied!';
+                        this.classList.remove('btn-light');
+                        this.classList.add('btn-success', 'text-white');
+                        setTimeout(() => {
+                            this.innerHTML = originalHTML;
+                            this.classList.remove('btn-success', 'text-white');
+                            this.classList.add('btn-light');
+                        }, 2000);
+                    });
+                });
+            }
+        });
+    </script>
+</th:block>
+</body>
+</html>

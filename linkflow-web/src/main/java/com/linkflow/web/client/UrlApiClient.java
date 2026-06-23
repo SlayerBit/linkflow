@@ -3,6 +3,7 @@ package com.linkflow.web.client;
 import com.linkflow.web.dto.common.ApiResponse;
 import com.linkflow.web.dto.common.PagedResponse;
 import com.linkflow.web.dto.url.UrlResponse;
+import com.linkflow.web.dto.url.BulkCreateUrlResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
@@ -84,6 +85,12 @@ public class UrlApiClient {
         );
     }
 
+    public byte[] getAdminQrCode(String accessToken, UUID id) {
+        return backendClient.exchangeForBytes(
+                backendClient.get("/api/v1/admin/urls/" + id + "/qr", accessToken)
+        );
+    }
+
     public byte[] getQrCode(String accessToken, UUID id) {
         return backendClient.exchangeForBytes(
                 backendClient.get("/api/v1/urls/" + id + "/qr", accessToken)
@@ -98,6 +105,14 @@ public class UrlApiClient {
         var response = backendClient.exchangeForBody(
                 backendClient.get(uri, accessToken),
                 new ParameterizedTypeReference<ApiResponse<PagedResponse<UrlResponse>>>() {}
+        );
+        return response.data();
+    }
+
+    public UrlResponse getAdminUrlById(String accessToken, UUID id) {
+        var response = backendClient.exchangeForBody(
+                backendClient.get("/api/v1/admin/urls/" + id, accessToken),
+                new ParameterizedTypeReference<ApiResponse<UrlResponse>>() {}
         );
         return response.data();
     }
@@ -122,6 +137,19 @@ public class UrlApiClient {
         var response = backendClient.exchangeForBody(
                 backendClient.patch("/api/v1/urls/" + id + "/reactivate", accessToken).body(Map.of()),
                 new ParameterizedTypeReference<ApiResponse<UrlResponse>>() {}
+        );
+        return response.data();
+    }
+
+    public BulkCreateUrlResponse bulkCreate(String accessToken, java.util.List<Map<String, Object>> urls, String idempotencyKey) {
+        Map<String, Object> body = Map.of("urls", urls);
+        var spec = backendClient.post("/api/v1/urls/bulk", accessToken).body(body);
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            spec = spec.header("Idempotency-Key", idempotencyKey);
+        }
+        var response = backendClient.exchangeForBody(
+                spec,
+                new ParameterizedTypeReference<ApiResponse<BulkCreateUrlResponse>>() {}
         );
         return response.data();
     }
