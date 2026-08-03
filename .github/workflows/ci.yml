@@ -144,7 +144,7 @@ jobs:
       # every unrelated pull request until someone upstream cuts a release, and a check that fails
       # for reasons the author cannot address is a check people learn to ignore.
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.29.0
         with:
           scan-type: fs
           scan-ref: .
