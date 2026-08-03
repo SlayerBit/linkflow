@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{email/_fragments :: head}"></th:block>
+    <title>Confirm your email address</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9;">
+
+<!-- Preheader: shown in inbox previews, hidden in the body. -->
+<div style="display: none; max-height: 0; overflow: hidden; opacity: 0;">
+    Confirm your email address to activate your LinkFlow account.
+</div>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+       style="background-color: #f1f5f9;">
+    <tr>
+        <td align="center" style="padding: 32px 12px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="lf-container"
+                   style="width: 600px; max-width: 600px; background-color: #ffffff;
+                          border: 1px solid #e2e8f0; border-radius: 12px;">
+                <tr>
+                    <td>
+                        <div th:replace="~{email/_fragments :: header}"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 40px 36px 40px;" class="lf-pad">
+
+                        <h1 style="margin: 12px 0 16px 0;
+                                   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                                   font-size: 22px; font-weight: 700; line-height: 30px;
+                                   color: #0f172a; letter-spacing: -0.02em;">
+                            Confirm your email address
+                        </h1>
+
+                        <p style="margin: 0 0 14px 0;
+                                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                                  font-size: 15px; line-height: 24px; color: #334155;">
+                            Hi <span th:text="${greetingName}">there</span>,
+                        </p>
+
+                        <p style="margin: 0;
+                                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                                  font-size: 15px; line-height: 24px; color: #334155;">
+                            Your LinkFlow account is almost ready. Confirm this address to activate it
+                            and sign in for the first time.
+                        </p>
+
+                        <div th:replace="~{email/_fragments :: button(${actionUrl}, 'Confirm email address')}"></div>
+
+                        <p style="margin: 16px 0 0 0;
+                                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                                  font-size: 13px; line-height: 20px; color: #64748b;">
+                            This link expires in <strong th:text="${validForText}">24 hours</strong>
+                            and can only be used once. If it expires, you can request a new one from
+                            the sign-in page.
+                        </p>
+
+                        <div th:replace="~{email/_fragments :: fallbackLink(${actionUrl})}"></div>
+                        <div th:replace="~{email/_fragments :: footer(${supportFrom})}"></div>
+
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Local Docker Compose demo profile — see linkflow-app/application-docker.yml for why this is
+# kept separate from `prod`. Real deployments must use SPRING_PROFILES_ACTIVE=prod.
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # `prometheus` is required: Prometheus scrapes this process for gateway routing latency and
+        # upstream error rates, and narrowing this to health,info silently broke that — the missing
+        # path fell through the catch-all route to the web UI, so the scrape collected HTML and
+        # failed to parse rather than reporting a missing endpoint.
+        #
+        # `metrics` stays out. It is a browsable index of every metric name with per-metric queries,
+        # which is useful in development and needless exposure in a deployment.
+        #
+        # This process runs no Spring Security filter chain, so it cannot authenticate the scrape
+        # itself. Prometheus reaches it over the private Compose network and Nginx denies /actuator
+        # from outside — that edge rule is what keeps it off the public surface.
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never

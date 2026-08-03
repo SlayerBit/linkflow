@@ -24,8 +24,6 @@ public interface UserLookupPort {
 
     void updateEmailVerified(UUID userId, boolean emailVerified);
 
-    void updateEmail(UUID userId, String newEmail);
-
     /**
      * Immutable data carrier for user principal information.
      */

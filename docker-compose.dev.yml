@@ -1,0 +1,48 @@
+# Development overlay: publishes the infrastructure ports to the host.
+#
+# The base stack deliberately publishes nothing but Nginx, so there is a single way in and no
+# service is exposed by accident. That is the right default, and it makes the base file directly
+# comparable to a real deployment — but it also means a locally running JAR cannot reach the
+# database or Redis, which is how most day-to-day development happens here.
+#
+# Kept as an overlay rather than folded into the base file so the exposure is a deliberate,
+# visible act rather than a permanent default that nobody revisits.
+#
+# Start just the dependencies and run the three JARs on the host:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis mailhog
+#   java -jar linkflow-app/target/linkflow-app-*.jar --spring.profiles.active=dev
+#
+# Or bring the whole stack up with the ports exposed for debugging:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  # The inbox on 8025 is published by the base stack; the SMTP listener is not, because only the app
+  # container needs it there. A JAR running on the host does need it — without this, registration
+  # and password reset fail at the point of sending.
+  mailhog:
+    ports:
+      - "1025:1025"
+
+  # Reaching these directly is occasionally useful when the edge is what you are debugging: it
+  # separates "the application is broken" from "Nginx is misrouting".
+  linkflow-app:
+    ports:
+      - "8081:8081"
+
+  linkflow-web:
+    ports:
+      - "8082:8082"
+
+  linkflow-gateway:
+    ports:
+      - "8080:8080"

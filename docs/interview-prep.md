@@ -122,7 +122,9 @@ Two fixed roles (`USER`, `ADMIN`) seeded in Flyway V1. Stored as `user_roles` jo
 
 ### Why this deployment approach?
 
-Docker Compose-first for reproducible demos: one command brings up the full stack including web UI and observability. Kubernetes manifests are intentionally out of repo scope — consumers bring their own orchestration. Three Dockerfiles (`Dockerfile.app`, `.gateway`, `.web`) multi-stage build from Maven.
+Docker Compose-first for reproducible demos: one command brings up the full stack — Nginx, PostgreSQL, Redis, SMTP catcher, all three Spring processes, and observability — with nothing external required. Kubernetes manifests are intentionally out of repo scope, though the images are built for it (non-root numeric UID, separate liveness/readiness probes, heap sized from the container limit, correct `SIGTERM` handling). One `docker/Dockerfile` builds all three images via `--target`, sharing a single build stage so the reactor compiles once.
+
+Nginx terminates TLS and is the only service publishing ports. It owns HSTS at the TLS boundary, denies `/actuator` publicly, and *replaces* rather than appends `X-Forwarded-For` — as the edge, anything a client put there was forged.
 
 ### Why these tests?
 
@@ -236,18 +238,27 @@ Swagger denied. Actuator mostly denied; `/actuator/health` public; Prometheus/me
 **Q: Prometheus scrape targets?**  
 `linkflow-app:8081`, `linkflow-gateway:8080` — not web.
 
+**Q: What business metrics does LinkFlow expose?**  
+Counters under the `linkflow_` prefix: redirects (with cache hit/stale/miss), URL-cache lookups, login success/failure reasons, registrations, URL creation, email delivery outcomes (via `EmailDeliveryEvent`), rate-limit exceeded / Redis-unavailable, analytics flush records. Feature modules call a `LinkflowMetrics` port in `linkflow-common`; Micrometer lives only in `linkflow-observability`.
+
+**Q: Alerting?**  
+Prometheus rule file (`docker/prometheus/alerts.yml`) covers scrape downtime, elevated 5xx, email delivery failures, rate-limiter Redis outages, analytics flush failures, and high heap. Alertmanager is not bundled — rules evaluate in Prometheus; paging would be a deployment-time add-on.
+
 ---
 
 ## Docker & deployment
 
 **Q: Compose services?**  
-postgres, redis, linkflow-app, linkflow-web, linkflow-gateway, prometheus, grafana.
+nginx, postgres, redis, mailhog, linkflow-app, linkflow-web, linkflow-gateway, prometheus, grafana. Only nginx publishes application ports.
 
 **Q: Dockerfiles?**  
-`docker/Dockerfile.app`, `docker/Dockerfile.gateway`, `docker/Dockerfile.web` — Temurin 21 multi-stage Maven builds.
+One `docker/Dockerfile` with three targets (`app`, `gateway`, `web`) over a shared Temurin 21 multi-stage build. Spring Boot layered jars so dependency layers cache separately from application code; non-root `uid 1001`; `HEALTHCHECK` on `/actuator/health/readiness`; `MaxRAMPercentage=75` and `ExitOnOutOfMemoryError`; JVM as PID 1 so `SIGTERM` reaches it.
+
+**Q: Why does `stop_grace_period` matter?**  
+Graceful shutdown is budgeted 25s. Docker's default grace period is 10s, after which it sends `SIGKILL` — so without raising it to 40s the drain is cut short and graceful shutdown achieves nothing.
 
 **Q: Required env for prod app startup?**  
-`LINKFLOW_JWT_SECRET` (strong Base64, validated in prod profile).
+`LINKFLOW_JWT_SECRET` (strong Base64, validated in prod profile). Prod additionally refuses to start on a wildcard CORS origin, a missing Redis password, a plaintext base URL, or a mail configuration that cannot deliver.
 
 **Q: macOS gateway tip?**  
 `LINKFLOW_APP_URI=http://127.0.0.1:8081` — avoids IPv6 `localhost` → `::1` connection refused.
@@ -305,7 +316,7 @@ Expected — `swagger-public=false` in prod profile.
 | Rate limit | Redis Lua sliding-window (sorted sets) | Why skip actuator/swagger? Ops endpoints shouldn't consume user quota |
 | Analytics | Redis Stream buffer + batch flush | Eventual consistency on `total_clicks` — acceptable for v1 |
 | Web | Session BFF, RestClient to gateway | Why not WebClient? RestClient simpler for SSR |
-| Observability | Actuator + Prometheus + Grafana | Why not scrape web? Minimal custom metrics on web tier |
+| Observability | Actuator + Prometheus + Grafana + business metrics + alert rules | Why not scrape web? Why a metrics port instead of Micrometer in every module? |
 
 ---
 

@@ -1,0 +1,6 @@
+{
+  "_comment": "Looser gates for ramping stress runs. Still not capacity claims.",
+  "http_req_failed": "rate<0.05",
+  "http_req_duration": ["p(95)<1000", "p(99)<3000"],
+  "checks": "rate>0.95"
+}

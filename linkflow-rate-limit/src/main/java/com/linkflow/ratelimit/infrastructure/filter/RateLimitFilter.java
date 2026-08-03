@@ -2,6 +2,8 @@ package com.linkflow.ratelimit.infrastructure.filter;
 
 import com.linkflow.common.exception.RateLimitBackendUnavailableException;
 import com.linkflow.common.exception.RateLimitExceededException;
+import com.linkflow.common.metrics.LinkflowMetrics;
+import com.linkflow.common.security.ClientIpResolver;
 import com.linkflow.common.security.UserPrincipal;
 import com.linkflow.ratelimit.api.dto.RateLimitInfo;
 import com.linkflow.ratelimit.application.service.RateLimitService;
@@ -33,6 +35,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final RateLimitService rateLimitService;
     private final RateLimitProperties rateLimitProperties;
     private final HandlerExceptionResolver handlerExceptionResolver;
+    private final ClientIpResolver clientIpResolver;
+    private final LinkflowMetrics metrics;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -46,15 +50,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        RateLimitInfo info = resolveRateLimitInfo(request);
+        ResolvedLimit resolved = resolveRateLimitInfo(request);
+        RateLimitInfo info = resolved.info();
         addRateLimitHeaders(response, info);
 
         if (info.isBackendUnavailable()) {
+            metrics.rateLimitBackendUnavailable(resolved.dimension());
             handleException(request, response, new RateLimitBackendUnavailableException());
             return;
         }
 
         if (!info.isAllowed()) {
+            metrics.rateLimitExceeded(resolved.dimension());
             handleException(request, response,
                     new RateLimitExceededException("Too many requests. Please try again later."));
             return;
@@ -63,14 +70,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private RateLimitInfo resolveRateLimitInfo(HttpServletRequest request) {
+    private ResolvedLimit resolveRateLimitInfo(HttpServletRequest request) {
         boolean failClosed = isAuthPath(request.getRequestURI()) && rateLimitProperties.isAuthFailClosed();
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
-            return rateLimitService.checkForUser(principal.getId());
+            return new ResolvedLimit(rateLimitService.checkForUser(principal.getId()), "user");
         }
-        return rateLimitService.checkForIp(resolveClientIp(request), failClosed);
+        return new ResolvedLimit(
+                rateLimitService.checkForIp(clientIpResolver.resolve(request), failClosed), "ip");
+    }
+
+    private record ResolvedLimit(RateLimitInfo info, String dimension) {
     }
 
     private boolean isAuthPath(String path) {
@@ -92,15 +103,4 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setHeader(HEADER_RESET, String.valueOf(info.getReset()));
     }
 
-    private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
-    }
 }

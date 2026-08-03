@@ -1,0 +1,16 @@
+server:
+  servlet:
+    session:
+      cookie:
+        # Session cookies carry an authenticated identity, so production must never send them
+        # over plaintext. Overridable only to accommodate a proxy that terminates TLS elsewhere.
+        secure: ${SERVER_SERVLET_SESSION_COOKIE_SECURE:true}
+
+spring:
+  thymeleaf:
+    cache: true
+
+logging:
+  level:
+    com.linkflow.web: INFO
+    org.springframework: WARN

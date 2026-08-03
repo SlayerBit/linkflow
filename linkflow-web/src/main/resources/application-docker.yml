@@ -1,0 +1,12 @@
+# Local Docker Compose demo profile — see linkflow-app/application-docker.yml for why this is
+# kept separate from `prod`. Real deployments must use SPRING_PROFILES_ACTIVE=prod.
+
+spring:
+  thymeleaf:
+    # Templates are baked into the image, so re-reading them per request only wastes I/O.
+    cache: true
+
+logging:
+  level:
+    com.linkflow.web: INFO
+    org.springframework: WARN

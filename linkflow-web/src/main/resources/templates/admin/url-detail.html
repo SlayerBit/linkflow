@@ -201,7 +201,7 @@
 
 <th:block layout:fragment="scripts">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:attr="nonce=${cspNonce}">
         const trends = {
             7: /*[[${trend7dJson}]]*/ '[]',
             30: /*[[${trend30dJson}]]*/ '[]',

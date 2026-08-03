@@ -2,7 +2,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # See application-docker.yml for the reasoning: `prometheus` is what the scraper reads, and
+        # `metrics` is deliberately left out.
+        #
+        # This process has no authentication of its own, so the reverse proxy must deny /actuator
+        # from the internet and allow the scraper in over the private network. docker/nginx does
+        # exactly that; any other proxy in front of this needs the equivalent rule.
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: never

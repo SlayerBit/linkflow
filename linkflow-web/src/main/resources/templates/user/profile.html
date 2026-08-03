@@ -9,18 +9,14 @@
         <h2 class="page-title fw-bold text-dark fs-2">My Profile</h2>
     </div>
     
-    <!-- Email Change Simulation Banner -->
-    <div class="alert alert-warning alert-premium d-flex align-items-start mb-4 shadow-sm" th:if="${emailChangeToken}">
-        <i class="ti ti-info-circle fs-2 me-3 mt-1 text-warning"></i>
+    <div class="alert alert-info alert-premium d-flex align-items-start mb-4 shadow-sm" th:if="${emailChangeNewEmail}">
+        <i class="ti ti-mail-fast fs-2 me-3 mt-1 text-info"></i>
         <div>
-            <h4 class="alert-title fw-bold mb-1">Email Change Simulation Mode</h4>
+            <h4 class="alert-title fw-bold mb-1">Confirm your new address</h4>
             <div class="text-secondary small">
-                An email change request has been generated for <strong><span th:text="${emailChangeNewEmail}">newemail</span></strong>.
-                Use the verification token below to complete the change.
-            </div>
-            <div class="mt-2 d-flex gap-2 align-items-center">
-                <code class="px-2 py-1 bg-dark text-white rounded font-monospace fs-5" th:text="${emailChangeToken}">token</code>
-                <a th:href="@{/verify-email-change(token=${emailChangeToken})}" class="btn btn-warning btn-sm fw-bold px-3" style="border-radius: 6px;">Verify Change</a>
+                We sent a confirmation link to <strong><span th:text="${emailChangeNewEmail}">newemail</span></strong>.
+                Open it within 24 hours to finish the change. Until then you keep signing in with your
+                current address.
             </div>
         </div>
     </div>

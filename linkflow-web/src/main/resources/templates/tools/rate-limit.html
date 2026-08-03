@@ -30,10 +30,11 @@
             <div class="row g-3 align-items-end">
                 <div class="col-md-5">
                     <label class="form-label">Endpoint</label>
+                    <!-- Driven by the server-side allowlist so the two cannot drift apart. -->
                     <select id="probe-endpoint" class="form-select">
-                        <option value="/api/v1/urls">GET /api/v1/urls (list URLs)</option>
-                        <option value="/api/v1/users/me">GET /api/v1/users/me</option>
-                        <option value="/api/v1/analytics/top">GET /api/v1/analytics/top</option>
+                        <option th:each="path : ${probeEndpoints}"
+                                th:value="${path}"
+                                th:text="'GET ' + ${path}">GET /api/v1/urls</option>
                     </select>
                 </div>
                 <div class="col-md-3">

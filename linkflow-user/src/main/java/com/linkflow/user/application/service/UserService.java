@@ -1,8 +1,13 @@
 package com.linkflow.user.application.service;
 
+import com.linkflow.common.event.EmailRequestedEvent;
 import com.linkflow.common.exception.ConflictException;
+import com.linkflow.common.exception.RateLimitExceededException;
+import com.linkflow.common.exception.ResourceNotFoundException;
+import com.linkflow.common.mail.MailSendCooldown;
 import com.linkflow.common.port.TokenRevocationPort;
 import com.linkflow.common.port.UserLookupPort;
+import com.linkflow.common.security.SecureTokenGenerator;
 import com.linkflow.common.security.SecurityConstants;
 import com.linkflow.common.security.UserPrincipal;
 import com.linkflow.user.api.dto.UpdateProfileRequest;
@@ -17,6 +22,7 @@ import com.linkflow.user.domain.repository.EmailChangeRequestRepository;
 import com.linkflow.user.infrastructure.adapter.RoleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +30,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
@@ -33,12 +40,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
 
+    static final Duration EMAIL_CHANGE_TOKEN_TTL = Duration.ofHours(24);
+
     private final UserRepository userRepository;
     private final RoleService roleService;
     private final TokenRevocationPort tokenRevocationPort;
     private final EmailChangeRequestRepository emailChangeRequestRepository;
     private final PasswordEncoder passwordEncoder;
-    private final java.security.SecureRandom secureRandom = new java.security.SecureRandom();
+    private final SecureTokenGenerator tokenGenerator;
+    private final ApplicationEventPublisher eventPublisher;
+    private final MailSendCooldown mailSendCooldown;
 
     @Transactional(readOnly = true)
     public UserResponse getCurrentUser() {
@@ -146,24 +157,16 @@ public class UserService {
                 .build();
     }
 
-    private String generateOpaqueToken() {
-        byte[] bytes = new byte[48];
-        secureRandom.nextBytes(bytes);
-        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private String hashToken(String rawToken) {
-        try {
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(rawToken.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            return java.util.HexFormat.of().formatHex(hash);
-        } catch (java.security.NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
-        }
-    }
-
+    /**
+     * Starts an email change. The confirmation link goes to the <em>new</em> address, so control
+     * of that mailbox is proven before the account moves; the current address stays active and
+     * usable for sign-in until then.
+     * <p>
+     * Re-entering the current password is required because an attacker holding a live session
+     * could otherwise redirect the account to a mailbox they own.
+     */
     @Transactional
-    public String requestEmailChange(String currentPassword, String newEmail) {
+    public void requestEmailChange(String currentPassword, String newEmail) {
         UserPrincipal principal = getCurrentPrincipal();
         User user = userRepository.findByIdAndNotDeleted(principal.getId())
                 .orElseThrow(() -> new UserNotFoundException(principal.getId().toString()));
@@ -180,38 +183,74 @@ public class UserService {
             throw new ConflictException("Email is already taken");
         }
 
-        String rawToken = generateOpaqueToken();
-        String tokenHash = hashToken(rawToken);
+        String normalizedEmail = newEmail.toLowerCase();
 
-        EmailChangeRequest request = EmailChangeRequest.builder()
+        // Reported rather than silently swallowed, unlike the unauthenticated recovery flows: the
+        // caller is signed in and nominated this address themselves, so there is no account to
+        // enumerate and nothing gained by pretending a suppressed request succeeded.
+        //
+        // Checked before the existing request is invalidated, so being refused here leaves any
+        // outstanding confirmation link working.
+        if (!mailSendCooldown.tryAcquire(MailSendCooldown.Purpose.EMAIL_CHANGE, normalizedEmail)) {
+            throw new RateLimitExceededException(
+                    "A confirmation link was just sent to that address. Check the inbox, "
+                            + "including spam, before requesting another.");
+        }
+
+        emailChangeRequestRepository.markAllUnusedAsUsedForUser(user.getId());
+
+        String rawToken = tokenGenerator.generateToken();
+
+        emailChangeRequestRepository.save(EmailChangeRequest.builder()
                 .userId(user.getId())
-                .newEmail(newEmail.toLowerCase())
-                .tokenHash(tokenHash)
-                .expiresAt(Instant.now().plus(java.time.Duration.ofHours(24)))
-                .build();
+                .newEmail(normalizedEmail)
+                .tokenHash(tokenGenerator.hash(rawToken))
+                .expiresAt(Instant.now().plus(EMAIL_CHANGE_TOKEN_TTL))
+                .build());
 
-        emailChangeRequestRepository.save(request);
-        log.info("Email change request generated for userId={}, newEmail={}", user.getId(), newEmail);
-        return rawToken;
+        eventPublisher.publishEvent(new EmailRequestedEvent.EmailChangeRequested(
+                normalizedEmail, user.getFirstName(), rawToken, EMAIL_CHANGE_TOKEN_TTL));
+
+        log.info("Email change requested for userId={}", user.getId());
     }
 
+    /**
+     * Completes an email change from the link sent to the new address.
+     * <p>
+     * Idempotent for the same reason {@code AuthService.verifyEmail} is: mail scanners and link
+     * prefetchers follow these links before the recipient does. If the account already carries the
+     * requested address the work is done, and saying so is more useful than reporting that the link
+     * was spent.
+     */
     @Transactional
     public void verifyEmailChange(String rawToken) {
-        String hash = hashToken(rawToken);
-        EmailChangeRequest request = emailChangeRequestRepository.findByTokenHash(hash)
-                .orElseThrow(() -> new com.linkflow.common.exception.ResourceNotFoundException("Email change request", "not found"));
-
-        if (request.isUsed()) {
-            throw new ConflictException("Email change request token has already been used");
-        }
-
-        if (request.isExpired()) {
-            throw new ConflictException("Email change request token has expired");
-        }
+        EmailChangeRequest request = emailChangeRequestRepository
+                .findByTokenHash(tokenGenerator.hash(rawToken))
+                .orElseThrow(() -> new ResourceNotFoundException("Confirmation link", "is not valid"));
 
         User user = userRepository.findByIdAndNotDeleted(request.getUserId())
                 .orElseThrow(() -> new UserNotFoundException(request.getUserId().toString()));
 
+        if (user.getEmail().equalsIgnoreCase(request.getNewEmail())) {
+            if (!request.isUsed()) {
+                request.setUsed(true);
+                emailChangeRequestRepository.save(request);
+            }
+            log.debug("Email change link presented for userId={}; address already applied", user.getId());
+            return;
+        }
+
+        if (request.isUsed()) {
+            throw new ConflictException("This confirmation link has already been used.");
+        }
+
+        if (request.isExpired()) {
+            throw new ConflictException(
+                    "This confirmation link has expired. Request the email change again to continue.");
+        }
+
+        // Checked at redemption rather than only at request time: the address may have been claimed
+        // by someone else during the 24 hours the link was valid.
         if (userRepository.existsByEmail(request.getNewEmail())) {
             throw new ConflictException("Email is already taken");
         }
@@ -224,7 +263,7 @@ public class UserService {
         emailChangeRequestRepository.save(request);
 
         revokeUserSessions(user.getId());
-        log.info("Email updated successfully for userId={} to {}", user.getId(), request.getNewEmail());
+        log.info("Email updated for userId={}; all sessions revoked", user.getId());
     }
 
     @Transactional

@@ -59,10 +59,6 @@ public class BackendClient {
                 .contentType(MediaType.APPLICATION_JSON);
     }
 
-    public RestClient.RequestHeadersSpec<?> getPublic(String path) {
-        return restClient.get().uri(path);
-    }
-
     public String buildUri(String path, Object... queryParams) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         for (int i = 0; i < queryParams.length; i += 2) {
@@ -88,15 +84,11 @@ public class BackendClient {
         }
     }
 
+    /**
+     * {@code HttpStatusCodeException} is the common supertype of the client and server error
+     * exceptions, so this one overload covers both.
+     */
     public BackendApiException toApiException(HttpStatusCodeException ex) {
-        return parseError(ex.getResponseBodyAsString(), ex.getStatusCode().value());
-    }
-
-    public BackendApiException toApiException(HttpClientErrorException ex) {
-        return parseError(ex.getResponseBodyAsString(), ex.getStatusCode().value());
-    }
-
-    public BackendApiException toApiException(HttpServerErrorException ex) {
         return parseError(ex.getResponseBodyAsString(), ex.getStatusCode().value());
     }
 

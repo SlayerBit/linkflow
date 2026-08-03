@@ -16,7 +16,7 @@ LinkFlow provides:
 4. **Analytics** — async click tracking, aggregate counters, recent click event listing per URL
 5. **Rate limiting** — Redis Lua counter per authenticated user or anonymous IP; auth paths fail closed when Redis is down
 6. **Admin operations** — list users, disable/enable/soft-delete users, deactivate URLs, system-wide analytics
-7. **Observability** — profile-based actuator exposure, Prometheus scrape, Grafana dashboards (Docker stack)
+7. **Observability** — profile-based actuator exposure, Prometheus scrape, business metrics (`linkflow_*`), Grafana **LinkFlow Overview** dashboard, and Prometheus alert rules (Docker stack)
 
 ### Runnable processes
 
@@ -381,25 +381,38 @@ Full threat analysis: [security-review.md](security-review.md)
 ```mermaid
 flowchart TB
     subgraph DockerHost["Docker Compose host"]
-        Gateway["linkflow-gateway\n:8080 public entry"]
-        WebUI["linkflow-web\n:8082 internal + optional host map"]
-        Backend["linkflow-app\n:8081 internal + optional host map"]
+        Nginx["nginx\n:80 → :443 public entry"]
+        Gateway["linkflow-gateway\n:8080 internal"]
+        WebUI["linkflow-web\n:8082 internal"]
+        Backend["linkflow-app\n:8081 internal"]
+        PG[(postgres :5432)]
         Redis[(redis :6379)]
+        Mail["mailhog :1025\ninbox :8025"]
         Prometheus["prometheus :9090"]
         Grafana["grafana :3000"]
     end
 
-    Browser["Browser"] --> Gateway
+    Browser["Browser"] -->|https| Nginx
+    Nginx --> Gateway
     Gateway --> Backend
     Gateway --> WebUI
     WebUI --> Gateway
+    WebUI --> Redis
+    Backend --> PG
     Backend --> Redis
+    Backend --> Mail
     Prometheus --> Backend
     Prometheus --> Gateway
     Grafana --> Prometheus
 ```
 
-Dockerfiles: `docker/Dockerfile.app`, `docker/Dockerfile.gateway`, `docker/Dockerfile.web`.
+Nginx terminates TLS and is the only service publishing application ports; the gateway, app, web,
+database, and Redis are reachable only on the private Compose network. Prometheus scrapes the app
+and gateway over that network, which is why `/actuator` can be denied at the edge without breaking
+metrics collection.
+
+A single `docker/Dockerfile` builds all three images, selected with `--target app|gateway|web`. They
+share one build stage, so the reactor is compiled once. See [docker.md](docker.md).
 
 **Kubernetes:** Out of scope for this repository. See [deployment.md](deployment.md) for a reference outline only.
 

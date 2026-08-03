@@ -1,9 +1,5 @@
 package com.linkflow.analytics.application.service;
 
-import com.linkflow.analytics.domain.entity.ClickEvent;
-import com.linkflow.analytics.domain.entity.UrlAnalytics;
-import com.linkflow.analytics.domain.repository.ClickEventRepository;
-import com.linkflow.analytics.domain.repository.UrlAnalyticsRepository;
 import com.linkflow.analytics.infrastructure.config.AnalyticsRedisConstants;
 import com.linkflow.common.port.ClickTrackingPort.ClickTrackingCommand;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +8,6 @@ import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -39,9 +34,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ClickTrackingService {
 
-    private final ClickEventRepository clickEventRepository;
-    private final UrlAnalyticsRepository urlAnalyticsRepository;
     private final StringRedisTemplate stringRedisTemplate;
+    private final ClickPersistenceService clickPersistenceService;
 
     /**
      * Buffer a click event in Redis for asynchronous flush.
@@ -54,7 +48,25 @@ public class ClickTrackingService {
         } catch (Exception ex) {
             log.warn("Redis buffering failed for shortUrlId={}, falling back to direct DB write: {}",
                     command.shortUrlId(), ex.getMessage());
-            directDbWrite(command);
+            fallbackWrite(command);
+        }
+    }
+
+    /**
+     * Writes the click straight to the database when Redis is unavailable.
+     * <p>
+     * Delegated to a separate bean rather than a local method so the call goes through the Spring
+     * proxy: a self-invoked {@code @Transactional} method is not proxied at all, which would leave
+     * the click-event insert and the counter update running as two independent auto-commits with
+     * no transaction around them.
+     */
+    private void fallbackWrite(ClickTrackingCommand command) {
+        try {
+            clickPersistenceService.recordClick(command);
+        } catch (Exception ex) {
+            // Analytics must never break a redirect. The visitor still gets their destination.
+            log.warn("Direct DB write failed for shortUrlId={}: {}",
+                    command.shortUrlId(), ex.getMessage());
         }
     }
 
@@ -87,33 +99,4 @@ public class ClickTrackingService {
                 .add(AnalyticsRedisConstants.ACTIVE_COUNTERS_SET, shortUrlId);
     }
 
-    /**
-     * Direct DB write fallback when Redis is unavailable.
-     * Preserves original behavior for resilience.
-     */
-    @Transactional
-    public void directDbWrite(ClickTrackingCommand command) {
-        try {
-            ClickEvent event = ClickEvent.builder()
-                    .shortUrlId(command.shortUrlId())
-                    .ipAddress(command.ipAddress())
-                    .userAgent(command.userAgent())
-                    .referer(command.referer())
-                    .clickedAt(Instant.now())
-                    .build();
-            clickEventRepository.save(event);
-
-            UrlAnalytics analytics = urlAnalyticsRepository.findByShortUrlId(command.shortUrlId())
-                    .orElseGet(() -> UrlAnalytics.builder()
-                            .shortUrlId(command.shortUrlId())
-                            .totalClicks(0L)
-                            .build());
-
-            analytics.setTotalClicks(analytics.getTotalClicks() + 1);
-            analytics.setLastAccessedAt(Instant.now());
-            urlAnalyticsRepository.save(analytics);
-        } catch (Exception ex) {
-            log.warn("Failed to track click for shortUrlId={}: {}", command.shortUrlId(), ex.getMessage());
-        }
-    }
 }

@@ -5,20 +5,24 @@ import com.linkflow.web.client.BackendApiException;
 import com.linkflow.web.client.UserApiClient;
 import com.linkflow.web.dto.auth.LoginForm;
 import com.linkflow.web.dto.auth.RegisterForm;
-import com.linkflow.web.dto.auth.RegisterResponse;
 import com.linkflow.web.dto.auth.TokenResponse;
 import com.linkflow.web.dto.user.UserResponse;
 import com.linkflow.web.session.SessionManager;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Controller
 @RequiredArgsConstructor
@@ -31,7 +35,7 @@ public class AuthController {
     @PostMapping("/login")
     public String login(@Valid @ModelAttribute LoginForm form,
                         BindingResult bindingResult,
-                        HttpSession session,
+                        HttpServletRequest request,
                         Model model) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("loginForm", form);
@@ -43,7 +47,7 @@ public class AuthController {
             TokenResponse tokens = authApiClient.login(form.getEmail(), form.getPassword());
             UserResponse user = userApiClient.getMe(tokens.accessToken());
             sessionManager.establishSession(
-                    session,
+                    request,
                     tokens.accessToken(),
                     tokens.refreshToken(),
                     tokens.expiresIn(),
@@ -80,15 +84,14 @@ public class AuthController {
         }
 
         try {
-            RegisterResponse response = authApiClient.register(
+            authApiClient.register(
                     form.getEmail(),
                     form.getPassword(),
                     form.getFirstName(),
                     form.getLastName()
             );
-            // Redirect to verify-email page with simulation token
-            return "redirect:/verify-email?token=" + (response.verificationToken() != null ? response.verificationToken() : "")
-                    + "&email=" + form.getEmail();
+            return "redirect:/check-email?email="
+                    + URLEncoder.encode(form.getEmail(), StandardCharsets.UTF_8);
         } catch (BackendApiException ex) {
             model.addAttribute("errorMessage", ex.getMessage());
             model.addAttribute("registerForm", form);
@@ -110,25 +113,87 @@ public class AuthController {
         return "redirect:/";
     }
 
-    @PostMapping("/verify-email")
-    public String verifyEmail(@RequestParam String token, Model model) {
+    /**
+     * Lands the emailed activation link. Verification happens on GET because that is what a user
+     * clicking a link expects; the alternative — rendering a confirm button — protects against
+     * link-prefetching mail clients but costs an extra step. The backend absorbs the prefetch case
+     * instead, by treating an already-verified account as success.
+     */
+    @GetMapping("/verify-email")
+    public String verifyEmail(@RequestParam(required = false) String token,
+                              @RequestParam(required = false) String email,
+                              Model model) {
+        model.addAttribute("pageTitle", "Verify Email");
+
+        // A query parameter wins, but must not overwrite an address carried here as a flash
+        // attribute by the resend below — flash attributes are already merged into the model at
+        // this point, and unconditionally setting the parameter would blank the form.
+        if (email != null && !email.isBlank()) {
+            model.addAttribute("email", email);
+        } else if (!model.containsAttribute("email")) {
+            model.addAttribute("email", "");
+        }
+
+        // Reached without a link, e.g. straight from the sign-in page prompt, or redirected here
+        // after a resend. Either way the page just offers the resend form.
+        if (token == null || token.isBlank()) {
+            return "public/verify-email";
+        }
+
         try {
             authApiClient.verifyEmail(token);
-            model.addAttribute("successMessage", "Email verified successfully! You can now log in.");
+            // Distinct from a generic success message: the template keys the whole "account
+            // activated" state off this flag, so an unrelated notice cannot claim the email is
+            // confirmed when it is not.
+            model.addAttribute("verified", true);
         } catch (BackendApiException ex) {
             model.addAttribute("errorMessage", ex.getMessage());
-            model.addAttribute("token", token);
         }
-        model.addAttribute("pageTitle", "Verify Email");
         return "public/verify-email";
+    }
+
+    /**
+     * The address is carried back as a flash attribute rather than a redirect query parameter.
+     * <p>
+     * Both would repopulate the form, but a query parameter also breaks the message: an email
+     * address contains an {@code @}, which is percent-encoded into the redirect URL, while Spring
+     * matches a saved flash map against the <em>decoded</em> parameters of the following request.
+     * The two never compare equal, the flash map is discarded as belonging to some other request,
+     * and the acknowledgement disappears without a trace — the user is left looking at an unchanged
+     * page, with no way to tell whether anything was sent.
+     * <p>
+     * Keeping the address out of the URL is worth having in its own right. It would otherwise
+     * persist in browser history and be handed to any third-party asset the page loads via the
+     * Referer header.
+     */
+    @PostMapping("/resend-verification")
+    public String resendVerification(@RequestParam String email,
+                                     RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("email", email);
+        try {
+            authApiClient.resendVerification(email);
+        } catch (BackendApiException ex) {
+            // The backend answers uniformly for unknown addresses, so a failure here is a genuine
+            // fault rather than "no such account" — surface it instead of claiming success.
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+            return "redirect:/verify-email";
+        }
+        // An acknowledgement, not a confirmation. Worded to match the backend, which sends nothing
+        // for unknown or already-verified addresses and cannot say so without leaking which.
+        redirectAttributes.addFlashAttribute("infoMessage",
+                "If that address needs verifying, a new link is on its way. "
+                        + "It can take a minute to arrive — check your spam folder too.");
+        return "redirect:/verify-email";
     }
 
     @PostMapping("/forgot-password")
     public String forgotPassword(@RequestParam String email, Model model) {
         try {
-            String resetToken = authApiClient.forgotPassword(email);
-            // Simulation: show the token in the UI banner
-            model.addAttribute("resetToken", resetToken);
+            authApiClient.forgotPassword(email);
+            // Deliberately identical whether or not the address is registered.
+            model.addAttribute("successMessage",
+                    "If an account exists for that address, a reset link is on its way. "
+                            + "The link expires in 15 minutes.");
         } catch (BackendApiException ex) {
             model.addAttribute("errorMessage", ex.getMessage());
         }
@@ -158,17 +223,30 @@ public class AuthController {
         return "public/reset-password";
     }
 
-    @PostMapping("/verify-email-change")
-    public String verifyEmailChange(@RequestParam String token, Model model, HttpSession session) {
+    /**
+     * Lands the confirmation link sent to the new address. The session is cleared on success
+     * because the account's sign-in identity has changed and every token was revoked server-side.
+     */
+    @GetMapping("/verify-email-change")
+    public String verifyEmailChange(@RequestParam(required = false) String token,
+                                    Model model,
+                                    HttpSession session) {
+        model.addAttribute("pageTitle", "Verify Email Change");
+
+        if (token == null || token.isBlank()) {
+            model.addAttribute("errorMessage",
+                    "This page needs the confirmation link from your new email address.");
+            return "public/verify-email-change";
+        }
+
         try {
             userApiClient.verifyEmailChange(token);
-            model.addAttribute("successMessage", "Email updated successfully! Please log back in.");
+            model.addAttribute("successMessage",
+                    "Your email is updated. Please sign in again with the new address.");
             sessionManager.clearSession(session);
         } catch (BackendApiException ex) {
             model.addAttribute("errorMessage", ex.getMessage());
-            model.addAttribute("token", token);
         }
-        model.addAttribute("pageTitle", "Verify Email Change");
         return "public/verify-email-change";
     }
 }

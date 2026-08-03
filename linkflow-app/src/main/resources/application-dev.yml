@@ -8,5 +8,14 @@ logging:
     org.springframework.security: INFO
 
 linkflow:
+  mail-cooldown:
+    # Off locally. The throttle exists to stop the application being aimed at a stranger's inbox,
+    # which is not a risk on a laptop, and leaving it on means a minute of waiting every time you
+    # re-run a registration or reset flow.
+    interval: 0s
   jwt:
-    secret: ${LINKFLOW_JWT_SECRET:ZGV2LXNlY3JldC1rZXktZm9yLWxvY2FsLWRldmVsb3BtZW50LW1pbmltdW0tNjQtY2hhcnM=}
+    # Local-development key only. It is committed deliberately so `mvn spring-boot:run` works out
+    # of the box, and is worthless outside a dev machine. Production requires LINKFLOW_JWT_SECRET
+    # to be supplied; the prod profile refuses to start without it.
+    # Must decode to 64 bytes, which is what HS512 signing requires.
+    secret: ${LINKFLOW_JWT_SECRET:nwxxE0adsd6vxACXW1dDyhFOq4W84jPyaSKna+4Xr9kXGr+kOc4Kxi7a213Z2rsaIySbe16mHho5yesliO8cSg==}

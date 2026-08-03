@@ -1,0 +1,40 @@
+# Local Docker Compose demo profile.
+#
+# Deliberately separate from `prod`. The demo stack used to activate `prod`, which made a
+# plaintext localhost deployment with a mail catcher look like a production configuration and
+# defeated the point of the production startup checks. This profile applies the same hardening
+# `prod` does, but is honest about being a demo: it does not require TLS-backed links or a real
+# SMTP relay, so MailConfigValidator does not enforce production mail rules here.
+#
+# Real deployments must use SPRING_PROFILES_ACTIVE=prod. See DEPLOYMENT.md.
+
+logging:
+  level:
+    com.linkflow: INFO
+    org.springframework: WARN
+
+spring:
+  jpa:
+    show-sql: false
+  mail:
+    # MailHog: accepts everything, delivers nothing, and exposes a web inbox on port 8025.
+    host: ${SPRING_MAIL_HOST:mailhog}
+    port: ${SPRING_MAIL_PORT:1025}
+
+linkflow:
+  mail:
+    from-address: ${LINKFLOW_MAIL_FROM:no-reply@linkflow.local}
+    base-url: ${LINKFLOW_MAIL_BASE_URL:http://localhost:8080}
+  security:
+    swagger-public: false
+    actuator-public: false
+    metrics-public: ${LINKFLOW_METRICS_PUBLIC:${LINKFLOW_SECURITY_METRICS_PUBLIC:true}}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: never

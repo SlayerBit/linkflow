@@ -58,10 +58,6 @@ public class RateLimitService {
         return check(key, properties.getUserRpm(), false);
     }
 
-    public RateLimitInfo checkForIp(String ipAddress) {
-        return checkForIp(ipAddress, false);
-    }
-
     public RateLimitInfo checkForIp(String ipAddress, boolean failClosedOnError) {
         String key = IP_KEY_PREFIX + ipAddress;
         return check(key, properties.getIpRpm(), failClosedOnError);

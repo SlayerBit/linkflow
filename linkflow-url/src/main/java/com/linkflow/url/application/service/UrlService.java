@@ -1,18 +1,20 @@
 package com.linkflow.url.application.service;
 
 import com.linkflow.common.exception.ResourceNotFoundException;
+import com.linkflow.common.metrics.LinkflowMetrics;
 import com.linkflow.common.security.UserPrincipal;
 import com.linkflow.url.api.dto.*;
 import com.linkflow.url.domain.entity.ShortUrl;
 import com.linkflow.url.domain.exception.AliasCollisionException;
 import com.linkflow.url.domain.exception.InvalidUrlException;
 import com.linkflow.url.domain.repository.IdempotencyRecordRepository;
+import com.linkflow.url.domain.event.UrlMutatedEvent;
 import com.linkflow.url.domain.repository.ShortUrlRepository;
-import com.linkflow.url.infrastructure.cache.UrlCacheService;
 import com.linkflow.url.infrastructure.config.UrlProperties;
-import com.linkflow.url.infrastructure.lock.RedisLockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.net.URI;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
@@ -42,10 +43,10 @@ public class UrlService {
     private final IdempotencyRecordRepository idempotencyRecordRepository;
     private final ShortCodeGenerator shortCodeGenerator;
     private final IdempotencyService idempotencyService;
-    private final UrlCacheService urlCacheService;
     private final QrCodeService qrCodeService;
-    private final RedisLockService redisLockService;
     private final UrlProperties urlProperties;
+    private final ApplicationEventPublisher eventPublisher;
+    private final LinkflowMetrics metrics;
 
     @Transactional
     public UrlResponse createUrl(CreateUrlRequest request, String idempotencyKey) {
@@ -69,6 +70,7 @@ public class UrlService {
                     idempotencyService.hashRequestBody(request), 201, response);
         }
 
+        metrics.urlsCreated(1, StringUtils.hasText(request.getCustomAlias()));
         log.info("Short URL created: id={}, shortCode={}, ownerId={}",
                 shortUrl.getId(), shortUrl.getShortCode(), principal.getId());
         return response;
@@ -99,6 +101,18 @@ public class UrlService {
         storeIdempotentResult(
                 principal.getId(), BULK_CREATE_ENDPOINT, idempotencyKey,
                 idempotencyService.hashRequestBody(request), 201, response);
+
+        long customAliases = request.getUrls().stream()
+                .filter(item -> StringUtils.hasText(item.getCustomAlias()))
+                .count();
+        if (customAliases > 0) {
+            metrics.urlsCreated((int) customAliases, true);
+        }
+        int generated = responses.size() - (int) customAliases;
+        if (generated > 0) {
+            metrics.urlsCreated(generated, false);
+        }
+
         log.info("Bulk short URLs created: count={}, ownerId={}", responses.size(), principal.getId());
         return response;
     }
@@ -240,15 +254,42 @@ public class UrlService {
                 .ownerId(ownerId)
                 .expiresAt(request.getExpiresAt())
                 .build();
-        ShortUrl saved = shortUrlRepository.save(shortUrl);
 
-        // Evict any negative cache entry for this shortCode so redirects work immediately.
-        // This is critical for custom aliases that may have been previously cached as not-found.
-        urlCacheService.evict(saved.getShortCode());
+        ShortUrl saved = insertReportingCollisions(shortUrl);
+
+        // Clears any not-found sentinel so the new link resolves immediately. Deferred to commit,
+        // otherwise a concurrent redirect can re-cache the sentinel before the insert is visible.
+        invalidateCaches(saved.getShortCode());
 
         return saved;
     }
 
+    /**
+     * Inserts the row, flushing so that a duplicate short code is reported as a conflict rather
+     * than escaping as an unhandled failure at commit time.
+     * <p>
+     * The unique index on {@code short_code} is what actually guarantees uniqueness: the preceding
+     * availability check can always be overtaken by a concurrent transaction that has not yet
+     * committed. Hibernate would otherwise defer this insert to the end of the transaction, well
+     * outside any handler here, turning a losing race into a 500 instead of a 409.
+     */
+    private ShortUrl insertReportingCollisions(ShortUrl shortUrl) {
+        try {
+            return shortUrlRepository.saveAndFlush(shortUrl);
+        } catch (DataIntegrityViolationException ex) {
+            throw new AliasCollisionException(shortUrl.getShortCode());
+        }
+    }
+
+    /**
+     * Picks the short code to use, rejecting an alias that is already taken.
+     * <p>
+     * This is a fast, friendly check, not the uniqueness guarantee — see
+     * {@link #insertReportingCollisions}. It deliberately takes no distributed lock: a lock held
+     * only for the duration of this check is released before the insert commits, so it excludes
+     * nothing, and treating an unreachable Redis as a failed acquisition would reject every custom
+     * alias with a bogus "already taken" error during a cache outage.
+     */
     private String resolveShortCode(String customAlias) {
         if (!StringUtils.hasText(customAlias)) {
             return shortCodeGenerator.generate();
@@ -257,19 +298,10 @@ public class UrlService {
         String normalized = customAlias.toLowerCase();
         validateAlias(normalized);
 
-        String lockName = "alias:" + normalized;
-        String lockValue = UUID.randomUUID().toString();
-        if (!redisLockService.tryLock(lockName, lockValue, Duration.ofSeconds(10))) {
+        if (shortUrlRepository.existsByShortCode(normalized)) {
             throw new AliasCollisionException(normalized);
         }
-        try {
-            if (shortUrlRepository.existsByShortCode(normalized)) {
-                throw new AliasCollisionException(normalized);
-            }
-            return normalized;
-        } finally {
-            redisLockService.unlock(lockName, lockValue);
-        }
+        return normalized;
     }
 
     private void validateBulkRequest(BulkCreateUrlRequest request) {
@@ -343,9 +375,13 @@ public class UrlService {
         return shortUrl;
     }
 
+    /**
+     * Requests cache eviction for a short code. The eviction itself is deferred until the
+     * surrounding transaction commits — see {@code UrlCacheInvalidationListener} for why evicting
+     * before commit reintroduces the staleness it is meant to prevent.
+     */
     private void invalidateCaches(String shortCode) {
-        urlCacheService.evict(shortCode);
-        qrCodeService.evict(shortCode);
+        eventPublisher.publishEvent(new UrlMutatedEvent(shortCode));
     }
 
     private UrlResponse toResponse(ShortUrl shortUrl) {

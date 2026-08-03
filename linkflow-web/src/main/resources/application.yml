@@ -1,6 +1,10 @@
 server:
   port: 8082
+  # Kept as 'framework' here, unlike linkflow-app: this service does no IP-based rate limiting or
+  # analytics, and it needs the forwarded scheme and host so redirects and absolute links point at
+  # the public https origin rather than the internal http one.
   forward-headers-strategy: framework
+  shutdown: graceful
   servlet:
     session:
       timeout: 30m
@@ -12,10 +16,16 @@ server:
 spring:
   application:
     name: linkflow-web
+  lifecycle:
+    timeout-per-shutdown-phase: ${SPRING_LIFECYCLE_SHUTDOWN_TIMEOUT:25s}
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
+      # Redis is the session store here, so an unauthenticated instance means anyone who can reach
+      # it can read or forge logged-in sessions.
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
   session:
     store-type: redis
     redis:
@@ -41,6 +51,17 @@ management:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        # Redis is the session store: without it nobody can stay signed in, so an instance that
+        # cannot reach it should not receive traffic.
+        readiness:
+          include: readinessState,redis
 
 logging:
   level:

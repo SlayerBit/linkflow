@@ -89,15 +89,6 @@ public class UserLookupAdapter implements UserLookupPort {
         userRepository.save(user);
     }
 
-    @Override
-    @Transactional
-    public void updateEmail(UUID userId, String newEmail) {
-        User user = userRepository.findByIdAndNotDeleted(userId)
-                .orElseThrow(() -> new com.linkflow.user.domain.exception.UserNotFoundException(userId.toString()));
-        user.setEmail(newEmail);
-        userRepository.save(user);
-    }
-
     private UserPrincipalData toData(User user) {
         Set<String> roleNames = roleService.resolveRoleNames(user.getRoleIds());
         return new UserPrincipalData(

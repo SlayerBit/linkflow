@@ -1,10 +1,22 @@
 server:
   port: 8081
-  forward-headers-strategy: framework
+  # Deliberately not 'framework'. Spring's ForwardedHeaderFilter rewrites getRemoteAddr() from
+  # X-Forwarded-For without checking who sent it, so with it enabled any client can choose the
+  # address used for rate limiting and click analytics. ClientIpResolver reads the same headers
+  # but only when the peer is a configured trusted proxy. Nothing here builds URLs from the
+  # request — links come from linkflow.base-url — so there is nothing else to gain from it.
+  forward-headers-strategy: none
+  # Finish in-flight requests instead of severing them when the container is asked to stop, so a
+  # rolling deploy does not surface as errors to whoever was mid-request.
+  shutdown: graceful
 
 spring:
   application:
     name: linkflow-app
+  lifecycle:
+    # Cap on graceful shutdown. Must stay below the orchestrator's kill grace period, otherwise
+    # the process is killed mid-request anyway and the graceful phase achieves nothing.
+    timeout-per-shutdown-phase: ${SPRING_LIFECYCLE_SHUTDOWN_TIMEOUT:25s}
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
@@ -22,6 +34,28 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
+      # Redis holds sessions, refresh-token state, and rate-limit counters, so it must not be
+      # reachable unauthenticated. Blank locally where Redis is bound to the container network;
+      # required in prod, which fails startup if it is unset.
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      # Bound how long a request can block on Redis. Lettuce multiplexes commands over a single
+      # connection and is thread-safe, so no connection pool is configured.
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${SPRING_MAIL_SMTP_STARTTLS:false}
+          # Bound every SMTP phase so an unresponsive relay cannot pin a mail thread forever.
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -31,10 +65,31 @@ linkflow:
   base-url: ${LINKFLOW_BASE_URL:http://localhost:8080}
   cors:
     allowed-origins: ${LINKFLOW_CORS_ALLOWED_ORIGINS:*}
+  trusted-proxies:
+    # Proxies allowed to assert the client IP via X-Forwarded-For / X-Real-IP.
+    # Empty means no forwarding header is trusted, so a direct caller cannot bypass IP rate
+    # limiting by inventing one. Set this to the reverse proxy in front of the app.
+    cidrs: ${LINKFLOW_TRUSTED_PROXIES:}
   jwt:
     secret: ${LINKFLOW_JWT_SECRET:}
     access-expiration-ms: ${LINKFLOW_JWT_ACCESS_EXPIRATION_MS:900000}
     refresh-expiration-ms: ${LINKFLOW_JWT_REFRESH_EXPIRATION_MS:2592000000}
+  mail:
+    enabled: ${LINKFLOW_MAIL_ENABLED:true}
+    from-address: ${LINKFLOW_MAIL_FROM:no-reply@linkflow.local}
+    from-name: ${LINKFLOW_MAIL_FROM_NAME:LinkFlow}
+    # Must be the origin a recipient's browser can reach, not an internal container hostname.
+    base-url: ${LINKFLOW_MAIL_BASE_URL:http://localhost:8080}
+    max-attempts: ${LINKFLOW_MAIL_MAX_ATTEMPTS:3}
+    retry-backoff-ms: ${LINKFLOW_MAIL_RETRY_BACKOFF_MS:1000}
+  mail-cooldown:
+    # Minimum gap between transactional emails of the same kind to the same address.
+    #
+    # The IP rate limit stops a caller hammering the API; it does not stop them pointing the API at
+    # somebody else's inbox. Resend-verification and forgot-password both accept an arbitrary
+    # address, so without this a single caller can direct hundreds of messages a minute at a third
+    # party. Zero disables it, which is only sensible locally.
+    interval: ${LINKFLOW_MAIL_COOLDOWN_INTERVAL:60s}
   rate-limit:
     user-rpm: ${LINKFLOW_RATE_LIMIT_USER_RPM:100}
     ip-rpm: ${LINKFLOW_RATE_LIMIT_IP_RPM:200}
@@ -43,9 +98,20 @@ linkflow:
     flush-interval-ms: ${LINKFLOW_ANALYTICS_FLUSH_INTERVAL_MS:30000}
     click-events-retention-days: ${LINKFLOW_ANALYTICS_CLICK_EVENTS_RETENTION_DAYS:365}
     click-events-retention-cron: ${LINKFLOW_ANALYTICS_CLICK_EVENTS_RETENTION_CRON:0 30 4 * * *}
+    stream:
+      # Must stay comfortably above flush-interval-ms, or instances will steal entries from each
+      # other mid-flush and persist the same click twice.
+      reclaim-pending-after: ${LINKFLOW_ANALYTICS_STREAM_RECLAIM_PENDING_AFTER:2m}
+      remove-consumer-after-idle: ${LINKFLOW_ANALYTICS_STREAM_CONSUMER_IDLE:1h}
+      max-length: ${LINKFLOW_ANALYTICS_STREAM_MAX_LENGTH:500000}
+      batch-size: ${LINKFLOW_ANALYTICS_STREAM_BATCH_SIZE:1000}
+      max-delivery-attempts: ${LINKFLOW_ANALYTICS_STREAM_MAX_DELIVERY_ATTEMPTS:5}
   auth:
     refresh-token-revoked-retention-days: ${LINKFLOW_AUTH_REFRESH_TOKEN_REVOKED_RETENTION_DAYS:7}
     refresh-token-cleanup-cron: ${LINKFLOW_AUTH_REFRESH_TOKEN_CLEANUP_CRON:0 15 3 * * *}
+    # Verification, password-reset, and email-change tokens, once spent or expired.
+    single-use-token-retention-days: ${LINKFLOW_AUTH_SINGLE_USE_TOKEN_RETENTION_DAYS:7}
+    single-use-token-cleanup-cron: ${LINKFLOW_AUTH_SINGLE_USE_TOKEN_CLEANUP_CRON:0 45 3 * * *}
   url:
     expired-cleanup-cron: ${LINKFLOW_URL_EXPIRED_CLEANUP_CRON:0 0 * * * *}
   security:
@@ -53,7 +119,6 @@ linkflow:
     actuator-public: ${LINKFLOW_SECURITY_ACTUATOR_PUBLIC:true}
     metrics-public: ${LINKFLOW_SECURITY_METRICS_PUBLIC:false}
     email-verification-required: ${LINKFLOW_SECURITY_EMAIL_VERIFICATION_REQUIRED:true}
-    expose-dev-tokens: ${LINKFLOW_SECURITY_EXPOSE_DEV_TOKENS:false}
   bootstrap:
     admin:
       enabled: ${LINKFLOW_BOOTSTRAP_ADMIN_ENABLED:false}
@@ -68,6 +133,19 @@ management:
   endpoint:
     health:
       show-details: always
+      # Separates "the process is alive" from "it can serve traffic". A load balancer that only
+      # knows the aggregate health will either kill an instance that is merely waiting on a
+      # dependency, or send it traffic before it is ready.
+      probes:
+        enabled: true
+      group:
+        # Liveness stays up during a dependency outage: restarting the process cannot fix Redis
+        # or the database, and a restart loop only makes the outage worse.
+        liveness:
+          include: livenessState
+        # Readiness includes them, so an instance that cannot serve is pulled from rotation.
+        readiness:
+          include: readinessState,db,redis
   metrics:
     tags:
       application: ${spring.application.name}

@@ -84,12 +84,9 @@ public class ProfileController {
                                 .updateMe(auth.accessToken(), form.getFirstName(), form.getLastName()));
 
                 AuthState current = sessionManager.getAuthState(session);
-                long remainingSeconds = Math.max(0, current.expiresAt() - java.time.Instant.now().getEpochSecond());
-                sessionManager.establishSession(
+                sessionManager.updateUserDetails(
                                 session,
-                                current.accessToken(),
-                                current.refreshToken(),
-                                remainingSeconds,
+                                current,
                                 updated.email(),
                                 updated.firstName(),
                                 updated.lastName(),
@@ -218,13 +215,16 @@ public class ProfileController {
                 }
 
                 try {
-                        String token = apiCallHelper.withTokenRefresh(session,
-                                        auth -> userApiClient.requestEmailChange(auth.accessToken(),
-                                                        form.getCurrentPassword(), form.getNewEmail()));
-                        redirectAttributes.addFlashAttribute("emailChangeToken", token);
+                        apiCallHelper.withTokenRefresh(session,
+                                        auth -> {
+                                                userApiClient.requestEmailChange(auth.accessToken(),
+                                                                form.getCurrentPassword(), form.getNewEmail());
+                                                return null;
+                                        });
                         redirectAttributes.addFlashAttribute("emailChangeNewEmail", form.getNewEmail());
                         redirectAttributes.addFlashAttribute("successMessage",
-                                        "Email change request generated. Verify using the token in the banner.");
+                                        "Confirmation link sent. Open it from your new address to complete the change — "
+                                                        + "you'll keep using your current address until then.");
                 } catch (BackendApiException e) {
                         bindingResult.rejectValue("currentPassword", "error.requestEmailChangeForm", e.getMessage());
 

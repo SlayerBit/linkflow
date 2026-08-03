@@ -20,24 +20,26 @@ Optional: `openssl` (generate JWT secret), `redis-cli` / `psql` (smoke tests).
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 java -version   # must show 21.x
 
-# 2. Infrastructure
-docker compose up -d redis
+# 2. Infrastructure (PostgreSQL, Redis, and a mail catcher on the host's ports)
+#    The dev overlay is what publishes those ports; the base stack keeps everything
+#    behind Nginx, so without it a JAR on the host cannot reach them.
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis mailhog
 
-# 3. Resolve PostgreSQL port conflict
-#    Ensure connections to the cloud DB are not blocked.
-
-# 4. Build
+# 3. Build
 mvn clean package -DskipTests
 
-# 5. Run backend (port 8081)
+# 4. Run backend (port 8081)
 java -jar linkflow-app/target/linkflow-app-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
 
-# 6. Optional: API gateway (port 8080) — separate terminal
+# 5. Optional: API gateway (port 8080) — separate terminal
 java -jar linkflow-gateway/target/linkflow-gateway-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
 
-# 7. Optional: Web UI (port 8082) — separate terminal
+# 6. Optional: Web UI (port 8082) — separate terminal
 java -jar linkflow-web/target/linkflow-web-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
 ```
+
+Prefer the full containerised stack instead? `./docker/nginx/generate-dev-certs.sh && docker compose
+up --build`, then open **https://localhost**. See [docs/docker.md](docs/docker.md).
 
 ## Spring profile
 
@@ -47,19 +49,28 @@ Use **`dev`** for local JAR runs:
 - Provides a default `LINKFLOW_JWT_SECRET` (see `application-dev.yml`)
 - Enables JPA `show-sql`
 
-Do **not** use `prod` locally unless you set all production secrets (JWT, etc.). Docker Compose services use `prod` internally.
+Do **not** use `prod` locally: it requires a real SMTP relay, an `https` base URL, an explicit CORS
+origin list, and a Redis password, and refuses to start without them. Docker Compose runs the
+**`docker`** profile, which applies the same hardening but is honest about being a local demo.
 
 ## Environment variables
 
-Defaults in `application.yml` match `docker-compose.yml` for Postgres and Redis when running JARs on the host:
+Running JARs on the host, with infrastructure from the dev overlay:
 
-| Variable | Default (local JAR) | `docker-compose.yml` (containers) |
-|----------|---------------------|-----------------------------------|
-| `SPRING_DATASOURCE_URL` | Cloud DB URL | `${SPRING_DATASOURCE_URL}` |
-| `SPRING_DATASOURCE_USERNAME` | Cloud DB User | `${SPRING_DATASOURCE_USERNAME}` |
-| `SPRING_DATASOURCE_PASSWORD` | Cloud DB Password | `${SPRING_DATASOURCE_PASSWORD}` |
-| `SPRING_DATA_REDIS_HOST` | `localhost` | `redis` (in app container) |
+| Variable | Local JAR (`dev`) | Compose containers |
+|----------|-------------------|--------------------|
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/linkflow` | `jdbc:postgresql://postgres:5432/linkflow` |
+| `SPRING_DATASOURCE_USERNAME` | `linkflow` | `linkflow` |
+| `SPRING_DATASOURCE_PASSWORD` | `linkflow-local-postgres` | `linkflow-local-postgres` |
+| `SPRING_DATA_REDIS_HOST` | `localhost` | `redis` |
 | `SPRING_DATA_REDIS_PORT` | `6379` | `6379` |
+| `SPRING_DATA_REDIS_PASSWORD` | `linkflow-local-redis` | `linkflow-local-redis` |
+| `SPRING_MAIL_HOST` / `PORT` | `localhost` / `1025` | `mailhog` / `1025` |
+
+Redis requires a password even locally, because it holds sessions, refresh-token state, and
+rate-limit counters — a mistakenly published port should not be an open door to all of it.
+
+Set `SPRING_DATASOURCE_*` to point at a managed database instead of the bundled container.
 
 ### Optional / recommended
 
@@ -110,7 +121,7 @@ java -jar linkflow-app/target/linkflow-app-1.0.0-SNAPSHOT.jar --spring.profiles.
 
 - Listens on **8081**
 - Runs Flyway migrations on startup
-- Requires Cloud PostgreSQL and Redis
+- Requires PostgreSQL, Redis, and an SMTP listener (all provided by the dev overlay in step 2)
 
 ### linkflow-gateway (optional)
 
@@ -130,46 +141,58 @@ java -jar linkflow-gateway/target/linkflow-gateway-1.0.0-SNAPSHOT.jar --spring.p
 ### Full stack via Docker
 
 ```bash
-cp .env.example .env
-# Edit .env — set LINKFLOW_JWT_SECRET
+./docker/nginx/generate-dev-certs.sh   # self-signed cert for local TLS
+cp .env.example .env                   # then set LINKFLOW_JWT_SECRET
 docker compose up --build
 ```
 
+Open **https://localhost**. Details: [docs/docker.md](docs/docker.md).
+
 ## Expected URLs
+
+Local JAR runs (`dev` profile), where every process binds a host port:
 
 | Service | URL | Notes |
 |---------|-----|-------|
 | API (direct app) | http://localhost:8081/api/v1/... | Backend without gateway |
-| API (via gateway) | http://localhost:8080/api/v1/... | Recommended public entry |
-| Health (app) | http://localhost:8081/actuator/health | |
+| API (via gateway) | http://localhost:8080/api/v1/... | Single entry point |
+| Health (app) | http://localhost:8081/actuator/health | Also `/health/liveness`, `/health/readiness` |
 | Health (gateway) | http://localhost:8080/actuator/health | |
 | Swagger UI (app) | http://localhost:8081/swagger-ui.html | Redirects to `/swagger-ui/index.html` |
 | Swagger UI (gateway) | http://localhost:8080/swagger-ui/index.html | `/swagger-ui.html` is not routed by gateway |
-| OpenAPI JSON (app) | http://localhost:8081/v3/api-docs | |
 | OpenAPI JSON (gateway) | http://localhost:8080/v3/api-docs | Proxied from app |
 | Redirects | http://localhost:8080/r/{code} | Via gateway |
-| Web UI (direct) | http://localhost:8082 | Optional; use gateway at :8080 for single entry |
-| Web UI (via gateway) | http://localhost:8080 | Recommended public entry |
-| Prometheus | http://localhost:9090 | Docker full stack only |
-| Grafana | http://localhost:3000 | Docker full stack only (admin/admin) |
+| Web UI (via gateway) | http://localhost:8080 | Single entry point |
+| MailHog inbox | http://localhost:8025 | Every outbound message |
+
+The full Compose stack publishes **only** `https://localhost` (plus Prometheus, Grafana, and MailHog
+for convenience). Swagger is disabled there, and `/actuator` is denied at the edge. Add the dev
+overlay to expose the individual services for debugging:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
 
 ## Infrastructure ports
 
-| Service | Host port | Container |
-|---------|-----------|-----------|
+| Service | Host port | Published by |
+|---------|-----------|--------------|
+| PostgreSQL | 5432 | dev overlay |
+| Redis | 6379 | dev overlay |
+| MailHog SMTP / inbox | 1025 (internal) / 8025 | base stack |
+| linkflow-app | 8081 | dev overlay |
+| linkflow-gateway | 8080 | dev overlay |
+| linkflow-web | 8082 | dev overlay |
+| Nginx | 80, 443 | base stack |
+| Prometheus | 9090 | base stack |
+| Grafana | 3000 | base stack |
 
-| Redis | 6379 | `redis:7-alpine` |
-| linkflow-app | 8081 | Docker full stack |
-| linkflow-gateway | 8080 | Docker full stack |
-| linkflow-web | 8082 | Docker full stack and local JAR |
-| Prometheus | 9090 | Docker full stack only |
-| Grafana | 3000 | Docker full stack only |
-
-### Verify Postgres and Redis
+### Verify PostgreSQL and Redis
 
 ```bash
 docker compose ps
-redis-cli -h 127.0.0.1 ping   # expect PONG
+redis-cli -h 127.0.0.1 -a linkflow-local-redis ping           # expect PONG
+psql "postgresql://linkflow:linkflow-local-postgres@127.0.0.1:5432/linkflow" -c 'select 1'
 ```
 
 ## Troubleshooting
@@ -189,7 +212,13 @@ mvn -version   # Java version should be 21.x
 
 Always use `$JAVA_HOME/bin/java` for `java -jar` if your default `java` points to Java 26.
 
-**Fix:** Wait, Cloud PostgreSQL is hosted remotely, so native Postgres on port 5432 won't conflict. If you see this, check your `.env` connection string.
+### Port 5432 already in use
+
+**Cause:** A PostgreSQL installed natively on the host is already bound to 5432, so the dev overlay
+cannot publish the container's port.
+
+**Fix:** Stop the native server, or remap the container port in `docker-compose.dev.yml` (for
+example `"5433:5432"`) and set `SPRING_DATASOURCE_URL` to match.
 
 ### Gateway returns 500 / `Connection refused` to app
 
@@ -211,16 +240,18 @@ Default in `linkflow-gateway` `application.yml` uses `127.0.0.1` for this reason
 
 ### Redis connection errors
 
-Ensure Redis container is healthy and port 6379 is not blocked:
+Redis is password-protected, and the base stack does not publish its port. Both are easy to trip
+over: `NOAUTH Authentication required` means the password is missing, and a connection refused on
+6379 usually means the dev overlay was omitted.
 
 ```bash
-docker compose up -d redis
-redis-cli -h 127.0.0.1 ping
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d redis
+redis-cli -h 127.0.0.1 -a linkflow-local-redis ping
 ```
 
 ### JWT / startup failure without `dev` profile
 
-`application.yml` requires `LINKFLOW_JWT_SECRET` when not using `dev`. Either use `--spring.profiles.active=dev` or export a 64+ character base64 secret.
+`application.yml` requires `LINKFLOW_JWT_SECRET` when not using `dev`. Either use `--spring.profiles.active=dev` or export a secret that decodes to at least 64 bytes: `export LINKFLOW_JWT_SECRET="$(openssl rand -base64 64)"`. Note the requirement is on the decoded length, not the length of the Base64 string.
 
 ### Integration tests fail
 

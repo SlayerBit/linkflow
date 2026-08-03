@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
@@ -22,9 +21,6 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
-
-    @Value("${linkflow.security.expose-dev-tokens:false}")
-    private boolean exposeDevTokens;
 
     @GetMapping("/me")
     @Operation(summary = "Get current user profile")
@@ -42,23 +38,40 @@ public class UserController {
     }
 
     @PostMapping("/me/email-change-request")
-    @Operation(summary = "Request email change verification token")
+    @Operation(
+            summary = "Request an email change",
+            description = """
+                    Sends a confirmation link, valid for 24 hours, to the new address. The current \
+                    address stays active and usable for sign-in until that link is opened, so a typo \
+                    cannot strand the account at a mailbox nobody owns.
+
+                    Requires the current password even though the caller is already authenticated: a \
+                    stolen session would otherwise be enough to redirect the account to an attacker's \
+                    mailbox, turning temporary access into permanent ownership.
+
+                    Responds 409 if the password is wrong, the address is unchanged, or it already \
+                    belongs to another account; 429 if a confirmation was sent to that address a \
+                    moment ago.""")
     public ResponseEntity<ApiResponse<Map<String, String>>> requestEmailChange(
             @Valid @RequestBody EmailChangeRequestDto request) {
-        String token = userService.requestEmailChange(request.getCurrentPassword(), request.getNewEmail());
-        if (exposeDevTokens) {
-            return ResponseEntity.ok(ApiResponse.of(Map.of(
-                    "token", token,
-                    "message", "Email change verification token generated."
-            )));
-        }
+        userService.requestEmailChange(request.getCurrentPassword(), request.getNewEmail());
         return ResponseEntity.ok(ApiResponse.of(Map.of(
-                "message", "If the request is valid, a verification link has been sent to the new email address."
+                "message", "Check the new address for a confirmation link to complete the change."
         )));
     }
 
     @PostMapping("/verify-email-change")
-    @Operation(summary = "Verify and complete email change")
+    @Operation(
+            summary = "Confirm and complete an email change",
+            description = """
+                    Consumes the emailed token, moves the account to the new address, and revokes \
+                    every session — the sign-in identity has changed, so credentials minted against \
+                    the old one must not survive.
+
+                    Idempotent once the account already carries the new address, because mail \
+                    scanners open these links before the recipient does. Responds 404 for an unknown \
+                    token, and 409 if the link was superseded, expired, or the address was claimed by \
+                    another account while the link sat unopened.""")
     public ResponseEntity<ApiResponse<Map<String, String>>> verifyEmailChange(
             @Valid @RequestBody EmailChangeVerifyDto request) {
         userService.verifyEmailChange(request.getToken());

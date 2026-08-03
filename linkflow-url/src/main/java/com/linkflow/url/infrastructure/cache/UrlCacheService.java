@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.linkflow.common.metrics.LinkflowMetrics;
 import com.linkflow.url.domain.entity.ShortUrl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +56,7 @@ public class UrlCacheService {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
+    private final LinkflowMetrics metrics;
 
     /**
      * Get a cached entry for the given shortcode.
@@ -66,11 +68,15 @@ public class UrlCacheService {
         try {
             String json = stringRedisTemplate.opsForValue().get(key);
             if (json == null) {
+                metrics.urlCacheLookup("miss");
                 return Optional.empty();
             }
-            return Optional.of(objectMapper.readValue(json, CachedUrlEntry.class));
+            CachedUrlEntry entry = objectMapper.readValue(json, CachedUrlEntry.class);
+            metrics.urlCacheLookup(entry.negative() ? "negative" : "hit");
+            return Optional.of(entry);
         } catch (Exception ex) {
             log.warn("Failed to read URL cache for shortCode={}: {}", shortCode, ex.getMessage());
+            metrics.urlCacheLookup("error");
             return Optional.empty();
         }
     }

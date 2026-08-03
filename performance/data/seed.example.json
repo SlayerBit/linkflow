@@ -1,0 +1,14 @@
+{
+  "generatedAt": "example",
+  "baseUrl": "https://localhost",
+  "users": [
+    {
+      "email": "perf.example@example.com",
+      "password": "PerfT3st!Pass",
+      "shortCodes": ["demo1"],
+      "urlIds": ["00000000-0000-0000-0000-000000000001"]
+    }
+  ],
+  "shortCodes": ["demo1"],
+  "urlIds": ["00000000-0000-0000-0000-000000000001"]
+}

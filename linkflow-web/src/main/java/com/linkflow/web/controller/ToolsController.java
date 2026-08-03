@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/tools")
@@ -26,10 +27,28 @@ public class ToolsController {
     private final ActuatorApiClient actuatorApiClient;
     private final WebClientConfig webClientConfig;
 
+    /**
+     * Endpoints the rate-limit demo is allowed to call.
+     * <p>
+     * The probe forwards the signed-in user's access token, so the target must never be caller
+     * controlled: an arbitrary value would let a user point the server at any host it can reach —
+     * internal services or a cloud metadata endpoint — and hand over a valid bearer token with the
+     * request. Only these read-only, rate-limited paths are permitted.
+     */
+    private static final Set<String> PROBE_ENDPOINTS = Set.of(
+            "/api/v1/urls",
+            "/api/v1/users/me",
+            "/api/v1/analytics/top"
+    );
+
+    private static final String DEFAULT_PROBE_ENDPOINT = "/api/v1/urls";
+    private static final int MAX_PROBE_REQUESTS = 200;
+
     @GetMapping("/rate-limit")
     public String rateLimit(Model model) {
         model.addAttribute("userRpm", webClientConfig.getRateLimit().getUserRpm());
         model.addAttribute("ipRpm", webClientConfig.getRateLimit().getIpRpm());
+        model.addAttribute("probeEndpoints", PROBE_ENDPOINTS.stream().sorted().toList());
         model.addAttribute("pageTitle", "Rate Limit Demo");
         model.addAttribute("activeNav", "tools-rate-limit");
         return "tools/rate-limit";
@@ -39,9 +58,16 @@ public class ToolsController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> rateLimitProbe(
             @RequestParam(defaultValue = "10") int n,
-            @RequestParam(defaultValue = "/api/v1/urls") String endpoint,
+            @RequestParam(defaultValue = DEFAULT_PROBE_ENDPOINT) String endpoint,
             HttpSession session) {
-        int count = Math.max(1, Math.min(n, 200));
+        if (!PROBE_ENDPOINTS.contains(endpoint)) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Unsupported probe endpoint",
+                    "allowed", PROBE_ENDPOINTS.stream().sorted().toList()
+            ));
+        }
+
+        int count = Math.max(1, Math.min(n, MAX_PROBE_REQUESTS));
         var authState = apiCallHelper.requireAuth(session);
         List<ActuatorApiClient.RateLimitProbeResult> results =
                 actuatorApiClient.probe(authState.accessToken(), endpoint, count);

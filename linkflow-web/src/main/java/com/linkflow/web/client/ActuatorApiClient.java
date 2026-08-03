@@ -37,11 +37,28 @@ public class ActuatorApiClient {
     }
 
     public List<RateLimitProbeResult> probe(String accessToken, String path, int count) {
+        requireRelativePath(path);
+
         List<RateLimitProbeResult> results = new ArrayList<>();
         for (int i = 1; i <= count; i++) {
             results.add(probeOnce(accessToken, path, i));
         }
         return results;
+    }
+
+    /**
+     * Rejects anything that could redirect the request away from the configured backend.
+     * <p>
+     * {@code RestClient.uri(String)} honours an absolute URL by replacing the base URL, so a value
+     * like {@code http://169.254.169.254/...} or {@code //evil.example.com} would send the caller's
+     * bearer token to a third party. Callers already restrict this to an allowlist; this is the
+     * backstop that keeps the guarantee local to the code performing the request.
+     */
+    private void requireRelativePath(String path) {
+        if (path == null || !path.startsWith("/") || path.startsWith("//")) {
+            throw new IllegalArgumentException(
+                    "Probe path must be a root-relative path on the backend, got: " + path);
+        }
     }
 
     private RateLimitProbeResult probeOnce(String accessToken, String path, int requestNumber) {

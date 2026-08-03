@@ -1,5 +1,6 @@
 package com.linkflow.web.session;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,14 +22,22 @@ public class SessionManager {
         return null;
     }
 
-    public void establishSession(HttpSession session, String accessToken, String refreshToken,
+    /**
+     * Binds a freshly authenticated user to the current session, rotating the session identifier.
+     * <p>
+     * Rotation closes session fixation: without it, an identifier an attacker managed to plant in
+     * the victim's browser before login would still be valid afterwards, handing them an
+     * authenticated session. {@code changeSessionId()} issues a new identifier while preserving
+     * attributes, so it is safe to call before writing the auth state.
+     */
+    public void establishSession(HttpServletRequest request, String accessToken, String refreshToken,
                                  long expiresIn, String email, String firstName, String lastName,
                                  Set<String> roles) {
-        long expiresAt = Instant.now().getEpochSecond() + expiresIn;
-        AuthState authState = new AuthState(
-                accessToken, refreshToken, expiresAt, email, firstName, lastName, roles
-        );
-        session.setAttribute(SessionKeys.AUTH_STATE, authState);
+        request.changeSessionId();
+
+        HttpSession session = request.getSession();
+        session.setAttribute(SessionKeys.AUTH_STATE,
+                buildAuthState(accessToken, refreshToken, expiresIn, email, firstName, lastName, roles));
 
         var authorities = roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
@@ -37,24 +46,35 @@ public class SessionManager {
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
+    /**
+     * Refreshes the cached profile fields of an already-authenticated session. Unlike
+     * {@link #establishSession} this is not a privilege transition, so the session id is retained.
+     */
+    public void updateUserDetails(HttpSession session, AuthState current, String email,
+                                  String firstName, String lastName, Set<String> roles) {
+        long remainingSeconds = Math.max(0, current.expiresAt() - Instant.now().getEpochSecond());
+        session.setAttribute(SessionKeys.AUTH_STATE, buildAuthState(
+                current.accessToken(), current.refreshToken(), remainingSeconds,
+                email, firstName, lastName, roles));
+    }
+
     public void updateTokens(HttpSession session, AuthState current, String accessToken,
                              String refreshToken, long expiresIn) {
-        long expiresAt = Instant.now().getEpochSecond() + expiresIn;
-        AuthState updated = new AuthState(
-                accessToken,
-                refreshToken,
-                expiresAt,
-                current.email(),
-                current.firstName(),
-                current.lastName(),
-                current.roles()
-        );
-        session.setAttribute(SessionKeys.AUTH_STATE, updated);
+        session.setAttribute(SessionKeys.AUTH_STATE, buildAuthState(
+                accessToken, refreshToken, expiresIn,
+                current.email(), current.firstName(), current.lastName(), current.roles()));
     }
 
     public void clearSession(HttpSession session) {
         session.removeAttribute(SessionKeys.AUTH_STATE);
         SecurityContextHolder.clearContext();
         session.invalidate();
+    }
+
+    private AuthState buildAuthState(String accessToken, String refreshToken, long expiresIn,
+                                     String email, String firstName, String lastName,
+                                     Set<String> roles) {
+        long expiresAt = Instant.now().getEpochSecond() + expiresIn;
+        return new AuthState(accessToken, refreshToken, expiresAt, email, firstName, lastName, roles);
     }
 }

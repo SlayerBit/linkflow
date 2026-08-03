@@ -32,16 +32,4 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, UUID> {
 
     @Query("SELECT s FROM ShortUrl s WHERE s.expiresAt < :now AND s.active = true AND s.deleted = false")
     List<ShortUrl> findExpiredActive(@Param("now") Instant now);
-
-    @Query("SELECT COUNT(s) FROM ShortUrl s WHERE s.deleted = false")
-    long countNotDeleted();
-
-    @Query("SELECT COUNT(s) FROM ShortUrl s WHERE s.deleted = false AND s.active = true")
-    long countActive();
-
-    @Query("SELECT COUNT(s) FROM ShortUrl s WHERE s.deleted = false AND s.active = false AND s.expiresAt IS NOT NULL AND s.expiresAt < :now")
-    long countExpired(@Param("now") Instant now);
-
-    @Query("SELECT COUNT(s) FROM ShortUrl s WHERE s.deleted = true")
-    long countDeleted();
 }

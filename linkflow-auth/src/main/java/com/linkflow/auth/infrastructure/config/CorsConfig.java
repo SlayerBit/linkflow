@@ -10,6 +10,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * The single source of CORS policy for the API.
+ * <p>
+ * Applied through the Spring Security filter chain rather than an MVC mapping so that preflight
+ * and rejected requests are handled consistently with authentication, and so the policy is not
+ * defined in two places that can drift apart.
+ */
 @Configuration
 public class CorsConfig {
 
@@ -17,7 +24,10 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource(
             @Value("${linkflow.cors.allowed-origins:*}") String allowedOrigins) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
+        config.setAllowedOriginPatterns(Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of(

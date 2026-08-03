@@ -28,7 +28,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers(disabledWithoutDocker = true)
 class AuthRateLimitRedisDownIT {
 
-    private static final String JWT_SECRET = "dGVzdC1zZWNyZXQta2V5LWZvci1pbnRlZ3JhdGlvbi10ZXN0cy1taW5pbXVtLTY0LWNoYXJz";
+    // Random 64-byte key; HS512 signing requires a 512-bit key.
+    private static final String JWT_SECRET =
+            "XWoRZDqCxr8/uVuFLJbaEo4aSFjcxKj4Qqfu56MY1M+1KHv807/qYveB98YSjrmOtooV/kR+D050WjbweBk0fg==";
 
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("linkflow")

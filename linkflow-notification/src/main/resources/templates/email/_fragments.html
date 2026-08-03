@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+  Shared scaffolding for transactional email.
+
+  Email clients (notably Outlook) do not support external stylesheets, flexbox, or grid, so
+  layout uses nested tables with inline styles and a 600px content width. Only web-safe font
+  stacks are used. Keep any change here compatible with that constraint.
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+
+<th:block th:fragment="head">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="color-scheme" content="light dark">
+    <style>
+        /* Progressive enhancement only — the inline styles below carry the layout. */
+        @media only screen and (max-width: 600px) {
+            .lf-container { width: 100% !important; }
+            .lf-pad { padding-left: 24px !important; padding-right: 24px !important; }
+            .lf-button { display: block !important; text-align: center !important; }
+        }
+        a { color: #2563eb; }
+    </style>
+</th:block>
+
+</head>
+<body>
+
+<div th:fragment="header"
+     style="padding: 32px 40px 8px 40px;" class="lf-pad">
+    <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                 font-size: 18px; font-weight: 700; color: #0f172a; letter-spacing: -0.01em;">
+        LinkFlow
+    </span>
+</div>
+
+<table th:fragment="button(url, label)" role="presentation" cellpadding="0" cellspacing="0" border="0"
+       style="margin: 28px 0 8px 0;">
+    <tr>
+        <td style="border-radius: 8px; background-color: #2563eb;">
+            <a th:href="${url}" th:text="${label}" class="lf-button"
+               style="display: inline-block; padding: 13px 26px; border-radius: 8px;
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                      font-size: 15px; font-weight: 600; line-height: 1; color: #ffffff;
+                      text-decoration: none;">Continue</a>
+        </td>
+    </tr>
+</table>
+
+<div th:fragment="fallbackLink(url)"
+     style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            font-size: 13px; line-height: 20px; color: #64748b; margin-top: 24px;">
+    If the button does not work, copy and paste this link into your browser:<br>
+    <a th:href="${url}" th:text="${url}"
+       style="color: #2563eb; word-break: break-all;">link</a>
+</div>
+
+<div th:fragment="footer(supportFrom)"
+     style="border-top: 1px solid #e2e8f0; margin-top: 32px; padding-top: 24px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            font-size: 12px; line-height: 19px; color: #94a3b8;">
+    You received this message because someone used this address on LinkFlow.
+    If that was not you, no action is required.<br>
+    <span th:text="'Sent from ' + ${supportFrom} + ' — please do not reply.'">Sent automatically.</span>
+</div>
+
+</body>
+</html>

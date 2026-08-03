@@ -1,7 +1,9 @@
 package com.linkflow.url.application.service;
 
 import com.linkflow.common.exception.ResourceNotFoundException;
+import com.linkflow.common.metrics.LinkflowMetrics;
 import com.linkflow.common.port.ClickTrackingPort;
+import com.linkflow.common.security.ClientIpResolver;
 import com.linkflow.url.domain.entity.ShortUrl;
 import com.linkflow.url.domain.exception.UrlDeactivatedException;
 import com.linkflow.url.domain.exception.UrlExpiredException;
@@ -39,9 +41,26 @@ public class RedirectService {
     private final ClickTrackingPort clickTrackingPort;
     private final RedisLockService redisLockService;
     private final RedirectCacheRefreshService redirectCacheRefreshService;
+    private final ClientIpResolver clientIpResolver;
+    private final LinkflowMetrics metrics;
 
     @Transactional(readOnly = true)
     public String resolveRedirect(String shortCode, HttpServletRequest request) {
+        try {
+            return resolveRedirectInternal(shortCode, request);
+        } catch (ResourceNotFoundException ex) {
+            metrics.redirectRejected("not_found");
+            throw ex;
+        } catch (UrlExpiredException ex) {
+            metrics.redirectRejected("expired");
+            throw ex;
+        } catch (UrlDeactivatedException ex) {
+            metrics.redirectRejected("deactivated");
+            throw ex;
+        }
+    }
+
+    private String resolveRedirectInternal(String shortCode, HttpServletRequest request) {
         String normalized = shortCode.toLowerCase();
 
         Optional<CachedUrlEntry> cached = urlCacheService.get(normalized);
@@ -53,13 +72,16 @@ public class RedirectService {
                 throw new ResourceNotFoundException("Short URL", shortCode);
             }
 
+            String cacheOutcome = "hit";
             if (urlCacheService.isStale(entry)) {
                 log.debug("Serving stale cache entry for shortCode={}, triggering async refresh", normalized);
                 redirectCacheRefreshService.refreshCacheEntry(normalized);
+                cacheOutcome = "stale";
             }
 
             validateRedirectable(entry.deleted(), entry.active(), entry.expiresAt(), normalized);
             trackClick(entry.id(), request);
+            metrics.redirectResolved(cacheOutcome);
             return entry.originalUrl();
         }
 
@@ -95,6 +117,7 @@ public class RedirectService {
                 }
                 validateRedirectable(entry.deleted(), entry.active(), entry.expiresAt(), normalized);
                 trackClick(entry.id(), request);
+                metrics.redirectResolved("hit");
                 return entry.originalUrl();
             }
         }
@@ -117,6 +140,7 @@ public class RedirectService {
 
         urlCacheService.put(shortUrl);
         trackClick(shortUrl.getId(), request);
+        metrics.redirectResolved("miss");
 
         return shortUrl.getOriginalUrl();
     }
@@ -138,7 +162,9 @@ public class RedirectService {
         try {
             clickTrackingPort.trackClick(new ClickTrackingPort.ClickTrackingCommand(
                     shortUrlId,
-                    request.getRemoteAddr(),
+                    // Behind a reverse proxy getRemoteAddr() is the proxy, which would collapse
+                    // every visitor into one address and make unique-visitor counts meaningless.
+                    clientIpResolver.resolve(request),
                     request.getHeader("User-Agent"),
                     request.getHeader("Referer")
             ));

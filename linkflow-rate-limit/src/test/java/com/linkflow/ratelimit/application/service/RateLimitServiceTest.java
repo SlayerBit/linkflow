@@ -64,7 +64,7 @@ class RateLimitServiceTest {
         when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("Redis down"));
 
-        RateLimitInfo info = rateLimitService.checkForIp("192.168.1.1");
+        RateLimitInfo info = rateLimitService.checkForIp("192.168.1.1", false);
 
         assertTrue(info.isAllowed());
         assertEquals(10, info.getLimit());
@@ -97,7 +97,7 @@ class RateLimitServiceTest {
         when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any(), any(), any()))
                 .thenReturn(List.of(1L));
 
-        RateLimitInfo info = rateLimitService.checkForIp("10.0.0.1");
+        RateLimitInfo info = rateLimitService.checkForIp("10.0.0.1", false);
 
         // Unexpected result treated as fail-open
         assertTrue(info.isAllowed());
