@@ -27,7 +27,6 @@ class RateLimitIT extends AbstractIntegrationTest {
     @DynamicPropertySource
     static void lowRateLimit(DynamicPropertyRegistry registry) {
         registry.add("linkflow.rate-limit.user-rpm", () -> TEST_USER_RPM);
-        registry.add("linkflow.rate-limit.ip-rpm", () -> TEST_USER_RPM);
     }
 
     @BeforeEach
