@@ -56,13 +56,12 @@ public class UserApiClient {
         return response.data();
     }
 
-    public String requestEmailChange(String accessToken, String currentPassword, String newEmail) {
+    public void requestEmailChange(String accessToken, String currentPassword, String newEmail) {
         Map<String, String> body = Map.of("currentPassword", currentPassword, "newEmail", newEmail);
-        var response = backendClient.exchangeForBody(
+        backendClient.exchangeForBody(
                 backendClient.post("/api/v1/users/me/email-change-request", accessToken).body(body),
                 new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
         );
-        return response.data().get("token");
     }
 
     public void verifyEmailChange(String token) {

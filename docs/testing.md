@@ -5,6 +5,8 @@
 - **JDK 21** (Maven Enforcer)
 - **Docker Desktop** (Testcontainers for integration tests)
 
+Load testing (optional): install [k6](https://k6.io/docs/get-started/installation/) and see [`performance/README.md`](../performance/README.md).
+
 ```bash
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 mvn clean verify

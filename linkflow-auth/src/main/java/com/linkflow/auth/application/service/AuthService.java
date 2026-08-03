@@ -5,58 +5,61 @@ import com.linkflow.auth.domain.exception.InvalidCredentialsException;
 import com.linkflow.auth.domain.exception.EmailNotVerifiedException;
 import com.linkflow.auth.domain.entity.EmailVerificationToken;
 import com.linkflow.auth.domain.entity.PasswordResetToken;
+import com.linkflow.auth.domain.repository.EmailVerificationTokenRepository;
+import com.linkflow.auth.domain.repository.PasswordResetTokenRepository;
+import com.linkflow.auth.infrastructure.config.LinkflowSecurityProperties;
+import com.linkflow.common.event.EmailRequestedEvent;
 import com.linkflow.common.exception.ConflictException;
+import com.linkflow.common.exception.ResourceNotFoundException;
+import com.linkflow.common.mail.MailSendCooldown;
+import com.linkflow.common.metrics.LinkflowMetrics;
 import com.linkflow.common.port.TokenRevocationPort;
 import com.linkflow.common.port.UserLookupPort;
 import com.linkflow.common.port.UserLookupPort.CreateUserCommand;
 import com.linkflow.common.port.UserLookupPort.UserPrincipalData;
+import com.linkflow.common.security.SecureTokenGenerator;
 import com.linkflow.common.security.SecurityConstants;
 import com.linkflow.common.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * Authentication service handling registration, login, refresh, and logout.
+ * Authentication service handling registration, login, refresh, logout, and credential recovery.
+ * <p>
+ * Recovery flows persist only the SHA-256 hash of each single-use token and hand the raw value
+ * to {@link EmailRequestedEvent} for delivery. The raw token is never returned through the API
+ * and never logged, so possession of the mailbox is the only way to complete a flow.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
+    static final Duration EMAIL_VERIFICATION_TOKEN_TTL = Duration.ofHours(24);
+    static final Duration PASSWORD_RESET_TOKEN_TTL = Duration.ofMinutes(15);
+
     private final UserLookupPort userLookupPort;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
     private final TokenRevocationPort tokenRevocationPort;
-    private final com.linkflow.auth.domain.repository.EmailVerificationTokenRepository emailVerificationTokenRepository;
-    private final com.linkflow.auth.domain.repository.PasswordResetTokenRepository passwordResetTokenRepository;
-    private final com.linkflow.auth.infrastructure.config.LinkflowSecurityProperties securityProperties;
-    private final java.security.SecureRandom secureRandom = new java.security.SecureRandom();
-
-    private String generateOpaqueToken() {
-        byte[] bytes = new byte[48];
-        secureRandom.nextBytes(bytes);
-        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private String hashToken(String rawToken) {
-        try {
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(rawToken.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            return java.util.HexFormat.of().formatHex(hash);
-        } catch (java.security.NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
-        }
-    }
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final LinkflowSecurityProperties securityProperties;
+    private final SecureTokenGenerator tokenGenerator;
+    private final ApplicationEventPublisher eventPublisher;
+    private final MailSendCooldown mailSendCooldown;
+    private final LinkflowMetrics metrics;
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -77,20 +80,13 @@ public class AuthService {
         );
 
         UserPrincipalData user = userLookupPort.createUser(command);
-        log.info("User registered: email={}", user.email());
+        log.info("User registered: userId={}", user.id());
 
-        String rawToken = null;
         if (securityProperties.isEmailVerificationRequired()) {
-            // Generate email verification token
-            rawToken = generateOpaqueToken();
-            String hash = hashToken(rawToken);
-            EmailVerificationToken verificationToken = EmailVerificationToken.builder()
-                    .tokenHash(hash)
-                    .userId(user.id())
-                    .expiresAt(Instant.now().plus(java.time.Duration.ofHours(24)))
-                    .build();
-            emailVerificationTokenRepository.save(verificationToken);
+            issueVerificationToken(user);
         }
+
+        metrics.registrationSucceeded();
 
         return RegisterResponse.builder()
                 .id(user.id())
@@ -99,24 +95,51 @@ public class AuthService {
                 .lastName(user.lastName())
                 .roles(user.roles())
                 .createdAt(Instant.now())
-                .verificationToken(rawToken)
                 .build();
+    }
+
+    /**
+     * Issues a fresh verification token and requests delivery. Any unused token already
+     * outstanding for the user is invalidated so only the newest link works, which keeps the
+     * resend flow from leaving several valid links in a mailbox.
+     */
+    private void issueVerificationToken(UserPrincipalData user) {
+        emailVerificationTokenRepository.markAllUnusedAsUsedForUser(user.id());
+
+        String rawToken = tokenGenerator.generateToken();
+        emailVerificationTokenRepository.save(EmailVerificationToken.builder()
+                .tokenHash(tokenGenerator.hash(rawToken))
+                .userId(user.id())
+                .expiresAt(Instant.now().plus(EMAIL_VERIFICATION_TOKEN_TTL))
+                .build());
+
+        eventPublisher.publishEvent(new EmailRequestedEvent.EmailVerificationRequested(
+                user.email(), user.firstName(), rawToken, EMAIL_VERIFICATION_TOKEN_TTL));
     }
 
     @Transactional
     public TokenResponse login(LoginRequest request) {
         UserPrincipalData user = userLookupPort.findByEmail(request.getEmail())
-                .orElseThrow(InvalidCredentialsException::new);
+                .orElse(null);
+        if (user == null) {
+            metrics.loginFailed("invalid_credentials");
+            throw new InvalidCredentialsException();
+        }
 
         if (!user.enabled()) {
+            // Same response as a bad password: reporting "disabled" would let an attacker confirm
+            // that an account exists and learn that it was taken offline.
+            metrics.loginFailed("invalid_credentials");
             throw new InvalidCredentialsException();
         }
 
         if (securityProperties.isEmailVerificationRequired() && !user.emailVerified()) {
+            metrics.loginFailed("email_not_verified");
             throw new EmailNotVerifiedException();
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.passwordHash())) {
+            metrics.loginFailed("invalid_credentials");
             throw new InvalidCredentialsException();
         }
 
@@ -127,7 +150,8 @@ public class AuthService {
         String accessToken = jwtService.generateAccessToken(principal);
         String refreshToken = refreshTokenService.createRefreshToken(user.id());
 
-        log.info("User logged in: email={}", user.email());
+        metrics.loginSucceeded();
+        log.info("User logged in: userId={}", user.id());
         return TokenResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -172,17 +196,48 @@ public class AuthService {
         log.info("User logged out");
     }
 
+    /**
+     * Activates an account from an emailed link.
+     * <p>
+     * Idempotent by design: once the account is verified, presenting the link again succeeds rather
+     * than reporting that it was already used. Links in email are followed by more than the
+     * recipient — mail clients prefetch them, corporate scanners and antivirus proxies open them to
+     * check for malware, and chat clients fetch them to build previews. Any of those can redeem a
+     * single-use token before the person ever clicks, and a strict reading would then greet the
+     * actual user with an error about a link they had not yet used. The state they care about is
+     * "my email is verified", and that is true either way.
+     * <p>
+     * Password reset gets the opposite treatment on purpose: there, the token authorises setting a
+     * new secret, so honouring it twice would let a replayed link overwrite a password that had
+     * since been changed.
+     */
     @Transactional
     public void verifyEmail(String rawToken) {
-        String hash = hashToken(rawToken);
-        com.linkflow.auth.domain.entity.EmailVerificationToken token = emailVerificationTokenRepository.findByTokenHash(hash)
-                .orElseThrow(() -> new com.linkflow.common.exception.ResourceNotFoundException("Verification token", "not found"));
+        EmailVerificationToken token = emailVerificationTokenRepository
+                .findByTokenHash(tokenGenerator.hash(rawToken))
+                .orElseThrow(() -> new ResourceNotFoundException("Verification link", "is not valid"));
+
+        boolean alreadyVerified = userLookupPort.findById(token.getUserId())
+                .map(UserPrincipalData::emailVerified)
+                .orElse(false);
+
+        if (alreadyVerified) {
+            // Consume the link on the way out so a still-live token does not linger in the mailbox.
+            if (!token.isUsed()) {
+                token.setUsed(true);
+                emailVerificationTokenRepository.save(token);
+            }
+            log.debug("Verification link presented for already-verified userId={}", token.getUserId());
+            return;
+        }
 
         if (token.isUsed()) {
-            throw new com.linkflow.common.exception.ConflictException("Token already used");
+            throw new ConflictException("This verification link has already been used. "
+                    + "Request a new one to finish activating your account.");
         }
         if (token.isExpired()) {
-            throw new com.linkflow.common.exception.ConflictException("Token expired");
+            throw new ConflictException("This verification link has expired. "
+                    + "Request a new one to finish activating your account.");
         }
 
         token.setUsed(true);
@@ -192,35 +247,76 @@ public class AuthService {
         log.info("Email verified for userId={}", token.getUserId());
     }
 
+    /**
+     * Re-sends the activation link for an unverified account.
+     * <p>
+     * Returns normally regardless of whether the address exists, is already verified, or is inside
+     * its send cooldown. Reporting any of those would turn this endpoint into an account-existence
+     * oracle, and it is reachable without authentication.
+     */
     @Transactional
-    public java.util.Optional<String> requestPasswordReset(String email) {
-        return userLookupPort.findByEmail(email).map(user -> {
-            String rawToken = generateOpaqueToken();
-            String hash = hashToken(rawToken);
+    public void resendVerificationEmail(String email) {
+        userLookupPort.findByEmail(email).ifPresentOrElse(user -> {
+            if (user.emailVerified()) {
+                log.debug("Verification resend ignored for already-verified userId={}", user.id());
+                return;
+            }
+            // Checked before issuing, never after: issuing invalidates whatever link is already
+            // outstanding, so suppressing the send afterwards would kill the user's working link
+            // and give them nothing in return.
+            if (!mailSendCooldown.tryAcquire(MailSendCooldown.Purpose.EMAIL_VERIFICATION, user.email())) {
+                log.debug("Verification resend suppressed by cooldown for userId={}", user.id());
+                return;
+            }
+            issueVerificationToken(user);
+            log.info("Verification email re-requested for userId={}", user.id());
+        }, () -> log.debug("Verification resend requested for an address with no account"));
+    }
 
-            PasswordResetToken token = PasswordResetToken.builder()
-                    .tokenHash(hash)
+    /**
+     * Starts password recovery. Returns normally for unknown addresses, and for addresses inside
+     * their cooldown, so the response cannot be used to enumerate registered accounts.
+     */
+    @Transactional
+    public void requestPasswordReset(String email) {
+        userLookupPort.findByEmail(email).ifPresentOrElse(user -> {
+            // As with resend: the cooldown is consulted before any existing token is invalidated,
+            // so a suppressed request leaves the previous link intact and usable.
+            if (!mailSendCooldown.tryAcquire(MailSendCooldown.Purpose.PASSWORD_RESET, user.email())) {
+                log.debug("Password reset suppressed by cooldown for userId={}", user.id());
+                return;
+            }
+
+            // Invalidate outstanding tokens so a stolen older link cannot be replayed after the
+            // real owner requests a new one.
+            passwordResetTokenRepository.markAllUnusedAsUsedForUser(user.id());
+
+            String rawToken = tokenGenerator.generateToken();
+            passwordResetTokenRepository.save(PasswordResetToken.builder()
+                    .tokenHash(tokenGenerator.hash(rawToken))
                     .userId(user.id())
-                    .expiresAt(Instant.now().plus(java.time.Duration.ofMinutes(15)))
-                    .build();
-            passwordResetTokenRepository.save(token);
+                    .expiresAt(Instant.now().plus(PASSWORD_RESET_TOKEN_TTL))
+                    .build());
 
-            log.info("Password reset token generated for userId={}", user.id());
-            return rawToken;
-        });
+            eventPublisher.publishEvent(new EmailRequestedEvent.PasswordResetRequested(
+                    user.email(), user.firstName(), rawToken, PASSWORD_RESET_TOKEN_TTL));
+
+            log.info("Password reset requested for userId={}", user.id());
+        }, () -> log.debug("Password reset requested for an address with no account"));
     }
 
     @Transactional
     public void resetPassword(String rawToken, String newPassword) {
-        String hash = hashToken(rawToken);
-        PasswordResetToken token = passwordResetTokenRepository.findByTokenHash(hash)
-                .orElseThrow(() -> new com.linkflow.common.exception.ResourceNotFoundException("Reset token", "not found"));
+        PasswordResetToken token = passwordResetTokenRepository
+                .findByTokenHash(tokenGenerator.hash(rawToken))
+                .orElseThrow(() -> new ResourceNotFoundException("Reset link", "is not valid"));
 
         if (token.isUsed()) {
-            throw new com.linkflow.common.exception.ConflictException("Token already used");
+            throw new ConflictException("This reset link has already been used. "
+                    + "Request a new one if you still need to change your password.");
         }
         if (token.isExpired()) {
-            throw new com.linkflow.common.exception.ConflictException("Token expired");
+            throw new ConflictException("This reset link has expired. Request a new one to continue.");
         }
 
         token.setUsed(true);

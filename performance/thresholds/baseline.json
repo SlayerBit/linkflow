@@ -1,0 +1,13 @@
+{
+  "_comment": "Documented default regression gates used by config/thresholds.js. Not product SLOs.",
+  "http_req_failed": "rate<0.01",
+  "http_req_duration": ["p(95)<500", "p(99)<1500"],
+  "checks": "rate>0.99",
+  "redirect": {
+    "http_req_duration{name:redirect}": ["p(95)<200", "p(99)<800"]
+  },
+  "auth": {
+    "http_req_duration": ["p(95)<1000", "p(99)<2500"],
+    "http_req_failed": "rate<0.02"
+  }
+}

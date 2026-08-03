@@ -38,6 +38,10 @@
         </dependency>
         <dependency>
             <groupId>com.linkflow</groupId>
+            <artifactId>linkflow-notification</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.linkflow</groupId>
             <artifactId>linkflow-observability</artifactId>
         </dependency>
 
@@ -91,6 +95,11 @@
             <groupId>com.redis</groupId>
             <artifactId>testcontainers-redis</artifactId>
             <version>2.2.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.icegreen</groupId>
+            <artifactId>greenmail-junit5</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

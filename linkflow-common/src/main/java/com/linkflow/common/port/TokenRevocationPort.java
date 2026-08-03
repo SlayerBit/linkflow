@@ -1,7 +1,6 @@
 package com.linkflow.common.port;
 
 import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -13,6 +12,4 @@ public interface TokenRevocationPort {
     void revokeAllRefreshTokensForUser(UUID userId);
 
     void markAccessTokensRevokedAfter(UUID userId, Instant revokedAfter);
-
-    Optional<Instant> getAccessTokensRevokedAfter(UUID userId);
 }

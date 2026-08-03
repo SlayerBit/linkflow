@@ -6,6 +6,7 @@ import com.linkflow.common.security.UserPrincipal;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.MacAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -13,19 +14,35 @@ import javax.crypto.SecretKey;
 import java.util.*;
 
 /**
- * JWT generation and validation service using HMAC-SHA512.
+ * Issues and validates access tokens, signed with HMAC-SHA512.
+ * <p>
+ * The algorithm is pinned on both sides rather than inferred. Accepting whatever a token's header
+ * declares is the root of the classic JWT confusion attacks, so verification here will only admit
+ * an HS512 signature over the configured key. Issuer and audience are likewise required, not
+ * merely emitted.
  */
 @Slf4j
 @Service
 public class JwtService {
 
+    private static final MacAlgorithm SIGNATURE_ALGORITHM = Jwts.SIG.HS512;
+
     private final JwtProperties jwtProperties;
     private final SecretKey signingKey;
+    private final JwtParser parser;
 
     public JwtService(JwtProperties jwtProperties) {
         this.jwtProperties = jwtProperties;
         byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+
+        this.parser = Jwts.parser()
+                .verifyWith(signingKey)
+                .sig().add(SIGNATURE_ALGORITHM).and()
+                .requireIssuer(jwtProperties.getIssuer())
+                .requireAudience(jwtProperties.getAudience())
+                .clockSkewSeconds(jwtProperties.getClockSkewSeconds())
+                .build();
     }
 
     /**
@@ -37,6 +54,8 @@ public class JwtService {
 
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
+                .issuer(jwtProperties.getIssuer())
+                .audience().add(jwtProperties.getAudience()).and()
                 .subject(principal.getEmail())
                 .claim(SecurityConstants.CLAIM_USER_ID, principal.getId().toString())
                 .claim(SecurityConstants.CLAIM_EMAIL, principal.getEmail())
@@ -44,7 +63,7 @@ public class JwtService {
                 .claim(SecurityConstants.CLAIM_TOKEN_TYPE, SecurityConstants.TOKEN_TYPE_ACCESS)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(signingKey)
+                .signWith(signingKey, SIGNATURE_ALGORITHM)
                 .compact();
     }
 
@@ -52,11 +71,7 @@ public class JwtService {
      * Parse and validate a JWT, returning the claims.
      */
     public Claims parseToken(String token) {
-        return Jwts.parser()
-                .verifyWith(signingKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        return parser.parseSignedClaims(token).getPayload();
     }
 
     /**

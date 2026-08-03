@@ -63,13 +63,20 @@ public class AuthApiClient {
         );
     }
 
-    public String forgotPassword(String email) {
+    public void forgotPassword(String email) {
         Map<String, String> body = Map.of("email", email);
-        var response = backendClient.exchangeForBody(
+        backendClient.exchangeForBody(
                 backendClient.postPublic("/api/v1/auth/forgot-password").body(body),
                 new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
         );
-        return response.data().get("token");
+    }
+
+    public void resendVerification(String email) {
+        Map<String, String> body = Map.of("email", email);
+        backendClient.exchangeForBody(
+                backendClient.postPublic("/api/v1/auth/resend-verification").body(body),
+                new ParameterizedTypeReference<ApiResponse<Map<String, String>>>() {}
+        );
     }
 
     public void resetPassword(String token, String newPassword) {

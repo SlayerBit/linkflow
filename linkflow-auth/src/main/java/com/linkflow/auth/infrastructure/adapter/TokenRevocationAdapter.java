@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -25,10 +24,5 @@ public class TokenRevocationAdapter implements TokenRevocationPort {
     @Override
     public void markAccessTokensRevokedAfter(UUID userId, Instant revokedAfter) {
         tokenRevocationService.markUserRevokedAfter(userId, revokedAfter);
-    }
-
-    @Override
-    public Optional<Instant> getAccessTokensRevokedAfter(UUID userId) {
-        return tokenRevocationService.getUserRevokedAfter(userId);
     }
 }

@@ -6,34 +6,27 @@ on:
   pull_request:
     branches: [main, master]
 
+# A new push makes the previous run's result irrelevant, so cancel it rather than paying for both
+# and waiting behind the stale one. Never applied to the default branch, where every commit's
+# result is worth keeping.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+
+# Least privilege by default. A job that needs more must ask for it explicitly, so a compromised
+# action in the dependency tree cannot push commits or publish packages.
+permissions:
+  contents: read
+
 jobs:
   build:
+    name: Build and test
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: linkflow
-          POSTGRES_USER: linkflow
-          POSTGRES_PASSWORD: linkflow
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U linkflow -d linkflow"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Integration tests start real PostgreSQL and Redis containers through Testcontainers, which is
+    # slower than a warm service container but keeps a test's dependencies declared in the test
+    # itself. There were `services:` blocks here for both; nothing ever connected to them, because
+    # every test provisions its own.
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -47,5 +40,115 @@ jobs:
 
       - name: Build and test
         env:
-          LINKFLOW_JWT_SECRET: dGVzdC1zZWNyZXQta2V5LWZvci1jaS1taW5pbXVtLTY0LWNoYXJzLWxlbmd0aC1yZXF1aXJlZA==
+          # Throwaway CI key. Generated randomly and used only for this build; HS512 needs 64
+          # decoded bytes. Real deployments inject a secret from their secret store.
+          LINKFLOW_JWT_SECRET: LEi1zn2i+yxtsZleAqjkTeiYGy6O7bPesPZdp+SAuc6+nGrKSvpvaBth6R2DRY1ahbiXftdckabnYZeMhtwmIA==
         run: mvn -B clean verify
+
+      # Surefire and Failsafe XML says which assertion failed and why; the job log alone often does
+      # not, especially for a test that failed inside a Testcontainers callback.
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/target/surefire-reports/**
+            **/target/failsafe-reports/**
+          retention-days: 7
+
+  images:
+    name: Build container images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # All three targets share one build stage, so this compiles the reactor once. Building the
+      # images in CI is what catches a Dockerfile that no longer matches the project — the previous
+      # per-service Dockerfiles listed every module by hand and silently broke when one was added,
+      # which nothing noticed because nothing built them.
+      - name: Build app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: app
+          # Not pushed anywhere. The point is that it builds; loading it into the daemon would only
+          # cost time and disk.
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: gateway
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: web
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  config:
+    name: Validate deployment config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Catches interpolation errors and schema mistakes that would otherwise only surface on
+      # someone's machine at `docker compose up`.
+      - name: Validate Compose file
+        run: docker compose config --quiet
+
+      - name: Generate TLS certificate for validation
+        run: ./docker/nginx/generate-dev-certs.sh
+
+      # `nginx -t` parses the real config with the real modules, which no linter approximates.
+      # --add-host is required because Nginx resolves upstream names while parsing, and the gateway
+      # does not exist outside the Compose network — without it the test fails on DNS, not syntax.
+      - name: Validate Nginx config
+        run: |
+          docker run --rm \
+            --add-host linkflow-gateway:127.0.0.1 \
+            -v "$PWD/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            -v "$PWD/docker/nginx/conf.d:/etc/nginx/conf.d:ro" \
+            -v "$PWD/docker/nginx/certs:/etc/nginx/certs:ro" \
+            nginx:1.27-alpine nginx -t
+
+  scan:
+    name: Vulnerability scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Scans the declared dependencies rather than a built image: it reports the pom coordinate to
+      # change, which is what a fix actually requires.
+      #
+      # Advisory, not blocking. A CVE published in a transitive dependency would otherwise fail
+      # every unrelated pull request until someone upstream cuts a release, and a check that fails
+      # for reasons the author cannot address is a check people learn to ignore.
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '0'
+          format: table

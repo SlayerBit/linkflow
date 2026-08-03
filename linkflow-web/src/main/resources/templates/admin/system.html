@@ -126,7 +126,7 @@
 </div>
 
 <th:block layout:fragment="scripts">
-    <script>
+    <script th:attr="nonce=${cspNonce}">
         document.addEventListener("DOMContentLoaded", function() {
             const checkLink = (linkId, url) => {
                 const el = document.getElementById(linkId);

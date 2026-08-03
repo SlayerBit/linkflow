@@ -8,26 +8,32 @@ LinkFlow demonstrates how to build a real-world link-management platform: secure
 
 ## Architecture summary
 
-Three independently runnable Spring Boot processes compose the full product:
+Three independently runnable Spring Boot processes compose the full product, behind Nginx at the
+edge:
 
 | Process | Port | Role |
 |---------|------|------|
-| `linkflow-gateway` | 8080 | **Public entry** — routes `/api/**`, `/r/**`, Swagger, and web UI (`/**`) |
+| `nginx` | 80, 443 | **Public entry** — TLS termination, compression, edge rate limiting |
+| `linkflow-gateway` | 8080 | Routes `/api/**`, `/r/**`, Swagger, and web UI (`/**`) |
 | `linkflow-app` | 8081 | Modular monolith assembling all feature JARs |
 | `linkflow-web` | 8082 | Thymeleaf SSR UI — also reachable via gateway at `/` |
 
-Infrastructure: **Cloud PostgreSQL (Neon)** (primary data), **Redis 7** (URL cache, rate limits, alias locks), **Prometheus + Grafana** (Docker full stack only).
+Infrastructure: **PostgreSQL 16** (primary data), **Redis 7** (URL cache, rate limits, sessions,
+analytics buffering), **SMTP** (account activation and recovery mail), **Prometheus + Grafana**
+(Docker full stack only). The Compose stack bundles all of them, so it needs nothing external.
 
 ```mermaid
 flowchart LR
-    Browser --> Gateway["linkflow-gateway :8080"]
-    Browser --> WebDirect["linkflow-web :8082\n(optional direct)"]
-    API["API clients"] --> Gateway
-    WebDirect --> Gateway
+    Browser -->|https| Nginx["nginx :443"]
+    API["API clients"] -->|https| Nginx
+    Nginx --> Gateway["linkflow-gateway :8080"]
     Gateway --> App["linkflow-app :8081"]
-    Gateway --> WebDirect
+    Gateway --> Web["linkflow-web :8082"]
+    Web --> Gateway
     App --> PG[(PostgreSQL)]
     App --> Redis[(Redis)]
+    App --> SMTP[[SMTP]]
+    Web --> Redis
     Prom[Prometheus] --> App
     Prom --> Gateway
     Grafana --> Prom
@@ -62,6 +68,9 @@ Canonical design: [docs/system-design.md](docs/system-design.md)
 ## Key features
 
 - Register / login / refresh / logout with JWT + rotating refresh tokens
+- Full account lifecycle over real SMTP: email activation, resend, password reset, and email change
+  — single-use hashed tokens, links that supersede one another, per-recipient send throttling, and a
+  nightly reaper for spent tokens
 - Create short URLs (single + bulk) with optional `Idempotency-Key`
 - Public redirect at `GET /r/{shortCode}` with Redis cache-aside
 - Per-URL and system analytics (aggregate counts, 7d/30d/90d daily click trends, and recent activity feeds with IP address masking for user privacy)
@@ -69,7 +78,8 @@ Canonical design: [docs/system-design.md](docs/system-design.md)
 - Per-user and per-IP rate limiting with `X-RateLimit-*` headers
 - Admin endpoints for users (including disable/enable/delete), URLs, analytics, and system stats
 - Bootstrap admin user via environment variables
-- Scheduled expiry cleanup (`ExpiredUrlCleanupJob`)
+- Scheduled cleanup of expired URLs and spent single-use tokens, guarded by ShedLock so only one
+  instance runs each job
 
 ## Request flow summary
 
@@ -114,14 +124,20 @@ Full runbook: [LOCAL_SETUP.md](LOCAL_SETUP.md) and [docs/setup.md](docs/setup.md
 ## Docker / Docker Compose
 
 ```bash
-cp .env.example .env
-# Set LINKFLOW_JWT_SECRET in .env
+./docker/nginx/generate-dev-certs.sh   # self-signed cert for local TLS
+cp .env.example .env                   # then set LINKFLOW_JWT_SECRET
 docker compose up --build
 ```
 
-**Included in Compose:** redis, linkflow-app, linkflow-gateway, **linkflow-web**, prometheus, grafana
+Open **https://localhost**. The browser warns about the self-signed certificate, which is expected —
+the stack exercises the real TLS path rather than pretending to.
 
-Open **http://localhost:8080** for the full experience (web UI + API via gateway).
+**Included in Compose:** nginx, postgres, redis, mailhog, linkflow-app, linkflow-gateway,
+linkflow-web, prometheus, grafana. Nothing external is required; point `SPRING_DATASOURCE_*` at a
+managed database if you prefer one.
+
+Only Nginx publishes application ports — the gateway, app, web, database, and Redis are reachable
+only on the private Compose network.
 
 Guide: [docs/docker.md](docs/docker.md)
 
@@ -134,11 +150,13 @@ Guide: [docs/docker.md](docs/docker.md)
 | `SPRING_DATASOURCE_PASSWORD` | (required) | DB password |
 | `SPRING_DATA_REDIS_HOST` | `localhost` | Redis host |
 | `SPRING_DATA_REDIS_PORT` | `6379` | Redis port |
-| `LINKFLOW_JWT_SECRET` | (required in prod) | Base64-encoded secret for HMAC-SHA512 JWT |
+| `SPRING_DATA_REDIS_PASSWORD` | (required in prod) | Redis password; Redis holds sessions and rate-limit state |
+| `LINKFLOW_JWT_SECRET` | (required in prod) | Base64 secret for HS512 JWT; must decode to ≥64 bytes |
 | `LINKFLOW_JWT_ACCESS_EXPIRATION_MS` | `900000` | Access token TTL (15 min) |
 | `LINKFLOW_JWT_REFRESH_EXPIRATION_MS` | `2592000000` | Refresh token TTL (30 days) |
 | `LINKFLOW_BASE_URL` | `http://localhost:8080` | Prefix for generated short URLs |
-| `LINKFLOW_CORS_ALLOWED_ORIGINS` | `*` | CORS allowed origins |
+| `LINKFLOW_CORS_ALLOWED_ORIGINS` | `*` | CORS allowed origins; `*` is rejected in prod |
+| `LINKFLOW_TRUSTED_PROXIES` | (empty) | CIDRs allowed to set `X-Forwarded-For`; empty ignores the header |
 | `LINKFLOW_RATE_LIMIT_USER_RPM` | `100` | Authenticated requests/minute |
 | `LINKFLOW_RATE_LIMIT_IP_RPM` | `200` | Anonymous requests/minute |
 | `LINKFLOW_BOOTSTRAP_ADMIN_*` | disabled | Optional first admin user |
@@ -170,22 +188,52 @@ mvn clean package -DskipTests -pl linkflow-app -am
 
 Guide: [docs/testing.md](docs/testing.md)
 
+## Performance (k6)
+
+Reusable load scenarios live under [`performance/`](performance/README.md). Seed verified users via MailHog, then run:
+
+```bash
+./performance/scripts/seed.sh
+./performance/run.sh smoke
+./performance/run.sh redirect
+```
+
+Reports are written to `performance/reports/`. Threshold defaults are **regression gates for a run**, not published product SLOs — do not invent or quote numbers without a real run. For stress/soak, raise rate limits with `docker-compose.perf.yml` (see the performance README).
+
 ## Observability
 
-| Endpoint | URL (local Docker stack) |
-|----------|--------------------------|
-| App health | http://localhost:8081/actuator/health |
-| Gateway health | http://localhost:8080/actuator/health |
-| Prometheus metrics (app) | http://localhost:8081/actuator/prometheus |
+| Endpoint | URL |
+|----------|-----|
+| Nginx health | https://localhost/nginx-health |
 | Prometheus UI | http://localhost:9090 |
-| Grafana | http://localhost:3000 (admin/admin) |
+| Grafana | http://localhost:3000 (admin/admin) — provisioned **LinkFlow Overview** dashboard |
+| MailHog inbox | http://localhost:8025 |
 
-Custom health: `RedisHealthIndicator` in `linkflow-observability`.
+Prometheus scrapes the app and gateway over the private Compose network (`/actuator` is denied at
+Nginx). Alert rules live in `docker/prometheus/alerts.yml` (availability, 5xx rate, email delivery
+failures, rate-limiter Redis outages, analytics flush failures, heap pressure).
+
+Business counters (prefix `linkflow_`) cover redirects, URL-cache hit/miss, login success/failure,
+registration, URL creation, email delivery outcomes, rate-limit rejections, and analytics flush.
+JVM/HTTP meters come from Spring Boot Actuator as usual.
+
+```bash
+docker compose exec linkflow-app wget -qO- http://127.0.0.1:8081/actuator/health/readiness
+docker compose exec linkflow-app wget -qO- http://127.0.0.1:8081/actuator/prometheus
+# Alerts loaded?
+curl -s http://localhost:9090/api/v1/rules | head
+```
+
+Liveness excludes external dependencies while readiness includes them. Custom health:
+`RedisHealthIndicator` in `linkflow-observability`.
 
 ## API documentation
 
-| Resource | URL |
-|----------|-----|
+Swagger is enabled under the `dev` profile and **denied under `docker` and `prod`** — an
+unauthenticated schema of every endpoint is not something to publish.
+
+| Resource | URL (`dev` profile) |
+|----------|---------------------|
 | Swagger UI (via gateway) | http://localhost:8080/swagger-ui/index.html |
 | OpenAPI JSON | http://localhost:8080/v3/api-docs |
 | Endpoint inventory | [docs/api-inventory.md](docs/api-inventory.md) |
@@ -196,8 +244,11 @@ Custom health: `RedisHealthIndicator` in `linkflow-observability`.
 - Refresh tokens are opaque, SHA-256 hashed in PostgreSQL, rotated on refresh
 - BCrypt strength 12 for passwords
 - Rate limiting: **auth paths fail closed** (503) when Redis is down; authenticated and redirect traffic **fail open**
-- Actuator/Swagger exposure is **profile-based** — prod denies Swagger and restricts actuator to health (+ optional metrics via `LINKFLOW_METRICS_PUBLIC`)
+- Actuator/Swagger exposure is **profile-based** — prod denies Swagger and restricts actuator to health (+ optional metrics via `LINKFLOW_METRICS_PUBLIC`); Nginx additionally denies `/actuator` at the edge
 - Web UI stores JWTs in server-side `HttpSession`, not browser storage
+- TLS terminates at Nginx, which sets HSTS once at the boundary; `X-Forwarded-For` is replaced rather than appended, so a client cannot forge its own IP
+- `X-Forwarded-For` is honoured only from configured trusted proxies, so IP rate limiting cannot be bypassed with a header
+- Containers run as a non-root numeric UID and the JVM exits on OOM rather than limping
 
 Full review: [docs/security-review.md](docs/security-review.md)
 
@@ -221,7 +272,9 @@ Docker Compose deploys app + gateway + observability on a single host. Kubernete
 
 - **Modular monolith:** feature modules compile independently but deploy as one JAR; cross-module calls use ports in `linkflow-common` (`UserLookupPort`, `ClickTrackingPort`)
 - **Gateway:** single public entry, correlation IDs, future cross-cutting concerns without touching business code
-- **Redis:** redirect cache (15 min), Lua rate limiter, alias creation locks — each with different TTL semantics
+- **Redis:** redirect cache (15 min, stale-while-revalidate), Lua sliding-window rate limiter, session store, click-event stream — each with different TTL and durability semantics
+- **Cache consistency:** invalidation is deferred to after commit via `@TransactionalEventListener`, so a concurrent reader cannot repopulate the cache from a pre-commit row
+- **Uniqueness under concurrency:** the unique index on `short_code` is the authority; a losing race surfaces as a 409 rather than a 500
 - **Analytics:** `@Async` click tracking to Redis buffers/flusher; daily click trends (7d/30d/90d ranges) and user/admin activity feeds (with IP masking for standard users) queried via JPA projections from PostgreSQL
 - **Idempotency:** `idempotency_records` table keyed by `(user_id, endpoint, idempotency_key)`
 

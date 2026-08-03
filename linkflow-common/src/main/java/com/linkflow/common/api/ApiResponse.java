@@ -26,13 +26,6 @@ public class ApiResponse<T> {
 
     private final T data;
 
-    public static <T> ApiResponse<T> of(T data, String correlationId) {
-        return ApiResponse.<T>builder()
-                .data(data)
-                .correlationId(correlationId)
-                .build();
-    }
-
     public static <T> ApiResponse<T> of(T data) {
         return ApiResponse.<T>builder()
                 .data(data)

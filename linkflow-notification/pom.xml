@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.linkflow</groupId>
+        <artifactId>linkflow-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>linkflow-notification</artifactId>
+    <name>LinkFlow Notification</name>
+    <description>Transactional email delivery - SMTP adapter for EmailSenderPort</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.linkflow</groupId>
+            <artifactId>linkflow-common</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!--
+          Thymeleaf core only, not spring-boot-starter-thymeleaf. The starter would register an
+          MVC view resolver in linkflow-app, which serves JSON APIs and must not gain view
+          resolution. Email rendering uses a standalone TemplateEngine instead.
+        -->
+        <dependency>
+            <groupId>org.thymeleaf</groupId>
+            <artifactId>thymeleaf</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.icegreen</groupId>
+            <artifactId>greenmail-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

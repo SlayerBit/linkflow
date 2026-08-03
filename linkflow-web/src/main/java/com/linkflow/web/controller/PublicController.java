@@ -6,7 +6,12 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
 
+/**
+ * Serves the unauthenticated pages that carry no side effects. Flows that call the backend —
+ * verification, password reset, email change — live in {@link AuthController}.
+ */
 @Controller
 public class PublicController {
 
@@ -28,14 +33,15 @@ public class PublicController {
         return "public/register";
     }
 
-    @GetMapping("/verify-email")
-    public String verifyEmail(@org.springframework.web.bind.annotation.RequestParam(required = false) String token,
-                              @org.springframework.web.bind.annotation.RequestParam(required = false) String email,
-                              Model model) {
-        model.addAttribute("token", token != null ? token : "");
+    /**
+     * Shown straight after registration. The address is echoed so a user who mistyped it notices
+     * before waiting on a message that will never arrive.
+     */
+    @GetMapping("/check-email")
+    public String checkEmail(@RequestParam(required = false) String email, Model model) {
         model.addAttribute("email", email != null ? email : "");
-        model.addAttribute("pageTitle", "Verify Email");
-        return "public/verify-email";
+        model.addAttribute("pageTitle", "Check your email");
+        return "public/check-email";
     }
 
     @GetMapping("/forgot-password")
@@ -44,19 +50,14 @@ public class PublicController {
         return "public/forgot-password";
     }
 
+    /**
+     * Renders the new-password form. The token is only consumed when the form is submitted, so
+     * a mail client prefetching this link cannot spend it.
+     */
     @GetMapping("/reset-password")
-    public String resetPassword(@org.springframework.web.bind.annotation.RequestParam(required = false) String token,
-                                Model model) {
+    public String resetPassword(@RequestParam(required = false) String token, Model model) {
         model.addAttribute("token", token != null ? token : "");
         model.addAttribute("pageTitle", "Reset Password");
         return "public/reset-password";
-    }
-
-    @GetMapping("/verify-email-change")
-    public String verifyEmailChange(@org.springframework.web.bind.annotation.RequestParam(required = false) String token,
-                                    Model model) {
-        model.addAttribute("token", token != null ? token : "");
-        model.addAttribute("pageTitle", "Verify Email Change");
-        return "public/verify-email-change";
     }
 }

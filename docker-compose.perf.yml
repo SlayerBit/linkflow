@@ -1,0 +1,21 @@
+# Overlay for load tests: raises app + Nginx rate limits so k6 is not dominated by 429s.
+# Values are literal (not ${VAR}) so a local .env cannot silently keep production-like limits.
+# Never use this profile for a real deployment.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.perf.yml up -d \
+#     --force-recreate nginx linkflow-app
+#   ./performance/scripts/seed.sh
+#   ./performance/run.sh stress
+
+services:
+  nginx:
+    volumes:
+      - ./docker/nginx/nginx.perf.conf:/etc/nginx/nginx.conf:ro
+      # Overlay only the site file; keep it outside conf.d/ so the directory mount does not
+      # also load a duplicate *.perf.conf server block.
+      - ./docker/nginx/linkflow.perf.conf:/etc/nginx/conf.d/linkflow.conf:ro
+
+  linkflow-app:
+    environment:
+      LINKFLOW_RATE_LIMIT_USER_RPM: "10000000"
+      LINKFLOW_RATE_LIMIT_IP_RPM: "10000000"

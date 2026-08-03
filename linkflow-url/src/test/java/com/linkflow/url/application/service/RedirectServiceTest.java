@@ -1,7 +1,10 @@
 package com.linkflow.url.application.service;
 
 import com.linkflow.common.exception.ResourceNotFoundException;
+import com.linkflow.common.metrics.LinkflowMetrics;
 import com.linkflow.common.port.ClickTrackingPort;
+import com.linkflow.common.security.ClientIpResolver;
+import com.linkflow.common.security.TrustedProxyProperties;
 import com.linkflow.url.domain.entity.ShortUrl;
 import com.linkflow.url.domain.exception.UrlDeactivatedException;
 import com.linkflow.url.domain.exception.UrlExpiredException;
@@ -45,9 +48,13 @@ class RedirectServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Real resolver over empty trusted-proxy config: forwarding headers are ignored and the
+        // peer address is used, which is the default deployment posture.
+        ClientIpResolver clientIpResolver = new ClientIpResolver(new TrustedProxyProperties());
         redirectService = new RedirectService(
                 shortUrlRepository, urlCacheService, clickTrackingPort,
-                redisLockService, redirectCacheRefreshService);
+                redisLockService, redirectCacheRefreshService, clientIpResolver,
+                LinkflowMetrics.noop());
     }
 
     // --- Fresh cache hit ---

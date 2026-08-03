@@ -1,12 +1,20 @@
 server:
   port: 8080
   forward-headers-strategy: framework
+  shutdown: graceful
 
 spring:
   application:
     name: linkflow-gateway
+  lifecycle:
+    timeout-per-shutdown-phase: ${SPRING_LIFECYCLE_SHUTDOWN_TIMEOUT:25s}
   cloud:
     gateway:
+      httpclient:
+        # Bounds how long a request may occupy the gateway when an upstream stops responding.
+        # Without these a hung backend would hold connections until the client gave up.
+        connect-timeout: ${LINKFLOW_GATEWAY_CONNECT_TIMEOUT_MS:2000}
+        response-timeout: ${LINKFLOW_GATEWAY_RESPONSE_TIMEOUT:15s}
       routes:
         - id: linkflow-api
           uri: ${LINKFLOW_APP_URI:http://127.0.0.1:8081}
@@ -37,6 +45,14 @@ management:
   endpoint:
     health:
       show-details: never
+      probes:
+        enabled: true
+      group:
+        # The gateway holds no state of its own; if it is running it can route.
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState
   metrics:
     tags:
       application: ${spring.application.name}

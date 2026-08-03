@@ -38,7 +38,8 @@ class UrlCacheServiceTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        urlCacheService = new UrlCacheService(stringRedisTemplate, objectMapper);
+        urlCacheService = new UrlCacheService(
+                stringRedisTemplate, objectMapper, com.linkflow.common.metrics.LinkflowMetrics.noop());
     }
 
     @Test

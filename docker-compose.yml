@@ -1,76 +1,265 @@
+# Full LinkFlow stack: Nginx -> Spring Cloud Gateway -> app / web, with Redis, MailHog,
+# Prometheus, and Grafana.
+#
+# This runs the `docker` Spring profile, not `prod`. The distinction is deliberate and honest: the
+# prod profile insists on a real SMTP relay and an https base URL, neither of which exists on a
+# laptop. The docker profile keeps every production behaviour that can be reproduced locally —
+# Redis authentication, template caching, non-root containers, TLS at the edge — and swaps only the
+# parts that genuinely need external infrastructure.
+#
+# Quick start:
+#   ./docker/nginx/generate-dev-certs.sh
+#   cp .env.example .env      # then set LINKFLOW_JWT_SECRET
+#   docker compose up --build
+#
+# Then open https://localhost (the browser will warn about the self-signed certificate).
+#
+# PostgreSQL and Redis are bundled, so nothing external is required. Point SPRING_DATASOURCE_* at
+# a managed database when you want one.
+
+name: linkflow
+
+# ---------------------------------------------------------------------------
+# Shared fragments
+# ---------------------------------------------------------------------------
+
+# Spring's graceful shutdown is configured to take up to 25s to drain in-flight requests. Docker's
+# default stop_grace_period is 10s, after which it sends SIGKILL — which would cut the drain short
+# and make the whole graceful shutdown setup pointless. This leaves headroom above the 25s.
+x-jvm-service: &jvm-service
+  restart: unless-stopped
+  stop_grace_period: 40s
+  # Container logs are unbounded by default, which is a slow-motion disk-full outage.
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
+  # -------------------------------------------------------------------------
+  # Edge
+  # -------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    # The only service publishing ports. Everything else is reachable only on the private network,
+    # so there is exactly one way in and one place where TLS terminates.
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    networks:
+      linkflow:
+        # Fixed so LINKFLOW_TRUSTED_PROXIES can name this hop exactly rather than trusting the
+        # whole subnet. Trusting the subnet would also trust the address that host traffic arrives
+        # from, and every visitor would then collapse into a single rate-limit bucket.
+        ipv4_address: 172.28.0.10
+    depends_on:
+      linkflow-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/nginx-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # -------------------------------------------------------------------------
+  # Infrastructure
+  # -------------------------------------------------------------------------
+  # Included so `docker compose up` needs nothing but Docker. To use a managed database instead,
+  # set SPRING_DATASOURCE_URL/USERNAME/PASSWORD in .env — the app honours those over the defaults
+  # below, and this container is then simply idle (or drop it with `--scale postgres=0`).
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-linkflow}
+      POSTGRES_USER: ${POSTGRES_USER:-linkflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-linkflow-local-postgres}
+      # Skips per-connection locale work and keeps initdb deterministic across host locales.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [linkflow]
+    healthcheck:
+      # -U and -d are required: pg_isready otherwise probes a database named after the OS user,
+      # which does not exist here, and reports failure while the server is perfectly healthy.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-linkflow} -d ${POSTGRES_DB:-linkflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
+    command:
+      - redis-server
+      # Redis holds sessions, refresh-token state, and rate-limit counters, so it must not be
+      # reachable unauthenticated even on a private network.
+      - --requirepass
+      - ${REDIS_PASSWORD:-linkflow-local-redis}
+      # Sessions and refresh-token state should survive a restart of this container; losing them
+      # signs every user out. appendonly is the durable option, fsync once per second.
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:-256mb}
+      # noeviction, emphatically not allkeys-lru. An LRU policy would silently evict live sessions
+      # and rate-limit counters under memory pressure, so users would be logged out at random and
+      # limits would quietly reset. Failing writes loudly is far easier to diagnose.
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis-data:/data
+    networks: [linkflow]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-linkflow-local-redis}", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Captures every outbound message so registration, password reset, and email change are all
+  # exercisable end to end without configuring a real SMTP relay. Web UI on http://localhost:8025
+  # via the mailhog profile, or exec into the network.
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    networks: [linkflow]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 1025"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # -------------------------------------------------------------------------
+  # Application
+  # -------------------------------------------------------------------------
   linkflow-app:
+    <<: *jvm-service
     build:
       context: .
-      dockerfile: docker/Dockerfile.app
-    ports:
-      - "8081:8081"
+      dockerfile: docker/Dockerfile
+      target: app
+    image: linkflow-app:local
+    networks: [linkflow]
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_PROFILES_ACTIVE: docker
+      # Defaults point at the bundled postgres service; setting SPRING_DATASOURCE_* in .env
+      # redirects the app at a managed database without touching this file.
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/${POSTGRES_DB:-linkflow}}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-${POSTGRES_USER:-linkflow}}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-${POSTGRES_PASSWORD:-linkflow-local-postgres}}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-linkflow-local-redis}
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
       LINKFLOW_JWT_SECRET: ${LINKFLOW_JWT_SECRET}
-      LINKFLOW_BASE_URL: http://localhost:8080
+      # https now, because Nginx terminates TLS and is the only entry point.
+      LINKFLOW_BASE_URL: https://localhost
+      # Links in emails must be reachable from the host browser, not from inside the network.
+      LINKFLOW_MAIL_BASE_URL: https://localhost
+      # Exactly the two hops in front of this service — Nginx and the gateway — and nothing else.
+      # A broader range such as 172.16.0.0/12 would also match the address host traffic arrives
+      # from, and the resolver would then treat real clients as proxies and attribute every
+      # request to one address, defeating per-IP rate limiting and unique-visitor counts.
+      LINKFLOW_TRUSTED_PROXIES: 172.28.0.10/32,172.28.0.11/32
       LINKFLOW_METRICS_PUBLIC: "true"
       LINKFLOW_BOOTSTRAP_ADMIN_ENABLED: ${LINKFLOW_BOOTSTRAP_ADMIN_ENABLED:-true}
       LINKFLOW_BOOTSTRAP_ADMIN_EMAIL: ${LINKFLOW_BOOTSTRAP_ADMIN_EMAIL:-admin@linkflow.local}
       LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD: ${LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD:-ChangeMeAdmin1!}
-      LINKFLOW_SECURITY_EXPOSE_DEV_TOKENS: "true"
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health | grep -q UP"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 40s
+      mailhog:
+        condition: service_healthy
+    # The image defines its own HEALTHCHECK against /actuator/health/readiness; no need to repeat
+    # it here. Limits are generous enough for the JVM heap plus metaspace and thread stacks —
+    # MaxRAMPercentage=75 in the image means the heap tracks whatever is set here.
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1g
+        reservations:
+          memory: 512m
 
   linkflow-web:
+    <<: *jvm-service
     build:
       context: .
-      dockerfile: docker/Dockerfile.web
-    ports:
-      - "8082:8082"
+      dockerfile: docker/Dockerfile
+      target: web
+    image: linkflow-web:local
+    networks: [linkflow]
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-linkflow-local-redis}
       LINKFLOW_GATEWAY_URL: http://linkflow-gateway:8080
       LINKFLOW_BACKEND_APP_URL: http://linkflow-app:8081
-      LINKFLOW_PROMETHEUS_URL: http://linkflow-app:8081/actuator/prometheus
-      SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
+      LINKFLOW_PUBLIC_GATEWAY_URL: https://localhost
+      # LINKFLOW_PUBLIC_PROMETHEUS_URL and LINKFLOW_GRAFANA_URL are left at their defaults
+      # (localhost:9090 and localhost:3000), which are already the published addresses here. They
+      # are links rendered for the operator's browser, so they must be host-reachable names rather
+      # than Compose service names.
+      # Sessions are served over https at the edge, so the cookie can be marked Secure. Requires
+      # the X-Forwarded-Proto that Nginx sets, otherwise Spring would see plain http and decline.
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "true"
     depends_on:
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health | grep -q UP"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768m
+        reservations:
+          memory: 384m
 
   linkflow-gateway:
+    <<: *jvm-service
     build:
       context: .
-      dockerfile: docker/Dockerfile.gateway
-    ports:
-      - "8080:8080"
+      dockerfile: docker/Dockerfile
+      target: gateway
+    image: linkflow-gateway:local
+    networks:
+      linkflow:
+        # Fixed for the same reason as Nginx: it is the immediate peer the app sees, and it has to
+        # be nameable in LINKFLOW_TRUSTED_PROXIES.
+        ipv4_address: 172.28.0.11
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: docker
       LINKFLOW_APP_URI: http://linkflow-app:8081
       LINKFLOW_WEB_URI: http://linkflow-web:8082
     depends_on:
@@ -78,34 +267,94 @@ services:
         condition: service_healthy
       linkflow-web:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health | grep -q UP"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+        reservations:
+          memory: 256m
 
+  # -------------------------------------------------------------------------
+  # Observability
+  # -------------------------------------------------------------------------
+  # Scrapes the app and gateway directly over the private network, which is why Nginx can deny
+  # /actuator to the public without breaking metrics collection.
   prometheus:
     image: prom/prometheus:v2.54.1
+    restart: unless-stopped
     ports:
       - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Bounded so the volume cannot grow until the disk fills.
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    networks: [linkflow]
     depends_on:
       linkflow-app:
         condition: service_healthy
-      linkflow-gateway:
-        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   grafana:
     image: grafana/grafana:11.2.0
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      # Grafana would otherwise phone home and nag about updates on every dashboard load.
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      # No anonymous access, and no sign-up form on a container that publishes a port.
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      # Without this, every dashboard edit and preference is lost on restart.
+      - grafana-data:/var/lib/grafana
+    networks: [linkflow]
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+networks:
+  linkflow:
+    driver: bridge
+    # An explicit subnet so the two proxy hops can hold fixed addresses. Docker's default
+    # allocation varies between machines, which would make LINKFLOW_TRUSTED_PROXIES unreliable.
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:

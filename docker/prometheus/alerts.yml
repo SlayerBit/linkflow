@@ -1,0 +1,98 @@
+groups:
+  - name: linkflow.availability
+    rules:
+      - alert: LinkFlowAppDown
+        expr: up{job="linkflow-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "linkflow-app is not being scraped"
+          description: "Prometheus has been unable to scrape linkflow-app for more than a minute."
+
+      - alert: LinkFlowGatewayDown
+        expr: up{job="linkflow-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "linkflow-gateway is not being scraped"
+          description: "Prometheus has been unable to scrape linkflow-gateway for more than a minute."
+
+  - name: linkflow.http
+    rules:
+      # 5xx share of requests over a 5-minute window. Excludes the actuator scrape path so a
+      # healthy instance being scraped aggressively cannot look unhealthy.
+      - alert: LinkFlowHighHttp5xxRate
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{job="linkflow-app",status=~"5..",uri!~"/actuator.*"}[5m]))
+            /
+            clamp_min(sum(rate(http_server_requests_seconds_count{job="linkflow-app",uri!~"/actuator.*"}[5m])), 0.001)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated 5xx rate on linkflow-app"
+          description: "More than 5% of non-actuator requests are returning 5xx over the last 5 minutes."
+
+  - name: linkflow.email
+    rules:
+      - alert: LinkFlowEmailDeliveryFailures
+        expr: |
+          sum(rate(linkflow_email_delivery_total{outcome="failed"}[10m])) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Transactional email delivery is failing"
+          description: >
+            At least one email delivery has failed in each of the last 10 minutes.
+            Account activation and password reset depend on SMTP; check the relay and app logs.
+
+  - name: linkflow.rate_limit
+    rules:
+      # Fail-closed auth path when Redis is down. Sustained unavailability means nobody can
+      # register or log in through the application rate limiter.
+      - alert: LinkFlowRateLimitBackendUnavailable
+        expr: |
+          sum(rate(linkflow_rate_limit_backend_unavailable_total[5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Rate limiter cannot reach Redis"
+          description: >
+            Auth endpoints fail closed when Redis is unavailable. Login and registration will
+            return 503 until Redis recovers.
+
+  - name: linkflow.analytics
+    rules:
+      - alert: LinkFlowAnalyticsFlushFailing
+        expr: |
+          sum(rate(linkflow_analytics_flush_cycles_total{result="failure"}[15m])) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Analytics flush cycles are failing"
+          description: >
+            Redis → PostgreSQL analytics flush has been failing for 15 minutes.
+            Click events may be backing up in the stream.
+
+  - name: linkflow.jvm
+    rules:
+      - alert: LinkFlowHighHeapUsage
+        expr: |
+          (
+            jvm_memory_used_bytes{job="linkflow-app",area="heap"}
+            /
+            clamp_min(jvm_memory_max_bytes{job="linkflow-app",area="heap"}, 1)
+          ) > 0.90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "linkflow-app heap above 90%"
+          description: "Heap utilisation has stayed above 90% for 10 minutes."

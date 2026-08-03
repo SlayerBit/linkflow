@@ -1,6 +1,7 @@
 package com.linkflow.app;
 
 import com.linkflow.app.support.AbstractIntegrationTest;
+import com.linkflow.app.support.TestMailbox;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -16,7 +17,7 @@ class AuthFlowIT extends AbstractIntegrationTest {
         String email = "auth-flow-" + System.nanoTime() + "@example.com";
         String password = "StrongP@ss1";
 
-        String registerJson = mockMvc.perform(post("/api/v1/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -30,7 +31,8 @@ class AuthFlowIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.email").value(email))
                 .andExpect(jsonPath("$.data.roles[0]").value("USER"))
-                .andReturn().getResponse().getContentAsString();
+                // The raw token must never travel back through the API.
+                .andExpect(jsonPath("$.data.verificationToken").doesNotExist());
 
         // First login attempt should fail with EmailNotVerifiedException (401 Unauthorized)
         mockMvc.perform(post("/api/v1/auth/login")
@@ -44,10 +46,9 @@ class AuthFlowIT extends AbstractIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value("EMAIL_NOT_VERIFIED"));
 
-        String verificationToken = JsonPath.read(registerJson, "$.data.verificationToken");
-        org.junit.jupiter.api.Assertions.assertNotNull(verificationToken);
+        // Recover the token the way a user does: from the delivered email.
+        String verificationToken = TestMailbox.awaitToken(email, "/verify-email");
 
-        // Verify the email
         mockMvc.perform(post("/api/v1/auth/verify-email")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
