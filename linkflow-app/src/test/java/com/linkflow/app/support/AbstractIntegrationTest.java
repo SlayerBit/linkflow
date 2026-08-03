@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -78,9 +79,29 @@ public abstract class AbstractIntegrationTest {
         @Autowired
         protected MockMvc mockMvc;
 
+        @Autowired(required = false)
+        protected StringRedisTemplate redisTemplate;
+
         @BeforeEach
-        void clearMailbox() {
+        void clearTestState() {
                 TestMailbox.clear();
+                if (redisTemplate != null) {
+                        try {
+                                var rateLimitKeys = redisTemplate.keys("rate_limit:*");
+                                if (rateLimitKeys != null && !rateLimitKeys.isEmpty()) {
+                                        redisTemplate.delete(rateLimitKeys);
+                                }
+                                var cooldownKeys = redisTemplate.keys("mail:cooldown:*");
+                                if (cooldownKeys != null && !cooldownKeys.isEmpty()) {
+                                        redisTemplate.delete(cooldownKeys);
+                                }
+                                var urlCacheKeys = redisTemplate.keys("url:*");
+                                if (urlCacheKeys != null && !urlCacheKeys.isEmpty()) {
+                                        redisTemplate.delete(urlCacheKeys);
+                                }
+                        } catch (Exception ignored) {
+                        }
+                }
         }
 
         /**
@@ -115,6 +136,7 @@ public abstract class AbstractIntegrationTest {
                 MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body))
+                                .andExpect(status().isCreated())
                                 .andReturn();
                 return result.getResponse().getContentAsString();
         }
@@ -130,6 +152,7 @@ public abstract class AbstractIntegrationTest {
                 MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body))
+                                .andExpect(status().isOk())
                                 .andReturn();
 
                 String json = result.getResponse().getContentAsString();
