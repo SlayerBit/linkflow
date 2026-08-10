@@ -1,0 +1,128 @@
+# EC2 Application Instance Compose Configuration (EC2 #2, #3, #4)
+#
+# Runs Gateway, App, and Web containers on a local Docker bridge network.
+# Deploy this exact file on each of the 3 application EC2 instances.
+#
+# Usage on EC2 #2 / #3 / #4:
+#   docker compose -f docker-compose.ec2-app.yml up -d
+
+name: linkflow-app-node
+
+x-jvm-service: &jvm-service
+  restart: unless-stopped
+  stop_grace_period: 40s
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  linkflow-app:
+    <<: *jvm-service
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: app
+    image: linkflow-app:latest
+    ports:
+      - "8081:8081"
+    networks:
+      linkflow-local:
+        ipv4_address: 172.20.0.11
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      LINKFLOW_JWT_SECRET: ${LINKFLOW_JWT_SECRET}
+      LINKFLOW_BASE_URL: ${LINKFLOW_BASE_URL}
+      LINKFLOW_CORS_ALLOWED_ORIGINS: ${LINKFLOW_CORS_ALLOWED_ORIGINS}
+      LINKFLOW_TRUSTED_PROXIES: "172.20.0.10/32"
+      LINKFLOW_METRICS_PUBLIC: "true"
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      SPRING_MAIL_SMTP_AUTH: ${SPRING_MAIL_SMTP_AUTH:-true}
+      SPRING_MAIL_SMTP_STARTTLS: ${SPRING_MAIL_SMTP_STARTTLS:-true}
+      LINKFLOW_MAIL_FROM: ${LINKFLOW_MAIL_FROM}
+      LINKFLOW_MAIL_BASE_URL: ${LINKFLOW_MAIL_BASE_URL:-${LINKFLOW_BASE_URL}}
+      LINKFLOW_BOOTSTRAP_ADMIN_ENABLED: ${LINKFLOW_BOOTSTRAP_ADMIN_ENABLED:-false}
+      LINKFLOW_BOOTSTRAP_ADMIN_EMAIL: ${LINKFLOW_BOOTSTRAP_ADMIN_EMAIL:-}
+      LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD: ${LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD:-}
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+        reservations:
+          memory: 384m
+
+  linkflow-web:
+    <<: *jvm-service
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: web
+    image: linkflow-web:latest
+    ports:
+      - "8082:8082"
+    networks:
+      linkflow-local:
+        ipv4_address: 172.20.0.12
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      LINKFLOW_GATEWAY_URL: http://linkflow-gateway:8080
+      LINKFLOW_BACKEND_APP_URL: http://linkflow-app:8081
+      LINKFLOW_PUBLIC_GATEWAY_URL: ${LINKFLOW_BASE_URL}
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "true"
+    depends_on:
+      linkflow-app:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+        reservations:
+          memory: 192m
+
+  linkflow-gateway:
+    <<: *jvm-service
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: gateway
+    image: linkflow-gateway:latest
+    ports:
+      - "8080:8080"
+    networks:
+      linkflow-local:
+        ipv4_address: 172.20.0.10
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      LINKFLOW_APP_URI: http://linkflow-app:8081
+      LINKFLOW_WEB_URI: http://linkflow-web:8082
+    depends_on:
+      linkflow-app:
+        condition: service_healthy
+      linkflow-web:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+        reservations:
+          memory: 128m
+
+networks:
+  linkflow-local:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
