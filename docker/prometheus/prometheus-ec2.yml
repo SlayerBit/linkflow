@@ -1,6 +1,6 @@
 # LinkFlow Staged Production Prometheus Configuration
 #
-# Stage 1 (2-EC2): Scrapes metrics from 1 LinkFlow App node (EC2 #2)
+# Stage 1 (2-EC2): Scrapes metrics from 1 LinkFlow App node (EC2 #2: 172.31.5.37)
 # Stage 2 (4-EC2): Uncomment EC2 #3 and #4 targets below.
 
 global:
@@ -15,7 +15,7 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets:
-          - "10.0.1.102:8081" # EC2 #2 App (Stage 1)
+          - "172.31.5.37:8081" # EC2 #2 App (Stage 1)
           # - "10.0.1.103:8081" # EC2 #3 App (Stage 2)
           # - "10.0.1.104:8081" # EC2 #4 App (Stage 2)
 
@@ -23,6 +23,6 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets:
-          - "10.0.1.102:8080" # EC2 #2 Gateway (Stage 1)
+          - "172.31.5.37:8080" # EC2 #2 Gateway (Stage 1)
           # - "10.0.1.103:8080" # EC2 #3 Gateway (Stage 2)
           # - "10.0.1.104:8080" # EC2 #4 Gateway (Stage 2)
