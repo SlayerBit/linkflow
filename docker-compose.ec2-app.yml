@@ -54,6 +54,12 @@ services:
       LINKFLOW_BOOTSTRAP_ADMIN_ENABLED: ${LINKFLOW_BOOTSTRAP_ADMIN_ENABLED:-false}
       LINKFLOW_BOOTSTRAP_ADMIN_EMAIL: ${LINKFLOW_BOOTSTRAP_ADMIN_EMAIL:-}
       LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD: ${LINKFLOW_BOOTSTRAP_ADMIN_PASSWORD:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/actuator/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      start_period: 90s
+      retries: 8
     deploy:
       resources:
         limits:
@@ -85,6 +91,12 @@ services:
     depends_on:
       linkflow-app:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8082/actuator/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      start_period: 90s
+      retries: 8
     deploy:
       resources:
         limits:
@@ -113,6 +125,12 @@ services:
         condition: service_healthy
       linkflow-web:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     deploy:
       resources:
         limits:
