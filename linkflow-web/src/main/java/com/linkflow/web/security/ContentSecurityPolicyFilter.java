@@ -39,10 +39,6 @@ public class ContentSecurityPolicyFilter extends OncePerRequestFilter {
 
     private static final int NONCE_BYTES = 16;
 
-    private static final String CDN = "https://cdn.jsdelivr.net";
-    private static final String GOOGLE_FONTS_CSS = "https://fonts.googleapis.com";
-    private static final String GOOGLE_FONTS_FILES = "https://fonts.gstatic.com";
-
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Override
@@ -65,9 +61,10 @@ public class ContentSecurityPolicyFilter extends OncePerRequestFilter {
     private String buildPolicy(String nonce) {
         return String.join("; ",
                 "default-src 'self'",
-                "script-src 'self' 'nonce-" + nonce + "' " + CDN,
-                "style-src 'self' 'unsafe-inline' " + CDN + " " + GOOGLE_FONTS_CSS,
-                "font-src 'self' " + GOOGLE_FONTS_FILES + " " + CDN + " data:",
+                "script-src 'self' 'nonce-" + nonce + "'",
+                // Inline style attributes remain; nonces do not apply to them.
+                "style-src 'self' 'unsafe-inline'",
+                "font-src 'self' data:",
                 "img-src 'self' data:",
                 "connect-src 'self'",
                 // No part of the app is meant to be framed, and no plugin content is used.

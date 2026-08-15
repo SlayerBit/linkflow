@@ -2,7 +2,7 @@ function copyToClipboard(text, button) {
     navigator.clipboard.writeText(text).then(function () {
         if (button) {
             var original = button.innerHTML;
-            button.innerHTML = '<i class="ti ti-check"></i> Copied';
+            button.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Copied';
             setTimeout(function () {
                 button.innerHTML = original;
             }, 2000);
@@ -18,6 +18,30 @@ function appendCell(row, text, className) {
     cell.textContent = text != null && text !== '' ? text : '—';
     row.appendChild(cell);
     return cell;
+}
+
+function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function chartDefaults() {
+    if (typeof Chart === 'undefined') {
+        return;
+    }
+    Chart.defaults.font.family = 'ui-sans-serif, system-ui, sans-serif';
+    Chart.defaults.color = '#64748b';
+    if (prefersReducedMotion()) {
+        Chart.defaults.animation = false;
+    }
+}
+
+function revealCharts() {
+    document.querySelectorAll('[data-chart-skeleton]').forEach(function (el) {
+        el.hidden = true;
+    });
+    document.querySelectorAll('[data-chart-canvas]').forEach(function (el) {
+        el.hidden = false;
+    });
 }
 
 async function fireRateLimitProbe(count, endpoint) {
@@ -74,9 +98,24 @@ async function fireRateLimitProbe(count, endpoint) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    chartDefaults();
+    revealCharts();
+
     document.querySelectorAll('.copy-btn[data-copy-url]').forEach(function (button) {
         button.addEventListener('click', function () {
             copyToClipboard(button.getAttribute('data-copy-url'), button);
+        });
+    });
+
+    document.querySelectorAll('form').forEach(function (form) {
+        form.querySelectorAll('.field-error').forEach(function (err) {
+            var field = form.querySelector('[name="' + err.getAttribute('data-field') + '"]');
+            if (field) {
+                field.setAttribute('aria-invalid', 'true');
+                if (err.id) {
+                    field.setAttribute('aria-describedby', err.id);
+                }
+            }
         });
     });
 

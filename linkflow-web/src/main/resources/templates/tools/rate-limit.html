@@ -11,7 +11,7 @@
         <div class="card-body">
             <h3 class="card-title">About rate limiting</h3>
             <p class="text-muted">
-                LinkFlow applies Redis-backed token bucket rate limits to API requests.
+                LinkFlow applies a Redis sliding-window limiter (sorted set, 60-second window) to API requests.
                 Authenticated users are limited to <strong th:text="${userRpm}">100</strong> requests/minute;
                 anonymous IPs to <strong th:text="${ipRpm}">200</strong> requests/minute.
                 Responses include <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>,
@@ -29,8 +29,8 @@
         <div class="card-body">
             <div class="row g-3 align-items-end">
                 <div class="col-md-5">
-                    <label class="form-label">Endpoint</label>
-                    <!-- Driven by the server-side allowlist so the two cannot drift apart. -->
+                    <label class="form-label" for="probe-endpoint">Endpoint</label>
+                    <!--/* Driven by the server-side allowlist so the two cannot drift apart. */-->
                     <select id="probe-endpoint" class="form-select">
                         <option th:each="path : ${probeEndpoints}"
                                 th:value="${path}"
@@ -38,7 +38,7 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Request count (1–200)</label>
+                    <label class="form-label" for="probe-count">Request count (1–200)</label>
                     <input type="number" id="probe-count" class="form-control" value="20" min="1" max="200">
                 </div>
                 <div class="col-md-4">

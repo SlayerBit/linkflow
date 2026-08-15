@@ -10,17 +10,18 @@
     <meta name="description" content="LinkFlow is a production-grade URL shortener with real-time analytics, rate-limiting, and admin dashboards.">
     <meta name="_csrf" th:content="${_csrf.token}" th:if="${_csrf}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}" th:if="${_csrf}"/>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/css/tabler.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.27.0/dist/tabler-icons.min.css">
+    <link rel="stylesheet" th:href="@{/vendor/tabler/tabler.min.css}">
+    <link rel="stylesheet" th:href="@{/vendor/tabler-icons/tabler-icons.min.css}">
+    <link rel="stylesheet" th:href="@{/css/tokens.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
     <link rel="stylesheet" th:href="@{/css/custom.css}">
     <th:block layout:fragment="head"></th:block>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 <div class="page">
-    <!-- Authenticated: vertical sidebar (sibling of page-wrapper per Tabler layout) -->
+    <!--/* Authenticated: vertical sidebar (sibling of page-wrapper per Tabler layout) */-->
     <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark" th:if="${auth != null}">
         <div class="container-fluid">
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu"
@@ -29,18 +30,18 @@
             </button>
             <h1 class="navbar-brand navbar-brand-autodark">
                 <a th:href="@{/dashboard}" class="d-flex align-items-center text-decoration-none">
-                    <i class="ti ti-link fs-2 text-primary"></i>
+                    <i class="ti ti-link fs-2" aria-hidden="true"></i>
                     <span>LinkFlow</span>
                 </a>
             </h1>
             <div class="collapse navbar-collapse" id="sidebar-menu">
                 <ul class="navbar-nav pt-lg-3">
                     <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-                        <span class="nav-link disabled text-uppercase small" style="font-size: 0.65rem; letter-spacing: 0.05em; color: #64748b;">Admin</span>
+                        <span class="nav-link disabled nav-section-label">Admin</span>
                     </li>
                     <th:block sec:authorize="hasRole('ADMIN')" th:replace="~{layout/sidebar-admin :: adminNav}"></th:block>
                     <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-                        <span class="nav-link disabled text-uppercase small mt-2" style="font-size: 0.65rem; letter-spacing: 0.05em; color: #64748b;">User</span>
+                        <span class="nav-link disabled nav-section-label mt-2">User</span>
                     </li>
                     <th:block th:replace="~{layout/sidebar-user :: userNav}"></th:block>
                 </ul>
@@ -49,13 +50,13 @@
     </aside>
 
     <div class="page-wrapper" th:if="${auth != null}">
-        <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none" style="background-color: #ffffff; border-bottom: 1px solid rgba(15, 23, 42, 0.06);">
+        <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none lf-topbar">
             <div class="container-xl">
                 <div class="navbar-nav flex-row order-md-last ms-auto">
                     <div class="nav-item dropdown">
                         <a class="nav-link d-flex lh-1 text-reset p-0" href="#" data-bs-toggle="dropdown"
-                           aria-label="Open user menu">
-                            <span class="avatar avatar-sm bg-primary-lt"><i class="ti ti-user"></i></span>
+                           aria-label="Open user menu" aria-haspopup="true">
+                            <span class="avatar avatar-sm bg-primary-lt" aria-hidden="true"><i class="ti ti-user"></i></span>
                             <div class="d-none d-xl-block ps-2">
                                 <div th:text="${auth.displayName()}" style="font-weight: 600; color: #1e293b;">User</div>
                                 <div class="mt-1 small text-muted" th:text="${auth.email()}">email</div>
@@ -74,10 +75,12 @@
         <div class="page-body">
             <div class="container-xl">
                 <div th:replace="~{fragments/alerts :: alerts}"></div>
-                <div layout:fragment="content"></div>
+                <main id="main-content" tabindex="-1">
+                    <div layout:fragment="content"></div>
+                </main>
             </div>
         </div>
-        <footer class="footer footer-transparent d-print-none py-3 mt-auto" style="border-top: 1px solid rgba(15, 23, 42, 0.06); background-color: #ffffff;">
+        <footer class="footer footer-transparent d-print-none py-3 mt-auto lf-footer">
             <div class="container-xl">
                 <div class="row text-center align-items-center flex-row-reverse">
                     <div class="col-lg-auto ms-lg-auto">
@@ -99,37 +102,19 @@
         </footer>
     </div>
 
-    <!-- Public: top navbar only -->
-    <header class="navbar navbar-expand-md navbar-light d-print-none" th:if="${auth == null}" style="background-color: #ffffff; border-bottom: 1px solid rgba(15, 23, 42, 0.06);">
-        <div class="container-xl">
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#public-nav"
-                    aria-controls="public-nav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <h1 class="navbar-brand navbar-brand-autodark">
-                <a th:href="@{/}" class="d-flex align-items-center text-decoration-none">
-                    <i class="ti ti-link fs-2 text-primary me-2"></i>
-                    <span style="font-weight: 800; color: #1e293b; letter-spacing: -0.03em;">LinkFlow</span>
-                </a>
-            </h1>
-            <div class="collapse navbar-collapse" id="public-nav">
-                <div class="navbar-nav flex-row order-md-last ms-auto">
-                    <a class="nav-link" th:href="@{/login}" style="font-weight: 500; color: #475569;">Login</a>
-                    <a class="nav-link" th:href="@{/register}" style="font-weight: 500; color: #475569;">Register</a>
-                </div>
-            </div>
-        </div>
-    </header>
+    <th:block th:if="${auth == null}" th:replace="~{layout/public-nav :: publicNav}"></th:block>
 
     <div class="page-body" th:if="${auth == null}">
         <div class="container-xl">
             <div th:replace="~{fragments/alerts :: alerts}"></div>
-            <div layout:fragment="content"></div>
+            <main id="main-content" tabindex="-1">
+                <div layout:fragment="content"></div>
+            </main>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/js/tabler.min.js"></script>
+<script th:src="@{/vendor/tabler/tabler.min.js}"></script>
 <script th:src="@{/js/app.js}"></script>
 <th:block layout:fragment="scripts"></th:block>
 </body>

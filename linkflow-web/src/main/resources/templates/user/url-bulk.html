@@ -28,13 +28,12 @@
                 <div class="card-body">
                     <form th:action="@{/urls/bulk}" th:object="${bulkCreateUrlForm}" method="post">
                         <div class="mb-3">
-                            <label class="form-label required fw-semibold text-secondary">URLs (one per line)</label>
+                            <label class="form-label required" for="urlsText">URLs (one per line)</label>
                             <textarea class="form-control" th:field="*{urlsText}" rows="12"
                                       placeholder="https://example.com/page1&#10;https://example.com/page2&#10;https://example.com/page3"
-                                      style="border-radius: 8px; font-family: monospace; font-size: 0.875rem;"
-                                      required></textarea>
-                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('urlsText')}" th:errors="*{urlsText}"></div>
-                            <small class="text-muted mt-1 d-block">Maximum 100 URLs per batch. Each URL must start with http:// or https://</small>
+                                      required aria-describedby="urlsText-hint"></textarea>
+                            <div class="field-error" id="urlsText-error" data-field="urlsText" th:if="${#fields.hasErrors('urlsText')}" th:errors="*{urlsText}"></div>
+                            <small class="form-hint" id="urlsText-hint">Maximum 100 URLs per batch. Each URL must start with http:// or https://</small>
                         </div>
                         <button type="submit" class="btn btn-primary px-4" style="border-radius: 8px; font-weight: 600;">
                             <i class="ti ti-bolt me-1"></i> Shorten All
@@ -45,7 +44,7 @@
             </div>
         </div>
 
-        <!-- Instructions Card -->
+        <!--/* Instructions Card */-->
         <div class="col-lg-4">
             <div class="card bg-white">
                 <div class="card-header py-3">
@@ -66,7 +65,7 @@
         </div>
     </div>
 
-    <!-- Results Table -->
+    <!--/* Results Table */-->
     <div th:if="${results != null and !results.isEmpty()}" class="mt-4">
         <div class="card bg-white">
             <div class="card-header py-3">

@@ -24,9 +24,9 @@
                 <div class="card-body">
                     <form th:action="@{/urls/{id}/edit(id=${url.id})}" th:object="${updateUrlForm}" method="post">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold text-secondary">Expires At (UTC)</label>
-                            <input type="datetime-local" class="form-control" th:field="*{expiresAt}" style="border-radius: 8px;">
-                            <div class="form-hint text-muted mt-1">Leave blank to keep current expiry unchanged.</div>
+                            <label class="form-label" for="expiresAt">Expires At (UTC)</label>
+                            <input type="datetime-local" class="form-control" th:field="*{expiresAt}" aria-describedby="expiresAt-hint">
+                            <div class="form-hint" id="expiresAt-hint">Leave blank to keep current expiry unchanged.</div>
                         </div>
                         <div class="mb-4">
                             <label class="form-check form-switch mb-0">

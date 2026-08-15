@@ -71,3 +71,4 @@ docker/nginx/certs/*
 performance/data/seed.json
 performance/reports/*
 !performance/reports/.gitkeep
+linkflow-images.tar

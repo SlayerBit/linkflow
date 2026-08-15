@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Something went wrong — LinkFlow</title>
+    <th:block layout:fragment="head"></th:block>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="error-page">
+        <p class="error-code">500</p>
+        <h1 class="error-title">Something went wrong</h1>
+        <p class="error-copy">The page failed to load. Try again in a moment. If this keeps happening, the service may be recovering.</p>
+        <div class="error-actions">
+            <a th:href="@{/}" class="btn btn-primary">Go to home</a>
+            <a th:href="@{/dashboard}" class="btn btn-outline-secondary" th:if="${auth != null}">Open dashboard</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

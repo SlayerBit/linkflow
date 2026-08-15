@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<header class="navbar navbar-expand-md navbar-light d-print-none lf-topbar" th:fragment="publicNav">
+    <div class="container-xl">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#public-nav"
+                aria-controls="public-nav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <h1 class="navbar-brand navbar-brand-autodark">
+            <a th:href="@{/}" class="d-flex align-items-center text-decoration-none">
+                <i class="ti ti-link fs-2 text-primary me-2" aria-hidden="true"></i>
+                <span style="font-weight: 800; color: #1e293b; letter-spacing: -0.03em;">LinkFlow</span>
+            </a>
+        </h1>
+        <div class="collapse navbar-collapse" id="public-nav">
+            <div class="navbar-nav flex-row order-md-last ms-auto">
+                <a class="nav-link" th:href="@{/login}">Login</a>
+                <a class="nav-link" th:href="@{/register}">Register</a>
+            </div>
+        </div>
+    </div>
+</header>
+</body>
+</html>

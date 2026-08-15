@@ -9,7 +9,7 @@
         <h2 class="page-title fw-bold text-dark fs-2">System Health &amp; Observability</h2>
     </div>
 
-    <!-- Health Badges Grid -->
+    <!--/* Health Badges Grid */-->
     <div class="row row-deck row-cards mb-4 g-3">
         <div class="col-sm-6 col-lg-4">
             <div class="card stat-card bg-white py-3 px-4" th:classappend="${health.get('status').asText() == 'UP'} ? 'card-emerald' : 'card-red'">
@@ -61,7 +61,7 @@
         </div>
     </div>
 
-    <!-- Observability & Rate limits -->
+    <!--/* Observability & Rate limits */-->
     <div class="row row-deck row-cards mb-4 g-4">
         <div class="col-lg-6">
             <div class="card bg-white">
@@ -111,7 +111,7 @@
         </div>
     </div>
 
-    <!-- Raw details -->
+    <!--/* Raw details */-->
     <div class="card bg-white">
         <div class="card-header">
             <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
