@@ -1,0 +1,84 @@
+/* LinkFlow design tokens. Semantic roles only — no component rules. */
+
+:root {
+    --lf-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --lf-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    --lf-text-xs: 0.75rem;
+    --lf-text-sm: 0.875rem;
+    --lf-text-md: 1rem;
+    --lf-text-lg: 1.25rem;
+    --lf-text-xl: 1.5rem;
+    --lf-text-2xl: 2rem;
+    --lf-text-3xl: 2.75rem;
+
+    --lf-space-1: 0.25rem;
+    --lf-space-2: 0.5rem;
+    --lf-space-3: 0.75rem;
+    --lf-space-4: 1rem;
+    --lf-space-5: 1.5rem;
+    --lf-space-6: 2rem;
+    --lf-space-8: 3rem;
+
+    --lf-radius-sm: 6px;
+    --lf-radius-md: 8px;
+    --lf-radius-lg: 12px;
+    --lf-radius-xl: 16px;
+
+    --lf-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --lf-shadow-md: 0 4px 12px -4px rgba(15, 23, 42, 0.08);
+    --lf-shadow-lg: 0 20px 40px -16px rgba(15, 23, 42, 0.12);
+
+    --lf-color-bg: #f8fafc;
+    --lf-color-surface: #ffffff;
+    --lf-color-text: #0f172a;
+    --lf-color-text-muted: #64748b;
+    --lf-color-border: rgba(15, 23, 42, 0.08);
+
+    --lf-color-primary: #1a6ddb;
+    --lf-color-primary-hover: #1558b0;
+    --lf-color-focus: #2563eb;
+
+    --lf-blue: hsl(217, 91%, 50%);
+    --lf-purple: hsl(262, 83%, 52%);
+    --lf-cyan: hsl(192, 91%, 36%);
+    --lf-green: hsl(142, 71%, 36%);
+    --lf-amber: hsl(32, 92%, 38%);
+    --lf-red: hsl(0, 72%, 46%);
+    --lf-emerald: hsl(160, 84%, 32%);
+
+    --lf-primary: var(--lf-color-primary);
+
+    --tblr-primary: #1a6ddb;
+    --tblr-primary-rgb: 26, 109, 219;
+    --tblr-font-sans-serif: var(--lf-font);
+    --tblr-body-bg: var(--lf-color-bg);
+    --tblr-body-color: var(--lf-color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --lf-motion: 0s;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+:focus-visible {
+    outline: 2px solid var(--lf-color-focus);
+    outline-offset: 2px;
+}
+
+body {
+    font-family: var(--lf-font);
+    color: var(--lf-color-text);
+    background: var(--lf-color-bg);
+    -webkit-font-smoothing: antialiased;
+}

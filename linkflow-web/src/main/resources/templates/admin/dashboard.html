@@ -9,9 +9,9 @@
         <h2 class="page-title fw-bold text-dark fs-2">Admin Dashboard</h2>
     </div>
 
-    <!-- Metric Grid -->
+    <!--/* Metric Grid */-->
     <div class="row g-3 mb-4">
-        <!-- Total Users -->
+        <!--/* Total Users */-->
         <div class="col-sm-6 col-md-4">
             <div class="card stat-card card-purple bg-white border card-hoverable">
                 <div class="card-body py-3 px-4">
@@ -29,7 +29,7 @@
                 </div>
             </div>
         </div>
-        <!-- Total URLs -->
+        <!--/* Total URLs */-->
         <div class="col-sm-6 col-md-4">
             <div class="card stat-card card-cyan bg-white border card-hoverable">
                 <div class="card-body py-3 px-4">
@@ -47,7 +47,7 @@
                 </div>
             </div>
         </div>
-        <!-- Total Redirect Clicks -->
+        <!--/* Total Redirect Clicks */-->
         <div class="col-sm-6 col-md-4">
             <div class="card stat-card card-green bg-white border card-hoverable">
                 <div class="card-body py-3 px-4">
@@ -65,7 +65,7 @@
                 </div>
             </div>
         </div>
-        <!-- Active URLs -->
+        <!--/* Active URLs */-->
         <div class="col-sm-6 col-md-4">
             <div class="card stat-card card-emerald bg-white border card-hoverable">
                 <div class="card-body py-3 px-4">
@@ -84,7 +84,7 @@
                 </div>
             </div>
         </div>
-        <!-- Expired URLs -->
+        <!--/* Expired URLs */-->
         <div class="col-sm-6 col-md-4">
             <div class="card stat-card card-amber bg-white border card-hoverable">
                 <div class="card-body py-3 px-4">
@@ -102,7 +102,7 @@
                 </div>
             </div>
         </div>
-        <!-- Inactive URLs -->
+        <!--/* Inactive URLs */-->
         <div class="col-sm-6 col-md-4">
             <div class="card stat-card card-red bg-white border card-hoverable">
                 <div class="card-body py-3 px-4">
@@ -122,7 +122,7 @@
         </div>
     </div>
 
-    <!-- Chart -->
+    <!--/* Chart */-->
     <div class="card bg-white mb-4">
         <div class="card-header py-3">
             <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
@@ -131,7 +131,8 @@
         </div>
         <div class="card-body d-flex flex-column justify-content-center" style="position: relative; min-height: 160px; padding: 1.5rem;">
             <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}" style="position: relative; height: 130px; width: 100%;">
-                <canvas id="adminTopChart"></canvas>
+                <div class="skeleton skeleton-chart" data-chart-skeleton aria-hidden="true"></div>
+                <canvas id="adminTopChart" data-chart-canvas hidden></canvas>
             </div>
             <div class="empty-state py-3" th:if="${#lists.isEmpty(topUrls)}">
                 <div class="empty-state-icon" style="font-size: 2rem; padding: 0.5rem; background: #f8fafc; border-radius: 50%; display: inline-block; line-height: 1; color: #94a3b8;"><i class="ti ti-link-off"></i></div>
@@ -141,7 +142,7 @@
         </div>
     </div>
 
-    <!-- Recent Activity -->
+    <!--/* Recent Activity */-->
     <div class="card bg-white">
         <div class="card-header py-3">
             <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
@@ -181,7 +182,7 @@
 </div>
 
 <th:block layout:fragment="scripts">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:src="@{/vendor/chartjs/chart.umd.min.js}"></script>
     <script th:inline="javascript" th:if="${!#lists.isEmpty(topUrls)}" th:attr="nonce=${cspNonce}">
         /*<![CDATA[*/
         const topUrls = (/*[[${topUrls}]]*/ []).slice(0, 5);

@@ -9,7 +9,7 @@
         <div class="col-xl-9 col-lg-10">
             <div class="card overflow-hidden" style="border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08); border-radius: 16px;">
                 <div class="row g-0">
-                    <!-- Left Side: Features / Benefits -->
+                    <!--/* Left Side: Features / Benefits */-->
                     <div class="col-lg-5 text-white p-5 d-none d-lg-flex flex-column justify-content-between" 
                          style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-right: 1px solid rgba(255, 255, 255, 0.06); position: relative;">
                         <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 10% 20%, rgba(26, 109, 219, 0.1) 0%, transparent 60%); pointer-events: none;"></div>
@@ -45,7 +45,7 @@
                         </div>
                     </div>
                     
-                    <!-- Right Side: Form -->
+                    <!--/* Right Side: Form */-->
                     <div class="col-lg-7 p-5 bg-white">
                         <div style="max-width: 400px; margin: 0 auto;">
                             <h2 class="fw-bold text-dark mb-1">Sign in</h2>
@@ -67,17 +67,17 @@
                             
                             <form th:action="@{/login}" th:object="${loginForm}" method="post">
                                 <div class="mb-3">
-                                    <label class="form-label" style="font-weight: 500;">Email address</label>
-                                    <input type="email" class="form-control" th:field="*{email}" placeholder="name@example.com" required style="border-radius: 8px; padding: 0.6rem 0.8rem;">
-                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                                    <label class="form-label" for="email">Email address</label>
+                                    <input type="email" class="form-control" th:field="*{email}" placeholder="name@example.com" required autocomplete="email">
+                                    <div class="field-error" id="email-error" data-field="email" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
                                 </div>
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <label class="form-label" style="font-weight: 500;">Password</label>
+                                        <label class="form-label" for="password">Password</label>
                                         <a th:href="@{/forgot-password}" class="small text-decoration-none" style="font-weight: 500;">Forgot password?</a>
                                     </div>
-                                    <input type="password" class="form-control" th:field="*{password}" placeholder="Enter your password" required style="border-radius: 8px; padding: 0.6rem 0.8rem;">
-                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                                    <input type="password" class="form-control" th:field="*{password}" placeholder="Enter your password" required autocomplete="current-password">
+                                    <div class="field-error" id="password-error" data-field="password" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Sign in to Account</button>
                             </form>

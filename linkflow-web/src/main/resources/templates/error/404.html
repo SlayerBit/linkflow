@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Page not found — LinkFlow</title>
+    <th:block layout:fragment="head"></th:block>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="error-page">
+        <p class="error-code">404</p>
+        <h1 class="error-title">Page not found</h1>
+        <p class="error-copy">That address is not a LinkFlow page. The link may be mistyped, or the short URL may have been removed.</p>
+        <div class="error-actions">
+            <a th:href="@{/}" class="btn btn-primary">Go to home</a>
+            <a th:href="@{/dashboard}" class="btn btn-outline-secondary" th:if="${auth != null}">Open dashboard</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

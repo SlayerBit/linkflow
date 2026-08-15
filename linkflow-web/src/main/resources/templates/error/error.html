@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Request failed — LinkFlow</title>
+    <th:block layout:fragment="head"></th:block>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="error-page">
+        <p class="error-code" th:text="${status != null ? status : 'Error'}">Error</p>
+        <h1 class="error-title">This request could not be completed</h1>
+        <p class="error-copy" th:text="${error != null ? error : 'An unexpected error stopped this page from loading.'}">
+            An unexpected error stopped this page from loading.
+        </p>
+        <div class="error-actions">
+            <a th:href="@{/}" class="btn btn-primary">Go to home</a>
+            <a th:href="@{/dashboard}" class="btn btn-outline-secondary" th:if="${auth != null}">Open dashboard</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

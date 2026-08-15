@@ -16,7 +16,7 @@
             </h3>
         </div>
         <div class="table-responsive">
-            <table class="table table-vcenter card-table table-hover">
+            <table class="table table-vcenter card-table table-hover table-stack">
                 <thead>
                     <tr>
                         <th>Email Address</th>
@@ -28,13 +28,13 @@
                 </thead>
                 <tbody>
                     <tr th:each="user : ${users.content}">
-                        <td class="fw-bold text-dark" th:text="${user.email}">email</td>
-                        <td class="text-secondary" th:text="${user.firstName + ' ' + (user.lastName != null ? user.lastName : '')}">name</td>
-                        <td>
+                        <td class="fw-bold text-dark" data-label="Email Address" th:text="${user.email}">email</td>
+                        <td class="text-secondary" data-label="Full Name" th:text="${user.firstName + ' ' + (user.lastName != null ? user.lastName : '')}">name</td>
+                        <td data-label="Roles">
                             <span th:each="role : ${user.roles}" class="badge bg-purple-lt text-purple me-1 fw-bold" th:text="${role}">USER</span>
                         </td>
-                        <td class="text-secondary" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">date</td>
-                        <td class="text-end">
+                        <td class="text-secondary" data-label="Created Date" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">date</td>
+                        <td class="text-end" data-label="Actions">
                             <a th:href="@{/admin/users/{id}(id=${user.id})}" class="btn btn-sm btn-light" style="border-radius: 6px;">View details</a>
                         </td>
                     </tr>

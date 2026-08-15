@@ -42,6 +42,7 @@ public class WebSecurityConfig {
                                                                 "/verify-email-change",
                                                                 "/css/**",
                                                                 "/js/**",
+                                                                "/vendor/**",
                                                                 "/error",
                                                                 // The subpaths matter: the liveness and readiness groups live beneath
                                                                 // /actuator/health, and without them a container probe is answered with the

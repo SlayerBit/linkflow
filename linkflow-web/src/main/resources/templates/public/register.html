@@ -9,7 +9,7 @@
         <div class="col-xl-9 col-lg-10">
             <div class="card overflow-hidden" style="border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08); border-radius: 16px;">
                 <div class="row g-0">
-                    <!-- Left Side: Features / Benefits -->
+                    <!--/* Left Side: Features / Benefits */-->
                     <div class="col-lg-5 text-white p-5 d-none d-lg-flex flex-column justify-content-between" 
                          style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-right: 1px solid rgba(255, 255, 255, 0.06); position: relative;">
                         <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.1) 0%, transparent 60%); pointer-events: none;"></div>
@@ -45,7 +45,7 @@
                         </div>
                     </div>
                     
-                    <!-- Right Side: Form -->
+                    <!--/* Right Side: Form */-->
                     <div class="col-lg-7 p-5 bg-white">
                         <div style="max-width: 440px; margin: 0 auto;">
                             <h2 class="fw-bold text-dark mb-1">Create account</h2>
@@ -54,25 +54,25 @@
                             <form th:action="@{/register}" th:object="${registerForm}" method="post">
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label" style="font-weight: 500;">First name</label>
-                                        <input type="text" class="form-control" th:field="*{firstName}" placeholder="John" required style="border-radius: 8px; padding: 0.6rem 0.8rem;">
-                                        <div class="text-danger small mt-1" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
+                                        <label class="form-label" for="firstName">First name</label>
+                                        <input type="text" class="form-control" th:field="*{firstName}" placeholder="John" required autocomplete="given-name">
+                                        <div class="field-error" id="firstName-error" data-field="firstName" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label" style="font-weight: 500;">Last name</label>
-                                        <input type="text" class="form-control" th:field="*{lastName}" placeholder="Doe" style="border-radius: 8px; padding: 0.6rem 0.8rem;">
+                                        <label class="form-label" for="lastName">Last name</label>
+                                        <input type="text" class="form-control" th:field="*{lastName}" placeholder="Doe" autocomplete="family-name">
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" style="font-weight: 500;">Email address</label>
-                                    <input type="email" class="form-control" th:field="*{email}" placeholder="john.doe@example.com" required style="border-radius: 8px; padding: 0.6rem 0.8rem;">
-                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                                    <label class="form-label" for="email">Email address</label>
+                                    <input type="email" class="form-control" th:field="*{email}" placeholder="john.doe@example.com" required autocomplete="email">
+                                    <div class="field-error" id="email-error" data-field="email" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
                                 </div>
                                 <div class="mb-4">
-                                    <label class="form-label" style="font-weight: 500;">Password</label>
-                                    <input type="password" class="form-control" th:field="*{password}" placeholder="At least 8 characters" required style="border-radius: 8px; padding: 0.6rem 0.8rem;">
-                                    <div class="form-hint mt-1" style="font-size: 0.725rem; color: #64748b;">Must contain uppercase, lowercase, numbers, and special characters.</div>
-                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                                    <label class="form-label" for="password">Password</label>
+                                    <input type="password" class="form-control" th:field="*{password}" placeholder="At least 8 characters" required autocomplete="new-password" aria-describedby="password-hint">
+                                    <div class="form-hint" id="password-hint">Must contain uppercase, lowercase, numbers, and special characters.</div>
+                                    <div class="field-error" id="password-error" data-field="password" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Register Account</button>
                             </form>

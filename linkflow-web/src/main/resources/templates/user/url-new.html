@@ -24,18 +24,18 @@
                 <div class="card-body">
                     <form th:action="@{/urls/new}" th:object="${createUrlForm}" method="post">
                         <div class="mb-3">
-                            <label class="form-label required fw-semibold text-secondary">Original Target URL</label>
-                            <input type="url" class="form-control" th:field="*{originalUrl}" placeholder="https://example.com/page" style="border-radius: 8px;" required>
-                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('originalUrl')}" th:errors="*{originalUrl}"></div>
+                            <label class="form-label required" for="originalUrl">Original Target URL</label>
+                            <input type="url" class="form-control" th:field="*{originalUrl}" placeholder="https://example.com/page" required>
+                            <div class="field-error" id="originalUrl-error" data-field="originalUrl" th:if="${#fields.hasErrors('originalUrl')}" th:errors="*{originalUrl}"></div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold text-secondary">Custom Alias (Optional)</label>
-                            <input type="text" class="form-control" th:field="*{customAlias}" placeholder="my-link" style="border-radius: 8px;">
-                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('customAlias')}" th:errors="*{customAlias}"></div>
+                            <label class="form-label" for="customAlias">Custom Alias (Optional)</label>
+                            <input type="text" class="form-control" th:field="*{customAlias}" placeholder="my-link">
+                            <div class="field-error" id="customAlias-error" data-field="customAlias" th:if="${#fields.hasErrors('customAlias')}" th:errors="*{customAlias}"></div>
                         </div>
                         <div class="mb-4">
-                            <label class="form-label fw-semibold text-secondary">Expires At (Optional, UTC)</label>
-                            <input type="datetime-local" class="form-control" th:field="*{expiresAt}" style="border-radius: 8px;">
+                            <label class="form-label" for="expiresAt">Expires At (Optional, UTC)</label>
+                            <input type="datetime-local" class="form-control" th:field="*{expiresAt}">
                         </div>
                         <button type="submit" class="btn btn-primary px-3" style="border-radius: 8px; font-weight: 600;">Create Link</button>
                         <a th:href="@{/urls}" class="btn btn-link text-secondary text-decoration-none ms-2">Cancel</a>

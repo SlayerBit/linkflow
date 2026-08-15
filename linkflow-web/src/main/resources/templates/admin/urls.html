@@ -19,7 +19,7 @@
                 </h3>
             </div>
             <div class="table-responsive">
-                <table class="table table-vcenter card-table table-hover">
+                <table class="table table-vcenter card-table table-hover table-stack">
                     <thead>
                         <tr>
                             <th>Short Code</th>
@@ -31,12 +31,12 @@
                     </thead>
                     <tbody>
                         <tr th:each="url : ${urls.content}">
-                            <td class="fw-bold text-dark">
+                            <td class="fw-bold text-dark" data-label="Short Code">
                                 <a th:href="@{/admin/urls/{id}(id=${url.id})}" class="text-primary fw-bold font-monospace text-decoration-none" th:text="${url.shortCode}">code</a>
                             </td>
-                            <td class="text-truncate text-secondary" style="max-width:240px"
+                            <td class="text-truncate text-secondary" style="max-width:240px" data-label="Original Target URL"
                                 th:text="${url.originalUrl}">original</td>
-                            <td>
+                            <td data-label="Status">
                                 <span
                                     th:if="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())}"
                                     class="badge bg-warning-lt text-warning">Expired</span>
@@ -46,9 +46,9 @@
                                     th:classappend="${url.active} ? ' bg-green-lt text-green' : ' bg-red-lt text-red'"
                                     th:text="${url.active} ? 'Active' : 'Inactive'">Active</span>
                             </td>
-                            <td class="text-secondary" th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd')}">date
+                            <td class="text-secondary" data-label="Created Date" th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd')}">date
                             </td>
-                            <td class="text-end">
+                            <td class="text-end" data-label="Actions">
                                 <a th:href="@{/admin/urls/{id}(id=${url.id})}" class="btn btn-sm btn-outline-primary me-1"
                                    style="border-radius: 6px;">
                                     <i class="ti ti-chart-bar me-1"></i> Analytics

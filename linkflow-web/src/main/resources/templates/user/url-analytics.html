@@ -12,7 +12,7 @@
         <h2 class="page-title fw-bold text-dark fs-2">Redirect Link Analytics</h2>
     </div>
 
-    <!-- Stat cards -->
+    <!--/* Stat cards */-->
     <div class="row row-deck row-cards mb-4 g-3">
         <div class="col-sm-6 col-lg-4">
             <div class="card stat-card card-green bg-white py-3 px-4">
@@ -55,7 +55,7 @@
         </div>
     </div>
 
-    <!-- Trend line chart -->
+    <!--/* Trend line chart */-->
     <div class="card bg-white">
         <div class="card-header d-flex align-items-center">
             <h3 class="card-title fw-bold text-dark section-header-title color-cyan mb-0">
@@ -71,14 +71,15 @@
         </div>
         <div class="card-body">
             <div class="chart-container" style="position: relative; height: 320px;">
-                <canvas id="clickTrendChart"></canvas>
+                <div class="skeleton skeleton-chart-lg" data-chart-skeleton aria-hidden="true"></div>
+                <canvas id="clickTrendChart" data-chart-canvas hidden></canvas>
             </div>
         </div>
     </div>
 </div>
 
 <th:block layout:fragment="scripts">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:src="@{/vendor/chartjs/chart.umd.min.js}"></script>
     <script th:inline="javascript" th:attr="nonce=${cspNonce}">
         const trends = {
             7: /*[[${trend7dJson}]]*/ '[]',

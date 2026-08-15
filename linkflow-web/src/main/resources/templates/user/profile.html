@@ -22,9 +22,9 @@
     </div>
     
     <div class="row g-4">
-        <!-- Sidebar Column: Summary & Stats -->
+        <!--/* Sidebar Column: Summary & Stats */-->
         <div class="col-lg-4">
-            <!-- Profile Summary Card -->
+            <!--/* Profile Summary Card */-->
             <div class="card mb-4 bg-white stat-card card-purple">
                 <div class="card-body text-center py-4 px-3">
                     <span class="avatar avatar-xl bg-purple-lt rounded-circle mb-3" style="width: 5rem; height: 5rem; font-size: 2.25rem;">
@@ -45,7 +45,7 @@
                 </div>
             </div>
             
-            <!-- Statistics Card -->
+            <!--/* Statistics Card */-->
             <div class="card bg-white mb-4">
                 <div class="card-header py-3">
                     <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
@@ -71,7 +71,7 @@
             </div>
         </div>
         
-        <!-- Main Form Column -->
+        <!--/* Main Form Column */-->
         <div class="col-lg-8">
             <div class="card bg-white">
                 <div class="card-header py-3">
@@ -83,14 +83,14 @@
                     <form th:action="@{/profile}" th:object="${updateProfileForm}" method="post">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold text-secondary mb-2">First Name</label>
-                                <input type="text" class="form-control" th:field="*{firstName}" required placeholder="First name" style="border-radius: 8px;">
-                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
+                                <label class="form-label" for="firstName">First Name</label>
+                                <input type="text" class="form-control" th:field="*{firstName}" required placeholder="First name" autocomplete="given-name">
+                                <div class="field-error" id="firstName-error" data-field="firstName" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold text-secondary mb-2">Last Name</label>
-                                <input type="text" class="form-control" th:field="*{lastName}" placeholder="Last name" style="border-radius: 8px;">
-                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}"></div>
+                                <label class="form-label" for="lastName">Last Name</label>
+                                <input type="text" class="form-control" th:field="*{lastName}" placeholder="Last name" autocomplete="family-name">
+                                <div class="field-error" id="lastName-error" data-field="lastName" th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}"></div>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Save Changes</button>
@@ -98,7 +98,7 @@
                 </div>
             </div>
 
-            <!-- Change Password Card -->
+            <!--/* Change Password Card */-->
             <div class="card bg-white mt-4">
                 <div class="card-header py-3">
                     <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
@@ -108,20 +108,20 @@
                 <div class="card-body">
                     <form th:action="@{/profile/change-password}" th:object="${changePasswordForm}" method="post">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold text-secondary mb-2">Current Password</label>
-                            <input type="password" class="form-control" th:field="*{currentPassword}" required placeholder="Enter current password" style="border-radius: 8px;">
-                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('currentPassword')}" th:errors="*{currentPassword}"></div>
+                            <label class="form-label" for="currentPassword">Current Password</label>
+                            <input type="password" class="form-control" th:field="*{currentPassword}" required placeholder="Enter current password" autocomplete="current-password">
+                            <div class="field-error" id="currentPassword-error" data-field="currentPassword" th:if="${#fields.hasErrors('currentPassword')}" th:errors="*{currentPassword}"></div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold text-secondary mb-2">New Password</label>
-                                <input type="password" class="form-control" th:field="*{newPassword}" required placeholder="New password" style="border-radius: 8px;">
-                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('newPassword')}" th:errors="*{newPassword}"></div>
+                                <label class="form-label" for="newPassword">New Password</label>
+                                <input type="password" class="form-control" th:field="*{newPassword}" required placeholder="New password" autocomplete="new-password">
+                                <div class="field-error" id="newPassword-error" data-field="newPassword" th:if="${#fields.hasErrors('newPassword')}" th:errors="*{newPassword}"></div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold text-secondary mb-2">Confirm New Password</label>
-                                <input type="password" class="form-control" th:field="*{confirmPassword}" required placeholder="Confirm new password" style="border-radius: 8px;">
-                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
+                                <label class="form-label" for="confirmPassword">Confirm New Password</label>
+                                <input type="password" class="form-control" th:field="*{confirmPassword}" required placeholder="Confirm new password" autocomplete="new-password">
+                                <div class="field-error" id="confirmPassword-error" data-field="confirmPassword" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Update Password</button>
@@ -129,7 +129,7 @@
                 </div>
             </div>
 
-            <!-- Change Email Card -->
+            <!--/* Change Email Card */-->
             <div class="card bg-white mt-4">
                 <div class="card-header py-3">
                     <h3 class="card-title fw-bold text-dark section-header-title color-green mb-0">
@@ -139,14 +139,14 @@
                 <div class="card-body">
                     <form th:action="@{/profile/request-email-change}" th:object="${requestEmailChangeForm}" method="post">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold text-secondary mb-2">New Email Address</label>
-                            <input type="email" class="form-control" th:field="*{newEmail}" required placeholder="Enter new email address" style="border-radius: 8px;">
-                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('newEmail')}" th:errors="*{newEmail}"></div>
+                            <label class="form-label" for="newEmail">New Email Address</label>
+                            <input type="email" class="form-control" th:field="*{newEmail}" required placeholder="Enter new email address" autocomplete="email">
+                            <div class="field-error" id="newEmail-error" data-field="newEmail" th:if="${#fields.hasErrors('newEmail')}" th:errors="*{newEmail}"></div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold text-secondary mb-2">Current Password</label>
-                            <input type="password" class="form-control" th:field="*{currentPassword}" required placeholder="Verify with current password" style="border-radius: 8px;">
-                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('currentPassword')}" th:errors="*{currentPassword}"></div>
+                            <label class="form-label" for="email-change-current-password">Current Password</label>
+                            <input type="password" class="form-control" id="email-change-current-password" th:field="*{currentPassword}" required placeholder="Verify with current password" autocomplete="current-password">
+                            <div class="field-error" id="email-change-current-password-error" data-field="currentPassword" th:if="${#fields.hasErrors('currentPassword')}" th:errors="*{currentPassword}"></div>
                         </div>
                         <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Request Email Change</button>
                     </form>

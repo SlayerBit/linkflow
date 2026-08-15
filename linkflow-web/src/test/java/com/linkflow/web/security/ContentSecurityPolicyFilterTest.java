@@ -36,11 +36,12 @@ class ContentSecurityPolicyFilterTest {
     }
 
     @Test
-    void restrictsScriptsToSelfNonceAndTheCdn() throws Exception {
+    void restrictsScriptsToSelfAndNonceWithoutACdn() throws Exception {
         String policy = runFilter().getHeader("Content-Security-Policy");
 
         assertTrue(policy.contains("script-src 'self' 'nonce-"), policy);
-        assertTrue(policy.contains("https://cdn.jsdelivr.net"), policy);
+        assertFalse(policy.contains("cdn.jsdelivr.net"), policy);
+        assertFalse(policy.contains("fonts.googleapis.com"), policy);
         assertFalse(policy.contains("script-src 'self' 'unsafe-inline'"),
                 "unsafe-inline in script-src would defeat the policy: " + policy);
     }
