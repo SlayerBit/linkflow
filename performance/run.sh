@@ -29,7 +29,7 @@ Examples:
 
 Env knobs: BASE_URL, VUS, DURATION, RAMP_VUS, RAMP_UP, SUSTAIN, RAMP_DOWN,
            SOAK_VUS, SOAK_DURATION, SEED_FILE, PERF_EMAIL, PERF_PASSWORD,
-           INSECURE_SKIP_TLS_VERIFY, THRESHOLD_* (see DEPLOYMENT.md, Load testing)
+           INSECURE_SKIP_TLS_VERIFY, THRESHOLD_* (see docs/DEPLOYMENT.md, Load testing)
 
 Reports: performance/reports/<scenario>-<timestamp>.{html,json}
 EOF

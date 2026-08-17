@@ -6,9 +6,9 @@
 # HSTS, secure cookies, the HTTP-to-HTTPS redirect — without depending on a public DNS name or a
 # certificate authority. Browsers will warn, which is correct and expected.
 #
-# For a real deployment, do not use this. Point certbot at docker/nginx/certs instead; the HTTP
-# server block already serves /.well-known/acme-challenge from /var/www/certbot for HTTP-01
-# validation. See DEPLOYMENT.md.
+# For a real deployment, do not use this. Point certbot at infrastructure/nginx/certs instead; the
+# HTTP server block already serves /.well-known/acme-challenge from /var/www/certbot for HTTP-01
+# validation. See docs/DEPLOYMENT.md.
 
 set -eu
 

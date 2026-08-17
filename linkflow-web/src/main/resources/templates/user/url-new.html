@@ -5,44 +5,38 @@
 <head><title>Create URL</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none mb-4">
-        <div class="mb-1">
-            <a th:href="@{/urls}" class="text-secondary small text-decoration-none">
-                <i class="ti ti-arrow-left me-1"></i> Back to Links
-            </a>
+    <div class="page-header d-print-none">
+        <div class="mb-2">
+            <a th:href="@{/urls}" class="text-muted small text-decoration-none">← Back to Links</a>
         </div>
-        <h2 class="page-title fw-bold text-dark fs-2">Create Short URL</h2>
+        <h2 class="page-title">Create Short URL</h2>
+        <p class="text-muted mb-0">Paste a destination. Everything else is optional.</p>
     </div>
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card bg-white">
-                <div class="card-header">
-                    <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
-                        <i class="ti ti-plus"></i> Shorten a New Link
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <form th:action="@{/urls/new}" th:object="${createUrlForm}" method="post">
-                        <div class="mb-3">
-                            <label class="form-label required" for="originalUrl">Original Target URL</label>
-                            <input type="url" class="form-control" th:field="*{originalUrl}" placeholder="https://example.com/page" required>
-                            <div class="field-error" id="originalUrl-error" data-field="originalUrl" th:if="${#fields.hasErrors('originalUrl')}" th:errors="*{originalUrl}"></div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="customAlias">Custom Alias (Optional)</label>
-                            <input type="text" class="form-control" th:field="*{customAlias}" placeholder="my-link">
-                            <div class="field-error" id="customAlias-error" data-field="customAlias" th:if="${#fields.hasErrors('customAlias')}" th:errors="*{customAlias}"></div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label" for="expiresAt">Expires At (Optional, UTC)</label>
-                            <input type="datetime-local" class="form-control" th:field="*{expiresAt}">
-                        </div>
-                        <button type="submit" class="btn btn-primary px-3" style="border-radius: 8px; font-weight: 600;">Create Link</button>
-                        <a th:href="@{/urls}" class="btn btn-link text-secondary text-decoration-none ms-2">Cancel</a>
-                    </form>
-                </div>
+    <div class="lf-create-panel">
+        <form th:action="@{/urls/new}" th:object="${createUrlForm}" method="post">
+            <div class="mb-3">
+                <label class="form-label required" for="originalUrl">Destination</label>
+                <input type="url" class="form-control form-control-lg" th:field="*{originalUrl}" placeholder="https://example.com/page" required autofocus>
+                <div class="field-error" id="originalUrl-error" data-field="originalUrl" th:if="${#fields.hasErrors('originalUrl')}" th:errors="*{originalUrl}"></div>
             </div>
-        </div>
+            <details class="lf-disclosure mb-4" th:open="${#fields.hasErrors('customAlias') or #fields.hasErrors('expiresAt')}">
+                <summary>Alias and expiry</summary>
+                <div class="pt-3">
+                    <div class="mb-3">
+                        <label class="form-label" for="customAlias">Custom alias</label>
+                        <input type="text" class="form-control" th:field="*{customAlias}" placeholder="docs" autocomplete="off">
+                        <div class="form-hint">Leave blank to generate a short code.</div>
+                        <div class="field-error" id="customAlias-error" data-field="customAlias" th:if="${#fields.hasErrors('customAlias')}" th:errors="*{customAlias}"></div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label" for="expiresAt">Expires (UTC)</label>
+                        <input type="datetime-local" class="form-control" th:field="*{expiresAt}">
+                    </div>
+                </div>
+            </details>
+            <button type="submit" class="btn btn-primary">Create link</button>
+            <a th:href="@{/urls}" class="btn btn-link text-muted text-decoration-none">Cancel</a>
+        </form>
     </div>
 </div>
 </body>

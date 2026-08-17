@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<div th:fragment="alerts" aria-live="polite" aria-atomic="true">
+<div th:fragment="alerts" class="lf-flash" aria-live="polite" aria-atomic="true">
     <div class="alert alert-success alert-premium alert-dismissible d-flex align-items-center" role="status"
          th:if="${successMessage}">
         <i class="ti ti-circle-check fs-2 me-2" aria-hidden="true"></i>
@@ -39,7 +39,7 @@
     <div class="text-secondary small fw-medium">
         Page <span class="text-dark fw-bold" th:text="${page.page + 1}">1</span> of
         <span class="text-dark fw-bold" th:text="${page.totalPages == 0 ? 1 : page.totalPages}">1</span>
-        (<span class="text-primary fw-bold" th:text="${page.totalElements}">0</span> total)
+        (<span class="fw-semibold" th:text="${page.totalElements}">0</span> total)
     </div>
     <ul class="pagination m-0" th:if="${page.totalPages > 1}">
         <li class="page-item" th:classappend="${page.page == 0} ? ' disabled'">

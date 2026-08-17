@@ -2,9 +2,9 @@
 #
 # One file builds all three LinkFlow images, selected with `--target`:
 #
-#   docker build -f docker/Dockerfile --target app     -t linkflow-app .
-#   docker build -f docker/Dockerfile --target gateway -t linkflow-gateway .
-#   docker build -f docker/Dockerfile --target web     -t linkflow-web .
+#   docker build -f infrastructure/Dockerfile --target app     -t linkflow-app .
+#   docker build -f infrastructure/Dockerfile --target gateway -t linkflow-gateway .
+#   docker build -f infrastructure/Dockerfile --target web     -t linkflow-web .
 #
 # They previously had a Dockerfile each, which meant three full Maven builds of the same reactor
 # and three copies of the same boilerplate that had to be kept in step. Sharing one build stage

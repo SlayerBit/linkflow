@@ -11,58 +11,23 @@
                 <i class="ti ti-arrow-left me-1"></i> Back to Links
             </a>
         </div>
-        <h2 class="page-title fw-bold text-dark fs-2">Bulk Create Short URLs</h2>
-        <p class="text-muted">Enter one URL per line to shorten them all at once.</p>
+        <h2 class="page-title">Bulk Create Short URLs</h2>
+        <p class="text-muted mb-0">One destination per line. Codes are generated. Maximum 100.</p>
     </div>
 
-    <div th:replace="~{fragments/alerts :: alerts}"></div>
-
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="card bg-white">
-                <div class="card-header py-3">
-                    <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
-                        <i class="ti ti-list-details"></i> Paste URLs
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <form th:action="@{/urls/bulk}" th:object="${bulkCreateUrlForm}" method="post">
-                        <div class="mb-3">
-                            <label class="form-label required" for="urlsText">URLs (one per line)</label>
-                            <textarea class="form-control" th:field="*{urlsText}" rows="12"
-                                      placeholder="https://example.com/page1&#10;https://example.com/page2&#10;https://example.com/page3"
-                                      required aria-describedby="urlsText-hint"></textarea>
-                            <div class="field-error" id="urlsText-error" data-field="urlsText" th:if="${#fields.hasErrors('urlsText')}" th:errors="*{urlsText}"></div>
-                            <small class="form-hint" id="urlsText-hint">Maximum 100 URLs per batch. Each URL must start with http:// or https://</small>
-                        </div>
-                        <button type="submit" class="btn btn-primary px-4" style="border-radius: 8px; font-weight: 600;">
-                            <i class="ti ti-bolt me-1"></i> Shorten All
-                        </button>
-                        <a th:href="@{/urls}" class="btn btn-link text-secondary text-decoration-none ms-2">Cancel</a>
-                    </form>
-                </div>
+    <div class="lf-create-panel lf-create-panel-wide">
+        <form th:action="@{/urls/bulk}" th:object="${bulkCreateUrlForm}" method="post">
+            <div class="mb-3">
+                <label class="form-label required" for="urlsText">URLs</label>
+                <textarea class="form-control" th:field="*{urlsText}" rows="12"
+                          placeholder="https://example.com/page1&#10;https://example.com/page2"
+                          required aria-describedby="urlsText-hint"></textarea>
+                <div class="field-error" id="urlsText-error" data-field="urlsText" th:if="${#fields.hasErrors('urlsText')}" th:errors="*{urlsText}"></div>
+                <small class="form-hint" id="urlsText-hint">http:// or https://. Blank lines are skipped.</small>
             </div>
-        </div>
-
-        <!--/* Instructions Card */-->
-        <div class="col-lg-4">
-            <div class="card bg-white">
-                <div class="card-header py-3">
-                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
-                        <i class="ti ti-info-circle"></i> Tips
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled text-secondary mb-0">
-                        <li class="mb-2"><i class="ti ti-check text-green me-2"></i> One URL per line</li>
-                        <li class="mb-2"><i class="ti ti-check text-green me-2"></i> URLs must include http:// or https://</li>
-                        <li class="mb-2"><i class="ti ti-check text-green me-2"></i> Blank lines are skipped</li>
-                        <li class="mb-2"><i class="ti ti-check text-green me-2"></i> Short codes are auto-generated</li>
-                        <li class="mb-0"><i class="ti ti-check text-green me-2"></i> Results table will show below after creation</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+            <button type="submit" class="btn btn-primary">Shorten all</button>
+            <a th:href="@{/urls}" class="btn btn-link text-muted text-decoration-none">Cancel</a>
+        </form>
     </div>
 
     <!--/* Results Table */-->
@@ -87,15 +52,20 @@
                     <tr th:each="url, iter : ${results}">
                         <td th:text="${iter.count}">1</td>
                         <td>
-                            <a th:href="${url.shortUrl()}" target="_blank" class="text-primary fw-semibold text-decoration-none" th:text="${url.shortUrl()}">short</a>
+                            <div class="d-flex align-items-center gap-2">
+                                <code class="lf-shortcode" th:text="${url.shortUrl()}">short</code>
+                                <button type="button" class="btn btn-sm btn-icon btn-light copy-btn"
+                                        th:attr="data-copy-url=${url.shortUrl()}"
+                                        aria-label="Copy short URL">
+                                    <i class="ti ti-copy" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </td>
                         <td>
                             <span class="text-muted text-truncate d-inline-block" style="max-width: 400px;" th:text="${url.originalUrl()}" th:title="${url.originalUrl()}">original</span>
                         </td>
                         <td>
-                            <a th:href="@{'/urls/' + ${url.id()}}" class="btn btn-sm btn-outline-primary" style="border-radius: 6px;">
-                                <i class="ti ti-external-link me-1"></i> Details
-                            </a>
+                            <a th:href="@{'/urls/' + ${url.id()}}" class="btn btn-sm btn-light">Open</a>
                         </td>
                     </tr>
                     </tbody>

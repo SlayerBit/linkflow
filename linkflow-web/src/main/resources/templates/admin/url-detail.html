@@ -13,35 +13,35 @@
                         <i class="ti ti-arrow-left me-1"></i> Back to URLs
                     </a>
                 </div>
-                <h2 class="page-title fw-bold text-dark fs-2">
-                    URL Details: <span class="ms-2 text-primary font-monospace" th:text="${url.shortCode}">code</span>
+                <h2 class="page-title">
+                    <span class="lf-mono" th:text="${url.shortCode}">code</span>
                 </h2>
             </div>
             <div class="col-auto d-flex align-items-center gap-2">
                 <form th:if="${url.active && !(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" th:action="@{/admin/urls/{id}/deactivate(id=${url.id})}" method="post" class="d-inline mb-0"
                       onsubmit="return confirm('Deactivate this URL?');">
-                    <button type="submit" class="btn btn-outline-danger px-3" style="border-radius: 8px; font-weight: 600;">
-                        <i class="ti ti-circle-x me-1"></i> Deactivate
+                    <button type="submit" class="btn btn-outline-danger">
+                        Deactivate
                     </button>
                 </form>
                 <form th:if="${!url.active && !(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" th:action="@{/admin/urls/{id}/reactivate(id=${url.id})}" method="post" class="d-inline mb-0"
                       onsubmit="return confirm('Reactivate this URL?');">
-                    <button type="submit" class="btn btn-outline-success px-3" style="border-radius: 8px; font-weight: 600;">
-                        <i class="ti ti-circle-check me-1"></i> Reactivate
+                    <button type="submit" class="btn btn-outline-success">
+                        Reactivate
                     </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!--/* Alert Banners */-->
-    <div class="alert alert-success alert-premium d-flex align-items-center mb-4" th:if="${successMessage}">
-        <i class="ti ti-circle-check fs-2 me-2"></i>
-        <div th:text="${successMessage}">Success</div>
-    </div>
-    <div class="alert alert-danger alert-premium d-flex align-items-center mb-4" th:if="${errorMessage}">
-        <i class="ti ti-alert-circle fs-2 me-2"></i>
-        <div th:text="${errorMessage}">Error</div>
+    <div class="lf-copy-row" th:if="${url.shortUrl != null}">
+        <div class="lf-copy-text">
+            <div class="lf-copy-kicker">Short URL</div>
+            <code class="lf-copy-url" th:id="|short-url-${url.id}|" th:text="${url.shortUrl}" th:title="${url.shortUrl}">short</code>
+        </div>
+        <button type="button" class="btn copy-btn" th:attr="data-copy-url=${url.shortUrl}" aria-label="Copy short URL">
+            <i class="ti ti-copy me-1" aria-hidden="true"></i> Copy
+        </button>
     </div>
 
     <!--/* Row 1: Target Configuration & QR Code */-->
@@ -56,16 +56,10 @@
                 <div class="card-body d-flex flex-column justify-content-center">
                     <dl class="row mb-0 gy-3">
                         <dt class="col-sm-3 text-secondary fw-semibold">Short URL</dt>
-                        <dd class="col-sm-9 d-flex align-items-center gap-2">
-                            <code th:id="|short-url-${url.id}|" th:text="${url.shortUrl}" class="px-2 py-1 bg-light text-primary rounded fw-bold">short</code>
-                            <button type="button" class="btn btn-sm btn-light copy-btn"
-                                    th:attr="data-copy-url=${url.shortUrl}" style="border-radius: 6px;">
-                                <i class="ti ti-copy me-1"></i> Copy
-                            </button>
-                        </dd>
+                        <dd class="col-sm-9 mb-0 text-truncate" th:text="${url.shortUrl}">short</dd>
                         <dt class="col-sm-3 text-secondary fw-semibold">Original URL</dt>
                         <dd class="col-sm-9 text-truncate">
-                            <a th:href="${url.originalUrl}" th:text="${url.originalUrl}" target="_blank" class="fw-semibold text-primary text-decoration-none">original</a>
+                            <a th:href="${url.originalUrl}" th:text="${url.originalUrl}" th:title="${url.originalUrl}" target="_blank" rel="noopener">original</a>
                         </dd>
                         <dt class="col-sm-3 text-secondary fw-semibold">Expiry Date</dt>
                         <dd class="col-sm-9 text-dark" th:text="${url.expiresAt != null ? #temporals.format(url.expiresAt, 'yyyy-MM-dd HH:mm ''UTC''') : 'Never'}">Never</dd>
@@ -247,9 +241,10 @@
             }
 
             const ctx = document.getElementById('clickTrendChart').getContext('2d');
+            const t = lfTheme();
             const lineGradient = ctx.createLinearGradient(0, 0, 0, 300);
-            lineGradient.addColorStop(0, 'rgba(124, 58, 237, 0.15)');
-            lineGradient.addColorStop(1, 'rgba(124, 58, 237, 0)');
+            lineGradient.addColorStop(0, 'rgba(194, 78, 28, 0.16)');
+            lineGradient.addColorStop(1, 'rgba(194, 78, 28, 0)');
 
             currentChart = new Chart(ctx, {
                 type: 'line',
@@ -258,46 +253,37 @@
                     datasets: [{
                         label: 'Clicks',
                         data: dataPoints,
-                        borderColor: '#7c3aed',
+                        borderColor: t.signal,
                         backgroundColor: lineGradient,
                         fill: true,
-                        tension: 0.4,
-                        borderWidth: 2.5,
-                        pointRadius: days > 30 ? 1 : 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#7c3aed',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2
+                        tension: 0.25,
+                        borderWidth: 2,
+                        pointRadius: days > 30 ? 0 : 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: t.signal,
+                        pointBorderColor: '#fbfaf6',
+                        pointBorderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
                     plugins: {
                         legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            titleFont: { family: 'Inter', size: 12, weight: 'bold' },
-                            bodyFont: { family: 'Inter', size: 12 },
-                            padding: 10,
-                            cornerRadius: 8,
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return ' ' + context.raw + ' clicks';
-                                }
-                            }
-                        }
+                        tooltip: Object.assign(lfTooltip(), {
+                            callbacks: { label: function(context) { return context.raw + ' clicks'; } }
+                        })
                     },
                     scales: {
                         x: {
                             grid: { display: false },
-                            ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                            ticks: { color: t.muted, maxTicksLimit: 8 }
                         },
                         y: {
                             beginAtZero: true,
-                            grid: { color: 'rgba(15, 23, 42, 0.03)', drawTicks: false },
-                            ticks: { precision: 0, font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                            grid: { color: t.line, drawTicks: false },
+                            ticks: { precision: 0, color: t.muted }
                         }
                     }
                 }
@@ -318,25 +304,6 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             renderChart(30);
-
-            // Copy short URL functionality
-            const copyBtn = document.querySelector('.copy-btn');
-            if (copyBtn) {
-                copyBtn.addEventListener('click', function() {
-                    const text = this.getAttribute('data-copy-url');
-                    navigator.clipboard.writeText(text).then(() => {
-                        const originalHTML = this.innerHTML;
-                        this.innerHTML = '<i class="ti ti-check me-1"></i> Copied!';
-                        this.classList.remove('btn-light');
-                        this.classList.add('btn-success', 'text-white');
-                        setTimeout(() => {
-                            this.innerHTML = originalHTML;
-                            this.classList.remove('btn-success', 'text-white');
-                            this.classList.add('btn-light');
-                        }, 2000);
-                    });
-                });
-            }
         });
     </script>
 </th:block>

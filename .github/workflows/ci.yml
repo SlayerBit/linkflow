@@ -75,7 +75,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/Dockerfile
+          file: infrastructure/Dockerfile
           target: app
           # Not pushed anywhere. The point is that it builds; loading it into the daemon would only
           # cost time and disk.
@@ -87,7 +87,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/Dockerfile
+          file: infrastructure/Dockerfile
           target: gateway
           push: false
           cache-from: type=gha
@@ -97,7 +97,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/Dockerfile
+          file: infrastructure/Dockerfile
           target: web
           push: false
           cache-from: type=gha
@@ -116,7 +116,7 @@ jobs:
         run: docker compose config --quiet
 
       - name: Generate TLS certificate for validation
-        run: ./docker/nginx/generate-dev-certs.sh
+        run: ./infrastructure/nginx/generate-dev-certs.sh
 
       # `nginx -t` parses the real config with the real modules, which no linter approximates.
       # --add-host is required because Nginx resolves upstream names while parsing, and the gateway
@@ -125,9 +125,9 @@ jobs:
         run: |
           docker run --rm \
             --add-host linkflow-gateway:127.0.0.1 \
-            -v "$PWD/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
-            -v "$PWD/docker/nginx/conf.d:/etc/nginx/conf.d:ro" \
-            -v "$PWD/docker/nginx/certs:/etc/nginx/certs:ro" \
+            -v "$PWD/infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            -v "$PWD/infrastructure/nginx/conf.d:/etc/nginx/conf.d:ro" \
+            -v "$PWD/infrastructure/nginx/certs:/etc/nginx/certs:ro" \
             nginx:1.27-alpine nginx -t
 
   scan:

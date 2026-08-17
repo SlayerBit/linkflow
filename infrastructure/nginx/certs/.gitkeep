@@ -1,3 +1,3 @@
 Certificates for the local Compose stack are generated into this directory and are not committed.
 
-Run docker/nginx/generate-dev-certs.sh before `docker compose up`.
+Run infrastructure/nginx/generate-dev-certs.sh before `docker compose up`.

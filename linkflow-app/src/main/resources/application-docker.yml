@@ -6,7 +6,7 @@
 # `prod` does, but is honest about being a demo: it does not require TLS-backed links or a real
 # SMTP relay, so MailConfigValidator does not enforce production mail rules here.
 #
-# Real deployments must use SPRING_PROFILES_ACTIVE=prod. See DEPLOYMENT.md.
+# Real deployments must use SPRING_PROFILES_ACTIVE=prod. See docs/DEPLOYMENT.md.
 
 logging:
   level:
