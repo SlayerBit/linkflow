@@ -4,59 +4,11 @@
       layout:decorate="~{layout/base}">
 <head>
     <title>System Analytics — LinkFlow</title>
-    <style>
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-        .skeleton-line, .skeleton-circle {
-            background: linear-gradient(90deg, #f8fafc 25%, #f1f5f9 50%, #f8fafc 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-        }
-        
-        /* Segmented controls styling */
-        .btn-trend-range.btn-primary {
-            background-color: #0f172a !important;
-            border-color: #0f172a !important;
-            color: #ffffff !important;
-        }
-        .btn-trend-range.btn-light {
-            background-color: #ffffff !important;
-            border-color: #e2e8f0 !important;
-            color: #475569 !important;
-        }
-        .btn-trend-range.btn-light:hover {
-            background-color: #f8fafc !important;
-            color: #1e293b !important;
-        }
-        
-        /* Dashboard Polish */
-        .card {
-            border-radius: 12px !important;
-            border: 1px solid rgba(15, 23, 42, 0.08) !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04) !important;
-        }
-        .card-header {
-            background-color: transparent !important;
-            border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
-            padding: 1.1rem 1.25rem !important;
-        }
-        .bg-light-lt {
-            background-color: #f8fafc;
-            border: 1px solid #f1f5f9;
-        }
-    </style>
 </head>
 <body>
 <div layout:fragment="content">
     <div class="page-header d-print-none mb-4">
-        <h2 class="page-title fw-bold text-dark fs-2">System Analytics</h2>
+        <h2 class="page-title">System Analytics</h2>
     </div>
 
     <!--/* Empty state for totalUrls == 0 */-->
@@ -303,9 +255,9 @@
                     labels: ['Active', 'Inactive', 'Expired'],
                     datasets: [{ 
                         data: [stats.activeUrls, stats.inactiveUrls, stats.expiredUrls],
-                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b'],
+                        backgroundColor: ['#2c6a4a', '#b42318', '#8a6414'],
                         borderWidth: 2,
-                        borderColor: '#ffffff'
+                        borderColor: '#fbfaf6'
                     }]
                 },
                 options: { 
@@ -321,49 +273,38 @@
             const topUrls = JSON.parse(/*[[${topUrlsJson}]]*/ '[]').slice(0, 5);
             if (topUrls.length) {
                 const topCtx = document.getElementById('topChart').getContext('2d');
-                const topGradient = topCtx.createLinearGradient(0, 0, 400, 0);
-                topGradient.addColorStop(0, '#0891b2');
-                topGradient.addColorStop(1, '#22c55e');
+                const t = lfTheme();
 
                 new Chart(topCtx, {
                     type: 'bar',
                     data: {
                         labels: topUrls.map(u => u.shortCode),
-                        datasets: [{ 
-                            data: topUrls.map(u => u.totalClicks), 
-                            backgroundColor: topGradient,
-                            borderRadius: 6,
-                            borderSkipped: false
+                        datasets: [{
+                            data: topUrls.map(u => u.totalClicks),
+                            backgroundColor: t.signal,
+                            borderRadius: 2,
+                            borderSkipped: false,
+                            barThickness: 14
                         }]
                     },
-                    options: { 
-                        indexAxis: 'y', 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { 
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
                             legend: { display: false },
-                            tooltip: {
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                                titleFont: { family: 'Inter', size: 12, weight: 'bold' },
-                                bodyFont: { family: 'Inter', size: 12 },
-                                padding: 10,
-                                cornerRadius: 8,
-                                displayColors: false,
-                                callbacks: {
-                                    label: function(context) {
-                                        return ' ' + context.raw + ' clicks';
-                                    }
-                                }
-                            }
+                            tooltip: Object.assign(lfTooltip(), {
+                                callbacks: { label: function(context) { return context.raw + ' clicks'; } }
+                            })
                         },
                         scales: {
                             x: {
-                                grid: { color: 'rgba(15, 23, 42, 0.03)', drawTicks: false },
-                                ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                                grid: { color: t.line, drawTicks: false },
+                                ticks: { color: t.muted }
                             },
                             y: {
                                 grid: { display: false },
-                                ticks: { font: { family: 'Inter', size: 12, weight: '600' }, color: '#334155' }
+                                ticks: { color: t.ink, font: { weight: '600' } }
                             }
                         }
                     }
@@ -417,9 +358,10 @@
             const chartEl = document.getElementById('platformClickTrendChart');
             if (!chartEl) return;
             const ctx = chartEl.getContext('2d');
+            const t = lfTheme();
             const lineGradient = ctx.createLinearGradient(0, 0, 0, 200);
-            lineGradient.addColorStop(0, 'rgba(34, 197, 94, 0.12)');
-            lineGradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+            lineGradient.addColorStop(0, 'rgba(194, 78, 28, 0.16)');
+            lineGradient.addColorStop(1, 'rgba(194, 78, 28, 0)');
 
             currentTrendChart = new Chart(ctx, {
                 type: 'line',
@@ -428,46 +370,37 @@
                     datasets: [{
                         label: 'System Clicks',
                         data: dataPoints,
-                        borderColor: '#22c55e',
+                        borderColor: t.signal,
                         backgroundColor: lineGradient,
                         fill: true,
-                        tension: 0.4,
-                        borderWidth: 2.5,
-                        pointRadius: days > 30 ? 1 : 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#22c55e',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2
+                        tension: 0.25,
+                        borderWidth: 2,
+                        pointRadius: days > 30 ? 0 : 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: t.signal,
+                        pointBorderColor: '#fbfaf6',
+                        pointBorderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
                     plugins: {
                         legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            titleFont: { family: 'Inter', size: 12, weight: 'bold' },
-                            bodyFont: { family: 'Inter', size: 12 },
-                            padding: 10,
-                            cornerRadius: 8,
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return ' ' + context.raw + ' clicks';
-                                }
-                            }
-                        }
+                        tooltip: Object.assign(lfTooltip(), {
+                            callbacks: { label: function(context) { return context.raw + ' clicks'; } }
+                        })
                     },
                     scales: {
                         x: {
                             grid: { display: false },
-                            ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                            ticks: { color: t.muted, maxTicksLimit: 8 }
                         },
                         y: {
                             beginAtZero: true,
-                            grid: { color: 'rgba(15, 23, 42, 0.03)', drawTicks: false },
-                            ticks: { precision: 0, font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                            grid: { color: t.line, drawTicks: false },
+                            ticks: { precision: 0, color: t.muted }
                         }
                     }
                 }

@@ -5,89 +5,40 @@
 <head><title>Sign In — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="row justify-content-center py-4">
-        <div class="col-xl-9 col-lg-10">
-            <div class="card overflow-hidden" style="border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08); border-radius: 16px;">
-                <div class="row g-0">
-                    <!--/* Left Side: Features / Benefits */-->
-                    <div class="col-lg-5 text-white p-5 d-none d-lg-flex flex-column justify-content-between" 
-                         style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-right: 1px solid rgba(255, 255, 255, 0.06); position: relative;">
-                        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 10% 20%, rgba(26, 109, 219, 0.1) 0%, transparent 60%); pointer-events: none;"></div>
-                        
-                        <div>
-                            <div class="d-flex align-items-center gap-2 mb-4">
-                                <i class="ti ti-link fs-2 text-primary"></i>
-                                <span class="fw-bold fs-3" style="letter-spacing: -0.02em;">LinkFlow</span>
-                            </div>
-                            <h2 class="fw-bold text-white mb-3" style="font-size: 1.75rem; line-height: 1.3;">Welcome back to LinkFlow</h2>
-                            <p class="text-muted" style="color: #94a3b8 !important;">Log in to access your dashboard, create short links, and monitor performance.</p>
-                        </div>
-                        
-                        <div class="my-4">
-                            <div class="d-flex align-items-center gap-3 mb-3">
-                                <span class="avatar avatar-sm bg-primary-lt"><i class="ti ti-chart-bar"></i></span>
-                                <div>
-                                    <div class="fw-bold text-white">Instant Insights</div>
-                                    <div class="small text-muted" style="color: #64748b !important;">Monitor traffic trends and link activity.</div>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="avatar avatar-sm bg-cyan-lt"><i class="ti ti-shield-check"></i></span>
-                                <div>
-                                    <div class="fw-bold text-white">Built-in Protection</div>
-                                    <div class="small text-muted" style="color: #64748b !important;">Secure forwarding helps protect your targets from overload.</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="small text-muted" style="color: #64748b !important;">
-                            Enterprise Ready &middot; Secure by default
-                        </div>
-                    </div>
-                    
-                    <!--/* Right Side: Form */-->
-                    <div class="col-lg-7 p-5 bg-white">
-                        <div style="max-width: 400px; margin: 0 auto;">
-                            <h2 class="fw-bold text-dark mb-1">Sign in</h2>
-                            <p class="text-muted mb-4">Enter your account credentials to continue</p>
-                            
-                            <div class="alert alert-warning alert-premium mb-3" th:if="${param.expired}">Your session has expired. Please sign in again.</div>
-                            <div class="alert alert-danger alert-premium d-flex align-items-center mb-3" th:if="${errorMessage}">
-                                <i class="ti ti-alert-circle fs-2 me-2"></i>
-                                <div th:text="${errorMessage}">Error</div>
-                            </div>
-                            <div class="alert alert-info alert-premium d-flex align-items-center mb-3" th:if="${showVerifyLink}">
-                                <i class="ti ti-mail-check fs-2 me-2"></i>
-                                <div>Need to verify your email? <a th:href="@{/verify-email}" class="fw-semibold">Verify Email</a></div>
-                            </div>
-                            <div class="alert alert-success alert-premium d-flex align-items-center mb-3" th:if="${successMessage}">
-                                <i class="ti ti-circle-check fs-2 me-2"></i>
-                                <div th:text="${successMessage}">Success</div>
-                            </div>
-                            
-                            <form th:action="@{/login}" th:object="${loginForm}" method="post">
-                                <div class="mb-3">
-                                    <label class="form-label" for="email">Email address</label>
-                                    <input type="email" class="form-control" th:field="*{email}" placeholder="name@example.com" required autocomplete="email">
-                                    <div class="field-error" id="email-error" data-field="email" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
-                                </div>
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <label class="form-label" for="password">Password</label>
-                                        <a th:href="@{/forgot-password}" class="small text-decoration-none" style="font-weight: 500;">Forgot password?</a>
-                                    </div>
-                                    <input type="password" class="form-control" th:field="*{password}" placeholder="Enter your password" required autocomplete="current-password">
-                                    <div class="field-error" id="password-error" data-field="password" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Sign in to Account</button>
-                            </form>
-                            
-                            <p class="text-center text-muted mt-4 mb-0">
-                                Don't have an account? <a th:href="@{/register}" class="fw-semibold text-decoration-none">Create account</a>
-                            </p>
-                        </div>
-                    </div>
+    <div class="lf-auth">
+        <th:block th:replace="~{layout/auth-panel :: panel('The workspace is one hop past the edge.', 'Sign in to issue links and read the click stream from the same session.')}"></th:block>
+        <div class="lf-auth-form">
+            <div class="lf-auth-form-inner">
+                <h1>Sign in</h1>
+                <p class="text-muted mb-4">Use the address you registered with.</p>
+
+                <div class="alert alert-warning alert-premium mb-3" th:if="${param.expired}">Your session has expired. Please sign in again.</div>
+                <div class="alert alert-danger alert-premium mb-3" role="alert" th:if="${errorMessage}" th:text="${errorMessage}">Error</div>
+                <div class="alert alert-info alert-premium mb-3" th:if="${showVerifyLink}">
+                    Need to verify your email? <a th:href="@{/verify-email}" class="fw-semibold">Verify email</a>
                 </div>
+                <div class="alert alert-success alert-premium mb-3" role="status" th:if="${successMessage}" th:text="${successMessage}">Success</div>
+
+                <form th:action="@{/login}" th:object="${loginForm}" method="post">
+                    <div class="mb-3">
+                        <label class="form-label" for="email">Email address</label>
+                        <input type="email" class="form-control" th:field="*{email}" placeholder="name@example.com" required autocomplete="email">
+                        <div class="field-error" id="email-error" data-field="email" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label" for="password">Password</label>
+                            <a th:href="@{/forgot-password}" class="small text-decoration-none">Forgot password?</a>
+                        </div>
+                        <input type="password" class="form-control" th:field="*{password}" required autocomplete="current-password">
+                        <div class="field-error" id="password-error" data-field="password" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Sign in</button>
+                </form>
+
+                <p class="text-muted mt-4 mb-0">
+                    Don't have an account? <a th:href="@{/register}" class="fw-semibold">Create account</a>
+                </p>
             </div>
         </div>
     </div>

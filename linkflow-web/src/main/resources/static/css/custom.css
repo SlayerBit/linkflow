@@ -1,170 +1,242 @@
-/* Page-specific styles. Shared tokens/components/layout live in the other CSS files. */
+/* App surfaces: metrics, charts, create flow, errors. */
 
 .stat-card {
     position: relative;
-    border-left: 4px solid var(--lf-color-primary);
+    border-left: 0;
+    padding: 1.1rem 1.2rem;
 }
 
-.stat-card.card-blue { border-left-color: var(--lf-blue); }
-.stat-card.card-purple { border-left-color: var(--lf-purple); }
-.stat-card.card-cyan { border-left-color: var(--lf-cyan); }
-.stat-card.card-green { border-left-color: var(--lf-green); }
-.stat-card.card-amber { border-left-color: var(--lf-amber); }
-.stat-card.card-red { border-left-color: var(--lf-red); }
-.stat-card.card-emerald { border-left-color: var(--lf-emerald); }
+.stat-card.card-blue,
+.stat-card.card-purple,
+.stat-card.card-cyan,
+.stat-card.card-green,
+.stat-card.card-amber,
+.stat-card.card-red,
+.stat-card.card-emerald {
+    border-left: 0;
+}
 
 .stat-card-icon {
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: 50%;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--lf-radius-md);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.35rem;
+    font-size: 1.15rem;
     margin-left: auto;
+    background: var(--lf-wash) !important;
+    color: var(--lf-ink) !important;
 }
 
-.stat-card-icon.bg-blue-lt { background-color: rgba(37, 99, 235, 0.1) !important; color: var(--lf-blue); }
-.stat-card-icon.bg-purple-lt { background-color: rgba(124, 58, 237, 0.1) !important; color: var(--lf-purple); }
-.stat-card-icon.bg-cyan-lt { background-color: rgba(8, 145, 178, 0.1) !important; color: var(--lf-cyan); }
-.stat-card-icon.bg-green-lt { background-color: rgba(22, 163, 74, 0.1) !important; color: var(--lf-green); }
-.stat-card-icon.bg-amber-lt { background-color: rgba(180, 83, 9, 0.1) !important; color: var(--lf-amber); }
-.stat-card-icon.bg-red-lt { background-color: rgba(185, 28, 28, 0.1) !important; color: var(--lf-red); }
-.stat-card-icon.bg-emerald-lt { background-color: rgba(4, 120, 87, 0.1) !important; color: var(--lf-emerald); }
-
-.landing-hero {
-    position: relative;
-    padding: 6rem 0 5rem;
-    background: radial-gradient(circle at 80% 20%, rgba(26, 109, 219, 0.06) 0%, transparent 50%),
-                radial-gradient(circle at 10% 80%, rgba(8, 145, 178, 0.05) 0%, transparent 50%);
+.metric-value {
+    font-size: 1.85rem;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    color: var(--lf-ink);
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
 }
 
-.hero-title {
-    font-size: clamp(2rem, 5vw, 3.25rem);
-    font-weight: 800;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    color: var(--lf-color-text);
+.metric-value.lf-metric-hero {
+    font-size: clamp(2.25rem, 5vw, 3.15rem);
 }
 
-.hero-gradient-text {
-    background: linear-gradient(135deg, #1a6ddb 0%, #0891b2 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+.lf-metrics {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
+    gap: var(--lf-space-4);
+    margin-bottom: var(--lf-space-5);
 }
 
-.feature-card {
-    border-top: 3px solid var(--lf-color-primary);
+.lf-metric {
+    padding: 0.15rem 0 0.35rem;
+    border-bottom: 1px solid var(--lf-line);
 }
 
-.feature-card.card-blue { border-top-color: var(--lf-blue); }
-.feature-card.card-purple { border-top-color: var(--lf-purple); }
-.feature-card.card-cyan { border-top-color: var(--lf-cyan); }
-.feature-card.card-green { border-top-color: var(--lf-green); }
-.feature-card.card-amber { border-top-color: var(--lf-amber); }
-
-.feature-icon-circle {
-    width: 3.5rem;
-    height: 3.5rem;
-    border-radius: var(--lf-radius-lg);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    margin-bottom: 1.25rem;
+.lf-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--lf-space-4);
+    margin: var(--lf-space-5) 0 0;
+    padding-top: var(--lf-space-4);
+    border-top: 1px solid var(--lf-line);
 }
 
-.landing-mockup {
-    border-radius: var(--lf-radius-xl);
-    box-shadow: var(--lf-shadow-lg);
-    border: 1px solid var(--lf-color-border);
-    overflow: hidden;
-    background: var(--lf-color-surface);
+.lf-meta div {
+    min-width: 0;
+}
+
+.lf-meta dt {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--lf-muted);
+    margin-bottom: 0.35rem;
+}
+
+.lf-meta dd {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+@media (max-width: 767.98px) {
+    .lf-metrics,
+    .lf-meta {
+        grid-template-columns: 1fr;
+        gap: var(--lf-space-4);
+    }
+}
+
+.metric-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--lf-muted);
+}
+
+.metric-subtext {
+    font-size: 0.8rem;
+    color: var(--lf-muted);
+    margin-top: 0.3rem;
 }
 
 .section-header-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-weight: 700;
+    gap: 0.45rem;
+    font-weight: 600;
     letter-spacing: -0.02em;
+    color: var(--lf-ink);
 }
 
-.section-header-title.color-blue i { color: var(--lf-blue); }
-.section-header-title.color-purple i { color: var(--lf-purple); }
-.section-header-title.color-cyan i { color: var(--lf-cyan); }
-.section-header-title.color-green i { color: var(--lf-green); }
-.section-header-title.color-amber i { color: var(--lf-amber); }
-.section-header-title.color-red i { color: var(--lf-red); }
-.section-header-title.color-emerald i { color: var(--lf-emerald); }
+.section-header-title i {
+    color: var(--lf-muted);
+    font-size: 1.05rem;
+}
 
 .chart-container {
     position: relative;
-    height: 280px;
+    height: 220px;
+}
+
+.chart-trend {
+    height: min(18rem, 58vw);
 }
 
 .health-pre {
     font-size: 0.8rem;
     max-height: 24rem;
     overflow: auto;
-    background: #0f172a;
-    color: #f8fafc;
+    background: var(--lf-ink);
+    color: #fbfaf6;
     border-radius: var(--lf-radius-md);
-    padding: 1.25rem;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.1rem;
+    border: 0;
 }
 
-.table-actions .btn + .btn {
-    margin-left: 0.25rem;
+.table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
 }
 
-.segmented-control {
-    background-color: #f1f5f9;
-    padding: 3px;
-    border-radius: var(--lf-radius-md);
-    display: inline-flex;
-    border: 1px solid rgba(15, 23, 42, 0.05);
+.table-actions .btn + .btn,
+.table-actions form {
+    margin: 0;
 }
 
-.segmented-control .btn-segmented {
-    border: none !important;
-    background: transparent !important;
-    color: #475569 !important;
-    font-size: 0.775rem;
+.lf-shortcode {
+    font-family: var(--lf-font-mono);
+    font-size: 0.85rem;
     font-weight: 600;
-    padding: 0.35rem 0.8rem;
-    border-radius: 6px;
-    cursor: pointer;
-    line-height: 1.2;
+    background: var(--lf-wash);
+    color: var(--lf-ink);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
 }
 
-.segmented-control .btn-segmented.active {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    box-shadow: var(--lf-shadow-sm) !important;
+.lf-copy-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.85rem 1rem;
+    padding: 1.05rem 1.2rem;
+    background: var(--lf-ink);
+    color: #fbfaf6;
+    border-radius: var(--lf-radius-lg);
+    margin-bottom: var(--lf-space-5);
 }
 
-.metric-value {
-    font-size: var(--lf-text-2xl);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: var(--lf-color-text);
-    line-height: 1.1;
-}
-
-.metric-label {
-    font-size: var(--lf-text-xs);
-    font-weight: 700;
+.lf-copy-kicker {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--lf-color-text-muted);
+    opacity: 0.55;
+    margin-bottom: 0.25rem;
 }
 
-.metric-subtext {
-    font-size: 0.775rem;
-    color: var(--lf-color-text-muted);
-    margin-top: 0.25rem;
+.lf-copy-url {
+    display: block;
+    color: #fbfaf6;
+    background: transparent;
+    font-size: 1.05rem;
+    font-weight: 600;
+    max-width: min(100%, 42rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lf-copy-row .lf-copy-text {
+    min-width: 0;
+    flex: 1 1 12rem;
+}
+
+.lf-copy-row .btn {
+    background: var(--lf-signal);
+    border-color: var(--lf-signal);
+    color: #fff;
+    flex: 0 0 auto;
+}
+
+.lf-copy-row .btn.is-copied {
+    background: var(--lf-positive);
+    border-color: var(--lf-positive);
+    color: #fff;
+}
+
+@media (max-width: 575.98px) {
+    .lf-copy-row .btn {
+        width: 100%;
+    }
+}
+
+.lf-create-panel {
+    max-width: 36rem;
+}
+
+.lf-create-panel-wide {
+    max-width: 42rem;
+}
+
+.lf-create-panel .form-control-lg {
+    font-size: 1.05rem;
+    padding: 0.75rem 0.9rem;
+}
+
+.lf-qr {
+    padding: 0.5rem;
+    background: #fff;
+    border: 1px solid var(--lf-line);
+    display: inline-block;
 }
 
 .error-page {
@@ -179,21 +251,21 @@
 
 .error-page .error-code {
     font-size: 4rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    color: var(--lf-color-primary);
+    font-weight: 600;
+    letter-spacing: -0.06em;
+    color: var(--lf-ink);
     line-height: 1;
     margin-bottom: var(--lf-space-3);
 }
 
 .error-page .error-title {
     font-size: var(--lf-text-xl);
-    font-weight: 700;
+    font-weight: 600;
     margin-bottom: var(--lf-space-3);
 }
 
 .error-page .error-copy {
-    color: var(--lf-color-text-muted);
+    color: var(--lf-muted);
     max-width: 28rem;
     margin-bottom: var(--lf-space-5);
 }
@@ -203,4 +275,27 @@
     flex-wrap: wrap;
     gap: var(--lf-space-3);
     justify-content: center;
+}
+
+.lf-reveal {
+    animation: lf-rise var(--lf-motion) var(--lf-ease) both;
+}
+
+.lf-reveal-2 { animation-delay: 40ms; }
+
+@keyframes lf-rise {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lf-reveal {
+        animation: none;
+    }
 }

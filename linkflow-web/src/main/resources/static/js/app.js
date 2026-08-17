@@ -1,11 +1,29 @@
 function copyToClipboard(text, button) {
+    if (!text) {
+        return;
+    }
+    var live = document.getElementById('lf-live');
     navigator.clipboard.writeText(text).then(function () {
-        if (button) {
-            var original = button.innerHTML;
+        if (live) {
+            live.textContent = 'Copied to clipboard';
+        }
+        if (!button) {
+            return;
+        }
+        var original = button.innerHTML;
+        button.classList.add('is-copied');
+        if (button.classList.contains('btn-icon')) {
+            button.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i>';
+        } else {
             button.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Copied';
-            setTimeout(function () {
-                button.innerHTML = original;
-            }, 2000);
+        }
+        setTimeout(function () {
+            button.innerHTML = original;
+            button.classList.remove('is-copied');
+        }, 1600);
+    }).catch(function () {
+        if (live) {
+            live.textContent = 'Copy failed';
         }
     });
 }
@@ -24,15 +42,44 @@ function prefersReducedMotion() {
     return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+function lfTheme() {
+    var s = getComputedStyle(document.documentElement);
+    var read = function (name, fallback) {
+        var v = s.getPropertyValue(name).trim();
+        return v || fallback;
+    };
+    return {
+        ink: read('--lf-ink', '#16181d'),
+        muted: read('--lf-muted', '#6f6a63'),
+        signal: read('--lf-signal', '#c24e1c'),
+        line: 'rgba(22, 24, 29, 0.08)',
+        font: read('--lf-font', 'ui-sans-serif, system-ui, sans-serif')
+    };
+}
+
 function chartDefaults() {
     if (typeof Chart === 'undefined') {
         return;
     }
-    Chart.defaults.font.family = 'ui-sans-serif, system-ui, sans-serif';
-    Chart.defaults.color = '#64748b';
+    var t = lfTheme();
+    Chart.defaults.font.family = t.font;
+    Chart.defaults.color = t.muted;
+    Chart.defaults.borderColor = t.line;
     if (prefersReducedMotion()) {
         Chart.defaults.animation = false;
     }
+}
+
+function lfTooltip() {
+    var t = lfTheme();
+    return {
+        backgroundColor: t.ink,
+        titleFont: { family: t.font, size: 12, weight: '600' },
+        bodyFont: { family: t.font, size: 12 },
+        padding: 10,
+        cornerRadius: 4,
+        displayColors: false
+    };
 }
 
 function revealCharts() {
@@ -78,7 +125,7 @@ async function fireRateLimitProbe(count, endpoint) {
 
         var statusCell = document.createElement('td');
         var badge = document.createElement('span');
-        badge.className = 'badge ' + (row.status === 429 ? 'bg-red' : 'bg-green');
+        badge.className = 'badge ' + (row.status === 429 ? 'bg-red-lt' : 'bg-green-lt');
         badge.textContent = String(row.status);
         statusCell.appendChild(badge);
         tr.appendChild(statusCell);
@@ -115,6 +162,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (err.id) {
                     field.setAttribute('aria-describedby', err.id);
                 }
+            }
+        });
+
+        form.addEventListener('submit', function () {
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn && !btn.classList.contains('is-busy') && btn.classList.contains('btn')) {
+                btn.classList.add('is-busy');
+                btn.setAttribute('aria-busy', 'true');
             }
         });
     });

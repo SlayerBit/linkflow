@@ -1,0 +1,465 @@
+/* Marketing + auth. Loaded globally; unused selectors are inert on app pages. */
+
+.lf-landing {
+    color: var(--lf-ink);
+}
+
+.lf-hero {
+    position: relative;
+    padding: 5rem 0 4.25rem;
+    overflow: hidden;
+    background: #12141a;
+    color: #f4f0e8;
+}
+
+.lf-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(244, 240, 232, 0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(244, 240, 232, 0.028) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse at 72% 38%, #000 18%, transparent 68%);
+    pointer-events: none;
+}
+
+.lf-hero-inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 3.25rem;
+    align-items: center;
+}
+
+.lf-hero-inner > * {
+    min-width: 0;
+}
+
+.lf-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(244, 240, 232, 0.55);
+    margin-bottom: 1.15rem;
+}
+
+.lf-kicker-quiet {
+    color: var(--lf-muted);
+}
+
+.lf-kicker-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: var(--lf-signal);
+}
+
+.lf-hero h1 {
+    font-size: clamp(2.15rem, 4.6vw, 3.35rem);
+    font-weight: 600;
+    letter-spacing: -0.048em;
+    line-height: 1.04;
+    color: #fbfaf6;
+    margin-bottom: 1.1rem;
+    max-width: 18ch;
+}
+
+.lf-hero-lead {
+    font-size: 1.05rem;
+    line-height: 1.55;
+    color: rgba(244, 240, 232, 0.7);
+    max-width: min(34rem, 100%);
+    margin-bottom: 1.6rem;
+    overflow-wrap: break-word;
+}
+
+.lf-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.lf-hero-actions .btn-primary {
+    padding: 0.65rem 1.15rem;
+}
+
+.lf-hero-actions .btn-ghost {
+    color: #fbfaf6;
+    border: 1px solid rgba(251, 250, 246, 0.22);
+    background: transparent;
+    padding: 0.65rem 1.15rem;
+}
+
+.lf-hero-actions .btn-ghost:hover {
+    background: rgba(251, 250, 246, 0.06);
+    color: #fff;
+}
+
+.lf-pathboard {
+    background: rgba(251, 250, 246, 0.03);
+    border: 1px solid rgba(251, 250, 246, 0.1);
+    border-radius: var(--lf-radius-lg);
+    padding: 1.15rem 1.2rem 1.05rem;
+    min-width: 0;
+    max-width: 100%;
+    contain: inline-size;
+}
+
+.lf-pathboard-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(244, 240, 232, 0.45);
+    margin-bottom: 0.85rem;
+}
+
+.lf-flow {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-width: 100%;
+}
+
+.lf-flow .lf-wire {
+    fill: none;
+    stroke: rgba(244, 240, 232, 0.28);
+    stroke-width: 1.5;
+}
+
+.lf-flow .lf-wire-hot {
+    stroke: var(--lf-signal);
+    stroke-dasharray: 4 14;
+    animation: lf-packet 3.2s linear infinite;
+}
+
+.lf-flow .lf-node {
+    fill: #1f2128;
+    stroke: rgba(244, 240, 232, 0.2);
+}
+
+.lf-flow text,
+.lf-flow .lf-flow-label {
+    fill: #f4f0e8;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--lf-font);
+    letter-spacing: 0.02em;
+}
+
+.lf-flow .lf-flow-note {
+    fill: rgba(244, 240, 232, 0.42);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+}
+
+@keyframes lf-packet {
+    to { stroke-dashoffset: -72; }
+}
+
+.lf-section {
+    padding: 4.75rem 0;
+}
+
+#path,
+#observability {
+    scroll-margin-top: 4.25rem;
+}
+
+.lf-section-ink {
+    background: var(--lf-ink);
+    color: #f4f0e8;
+}
+
+.lf-section h2 {
+    font-size: clamp(1.45rem, 2.6vw, 1.95rem);
+    font-weight: 600;
+    letter-spacing: -0.038em;
+    line-height: 1.18;
+    margin-bottom: 0.7rem;
+}
+
+.lf-section .lede {
+    color: var(--lf-muted);
+    font-size: 1.05rem;
+    max-width: 38rem;
+    line-height: 1.55;
+}
+
+.lf-section-ink .lede {
+    color: rgba(244, 240, 232, 0.65);
+}
+
+.lf-split {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+.lf-capability {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr;
+    gap: 1.25rem;
+    padding: 1.4rem 0;
+    border-top: 1px solid var(--lf-line);
+}
+
+.lf-capability:last-child {
+    border-bottom: 1px solid var(--lf-line);
+}
+
+.lf-capability-index {
+    font-family: var(--lf-font-mono);
+    font-size: 0.8rem;
+    color: var(--lf-signal);
+    letter-spacing: 0.04em;
+    padding-top: 0.3rem;
+}
+
+.lf-capability h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.35rem;
+}
+
+.lf-capability p {
+    color: var(--lf-muted);
+    margin: 0;
+    max-width: 40rem;
+    line-height: 1.55;
+}
+
+.lf-console {
+    background: var(--lf-surface);
+    border: 1px solid var(--lf-line);
+    border-radius: var(--lf-radius-lg);
+    overflow: auto;
+}
+
+.lf-console-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 0.9rem;
+    border-bottom: 1px solid var(--lf-line);
+    background: var(--lf-paper);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lf-muted);
+    font-weight: 600;
+}
+
+.lf-console table {
+    width: 100%;
+    font-size: 0.82rem;
+    margin: 0;
+}
+
+.lf-console td,
+.lf-console th {
+    padding: 0.65rem 0.9rem;
+    border-bottom: 1px solid var(--lf-line);
+}
+
+.lf-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    background: var(--lf-positive-wash);
+    color: var(--lf-positive);
+}
+
+.lf-pill-stale {
+    background: var(--lf-warning-wash);
+    color: var(--lf-warning);
+}
+
+.lf-facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.lf-fact dt {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(244, 240, 232, 0.45);
+    margin-bottom: 0.35rem;
+}
+
+.lf-fact dd {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #fbfaf6;
+}
+
+.lf-cta {
+    text-align: left;
+    padding: 4.5rem 0 5rem;
+}
+
+.lf-cta h2 {
+    max-width: 22ch;
+}
+
+.lf-foot {
+    border-top: 1px solid var(--lf-line);
+    padding: 2rem 0 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    color: var(--lf-muted);
+    font-size: 0.85rem;
+}
+
+.lf-auth {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    min-height: calc(100dvh - 3.5rem);
+    width: 100%;
+    margin: 0;
+}
+
+.lf-auth-panel {
+    background: var(--lf-ink);
+    color: #f4f0e8;
+    padding: 3rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+}
+
+.lf-auth-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(244, 240, 232, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(244, 240, 232, 0.035) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+}
+
+.lf-auth-panel > * {
+    position: relative;
+}
+
+.lf-auth-panel h2 {
+    font-size: 1.85rem;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    color: #fbfaf6;
+    margin: 1.25rem 0 0.65rem;
+}
+
+.lf-auth-panel p {
+    color: rgba(244, 240, 232, 0.62);
+    max-width: 28rem;
+    line-height: 1.5;
+}
+
+.lf-auth-form {
+    padding: 3.25rem 12%;
+    display: flex;
+    align-items: center;
+    background: var(--lf-paper);
+}
+
+.lf-auth-form-inner {
+    width: 100%;
+    max-width: 24rem;
+}
+
+.lf-auth-form h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.35rem;
+}
+
+.lf-auth-narrow {
+    max-width: 26rem;
+    margin: 2.5rem auto 4.5rem;
+}
+
+.lf-cta .btn-outline-primary {
+    color: var(--lf-ink);
+    border-color: var(--lf-line-strong);
+}
+
+.lf-cta .btn-outline-primary:hover {
+    background: var(--lf-wash);
+    color: var(--lf-ink);
+    border-color: var(--lf-line-strong);
+}
+
+@media (max-width: 991.98px) {
+    .lf-hero-inner,
+    .lf-split,
+    .lf-auth {
+        grid-template-columns: 1fr;
+    }
+
+    .lf-auth {
+        min-height: 0;
+    }
+
+    .lf-auth-panel {
+        display: none;
+    }
+
+    .lf-auth-form {
+        padding: 2.25rem 1.25rem 3.5rem;
+    }
+
+    .lf-facts {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .lf-capability {
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .lf-hero {
+        padding: 3rem 0 2.5rem;
+    }
+
+    .lf-facts {
+        grid-template-columns: 1fr;
+    }
+
+    .lf-hero-actions .btn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lf-flow .lf-wire-hot {
+        animation: none;
+        stroke-dasharray: none;
+    }
+}

@@ -17,7 +17,8 @@ public class PublicController {
 
     @GetMapping("/")
     public String index(Model model) {
-        model.addAttribute("pageTitle", "URL Shortener");
+        model.addAttribute("pageTitle", "URL infrastructure");
+        model.addAttribute("fullBleed", true);
         return "public/index";
     }
 

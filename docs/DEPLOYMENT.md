@@ -25,7 +25,7 @@ What this repository actually runs. Architecture: [ARCHITECTURE.md](ARCHITECTURE
 ## Full Compose (primary local stack)
 
 ```bash
-./docker/nginx/generate-dev-certs.sh
+./infrastructure/nginx/generate-dev-certs.sh
 cp .env.example .env
 # set LINKFLOW_JWT_SECRET (openssl rand -base64 64)
 docker compose up --build
@@ -71,16 +71,16 @@ On macOS use `127.0.0.1` for gateway upstreams — `localhost` may resolve to `:
 ## Images
 
 ```bash
-docker build -f docker/Dockerfile --target app     -t linkflow-app .
-docker build -f docker/Dockerfile --target gateway -t linkflow-gateway .
-docker build -f docker/Dockerfile --target web     -t linkflow-web .
+docker build -f infrastructure/Dockerfile --target app     -t linkflow-app .
+docker build -f infrastructure/Dockerfile --target gateway -t linkflow-gateway .
+docker build -f infrastructure/Dockerfile --target web     -t linkflow-web .
 ```
 
 One Maven build stage is shared. Images: UID 1001, layered JARs, `HEALTHCHECK` on `/actuator/health/readiness`, `MaxRAMPercentage=75`, `ExitOnOutOfMemoryError`, JVM as PID 1. Compose `stop_grace_period` is 40s (app graceful shutdown budget is 25s).
 
 ## Nginx
 
-`docker/nginx/nginx.conf` + `conf.d/linkflow.conf`:
+`infrastructure/nginx/nginx.conf` + `conf.d/linkflow.conf`:
 
 - TLS 1.2/1.3 at the edge; HTTP → HTTPS except `/.well-known/acme-challenge/`
 - HSTS set here, stripped from upstream
@@ -91,7 +91,7 @@ One Maven build stage is shared. Images: UID 1001, layered JARs, `HEALTHCHECK` o
 - `/r/` is `no-store`
 - `/vendor/**` proxied with other static assets
 
-`generate-dev-certs.sh` writes a self-signed ECDSA cert (gitignored). Replace `docker/nginx/certs/linkflow.crt` and `linkflow.key` for a real certificate.
+`generate-dev-certs.sh` writes a self-signed ECDSA cert (gitignored). Replace `infrastructure/nginx/certs/linkflow.crt` and `linkflow.key` for a real certificate.
 
 Trusted proxies in Compose are the two `/32` addresses `172.28.0.10` (Nginx) and `172.28.0.11` (gateway). A subnet-wide CIDR would treat real clients as proxies and collapse rate-limit buckets.
 
@@ -151,7 +151,7 @@ On #2 the three JVMs share Docker bridge `172.20.0.0/24` (gateway `172.20.0.10`,
 
 | Path | Current behavior |
 |------|------------------|
-| Public entry | Nginx on #1 (`docker/nginx/linkflow-ec2.conf`). **HTTP-only** in that file. Compose publishes 443 and mounts `/etc/letsencrypt`; no HTTPS `server` block yet |
+| Public entry | Nginx on #1 (`infrastructure/nginx/linkflow-ec2.conf`). **HTTP-only** in that file. Compose publishes 443 and mounts `/etc/letsencrypt`; no HTTPS `server` block yet |
 | To the app | One active upstream: `172.31.5.37:8080` (EC2 #2 gateway). `#3`/`#4` lines are commented placeholders |
 | Redis | Only on #1. #2 sets `REDIS_HOST` to #1's private IP |
 | PostgreSQL | Neon (external). `SPRING_DATASOURCE_*` on #2 |
@@ -234,7 +234,7 @@ Copy `.env.example` to `.env`. Minimum for the app container: `LINKFLOW_JWT_SECR
 
 ## Observability
 
-Prometheus scrapes `linkflow-app:8081` and `linkflow-gateway:8080`. Alert rules (`docker/prometheus/alerts.yml`): app/gateway scrape down, elevated 5xx, email delivery failures, rate-limiter Redis unavailable, analytics flush failures, high heap. They evaluate in Prometheus. Grafana dashboard: `docker/grafana/provisioning/dashboards/json/linkflow-overview.json`.
+Prometheus scrapes `linkflow-app:8081` and `linkflow-gateway:8080`. Alert rules (`infrastructure/prometheus/alerts.yml`): app/gateway scrape down, elevated 5xx, email delivery failures, rate-limiter Redis unavailable, analytics flush failures, high heap. They evaluate in Prometheus. Grafana dashboard: `infrastructure/grafana/provisioning/dashboards/json/linkflow-overview.json`.
 
 Business counters go through `LinkflowMetrics` (`linkflow_redirect_*`, URL cache, login, registration, URL create, rate-limit, analytics flush). Email delivery is recorded via `EmailDeliveryEvent`.
 
@@ -264,7 +264,7 @@ docker compose -f docker-compose.yml -f docker-compose.perf.yml up -d \
   --force-recreate nginx linkflow-app
 ```
 
-`docker/nginx/linkflow.perf.conf` stays **outside** `conf.d/` so it cannot load next to the normal site.
+`infrastructure/nginx/linkflow.perf.conf` stays **outside** `conf.d/` so it cannot load next to the normal site.
 
 | Scenario | Writes DB? | Needs seed? |
 |----------|------------|-------------|

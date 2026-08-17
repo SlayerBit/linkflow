@@ -6,7 +6,7 @@ management:
         # `metrics` is deliberately left out.
         #
         # This process has no authentication of its own, so the reverse proxy must deny /actuator
-        # from the internet and allow the scraper in over the private network. docker/nginx does
+        # from the internet and allow the scraper in over the private network. infrastructure/nginx does
         # exactly that; any other proxy in front of this needs the equivalent rule.
         include: health,info,prometheus
   endpoint:

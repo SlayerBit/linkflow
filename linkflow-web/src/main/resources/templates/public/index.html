@@ -2,195 +2,169 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>LinkFlow — Smart Link Shortener & Analytics</title></head>
+<head><title>LinkFlow — URL infrastructure</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="landing-hero text-center py-6">
-        <h1 class="hero-title fw-extrabold mb-3">Smart links. <span class="hero-gradient-text">Real-time insights.</span></h1>
-        <p class="lead text-muted mt-3 mx-auto" style="max-width: 640px; font-size: 1.15rem; line-height: 1.6;">
-            LinkFlow simplifies link shortening and performance tracking. Create custom, secure links and monitor click metrics in a single workspace.
-        </p>
-        <div class="mt-4 pt-2">
-            <a th:href="@{/register}" class="btn btn-primary btn-lg px-4 py-2 me-3 shadow-sm" style="border-radius: 8px; font-weight: 600;">Get started free <i class="ti ti-arrow-right ms-1"></i></a>
-            <a th:href="@{/login}" class="btn btn-outline-primary btn-lg px-4 py-2" style="border-radius: 8px; font-weight: 600;">Sign in</a>
-        </div>
-    </div>
+    <div class="lf-landing">
+        <section class="lf-hero">
+            <div class="container-xl lf-hero-inner">
+                <div class="lf-reveal">
+                    <p class="lf-kicker"><span class="lf-kicker-dot" aria-hidden="true"></span> URL infrastructure</p>
+                    <h1>The 302 should not wait on a write.</h1>
+                    <p class="lf-hero-lead">
+                        Redis answers the redirect. Clicks enqueue and flush later.
+                        Postgres remains the source of truth — it just is not on the 302.
+                    </p>
+                    <div class="lf-hero-actions">
+                        <a th:href="@{/register}" class="btn btn-primary">Create account</a>
+                        <a th:href="@{/login}" class="btn btn-ghost">Sign in</a>
+                    </div>
+                </div>
+                <div class="lf-pathboard" aria-hidden="true">
+                    <div class="lf-pathboard-label">Redirect path</div>
+                    <svg class="lf-flow" viewBox="0 0 460 228" width="100%" preserveAspectRatio="xMidYMid meet">
+                        <path class="lf-wire lf-wire-hot" d="M48 40 H252 V184"/>
+                        <rect class="lf-node" x="20" y="22" width="56" height="36" rx="3"/>
+                        <rect class="lf-node" x="124" y="22" width="56" height="36" rx="3"/>
+                        <rect class="lf-node" x="220" y="22" width="64" height="36" rx="3"/>
+                        <rect class="lf-node" x="224" y="94" width="56" height="36" rx="3"/>
+                        <rect class="lf-node" x="224" y="166" width="56" height="36" rx="3"/>
+                        <text class="lf-flow-label" x="48" y="45" text-anchor="middle">Client</text>
+                        <text class="lf-flow-label" x="152" y="45" text-anchor="middle">Nginx</text>
+                        <text class="lf-flow-label" x="252" y="45" text-anchor="middle">Gateway</text>
+                        <text class="lf-flow-label" x="252" y="117" text-anchor="middle">Redis</text>
+                        <text class="lf-flow-label" x="252" y="189" text-anchor="middle">App</text>
+                        <text class="lf-flow-note" x="300" y="117">fresh · stale · miss</text>
+                        <text class="lf-flow-note" x="300" y="189">302 · stream</text>
+                    </svg>
+                </div>
+            </div>
+        </section>
 
-    <!--/* Feature Grid */-->
-    <div class="row g-4 mt-4 mb-6">
-        <div class="col-md-4">
-            <div class="card card-hoverable feature-card card-cyan h-100">
-                <div class="card-body">
-                    <div class="feature-icon-circle bg-cyan-lt"><i class="ti ti-link"></i></div>
-                    <h3 class="card-title fw-bold fs-3">Link Management</h3>
-                    <p class="text-muted">Generate clean short links with custom aliases, automatic QR codes, and custom expiration dates.</p>
+        <section class="lf-section" id="path">
+            <div class="container-xl lf-split">
+                <div>
+                    <p class="lf-kicker lf-kicker-quiet"><span class="lf-kicker-dot"></span> Hot path</p>
+                    <h2>Cache first. Database when it matters.</h2>
+                    <p class="lede">
+                        A redirect is four states, not a query: fresh, stale-while-revalidate,
+                        negative cache, or a locked miss. The click is recorded after the 302
+                        has already left.
+                    </p>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card card-hoverable feature-card card-green h-100">
-                <div class="card-body">
-                    <div class="feature-icon-circle bg-green-lt"><i class="ti ti-chart-line"></i></div>
-                    <h3 class="card-title fw-bold fs-3">Click Analytics</h3>
-                    <p class="text-muted">Track total clicks, recent access times, and visitor details as redirects occur.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card card-hoverable feature-card card-red h-100">
-                <div class="card-body">
-                    <div class="feature-icon-circle bg-red-lt"><i class="ti ti-shield-lock"></i></div>
-                    <h3 class="card-title fw-bold fs-3">Security &amp; Control</h3>
-                    <p class="text-muted">Keep redirects fast and secure with active link statuses and secure user dashboards.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!--/* Dashboard Preview Mockup */-->
-    <div class="text-center my-6">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <div class="landing-mockup p-4 bg-white border shadow-lg rounded-3">
-                    <!--/* Top Window bar */-->
-                    <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-4">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="avatar avatar-xs bg-cyan-lt text-cyan" style="width: 24px; height: 24px; border-radius: 6px;"><i class="ti ti-layout-dashboard fs-4"></i></span>
-                            <span class="fw-bold" style="color: #1e293b; font-size: 0.95rem;">LinkFlow Dashboard Preview</span>
-                        </div>
-                        <div class="d-flex gap-1.5 align-items-center">
-                            <span style="width: 10px; height: 10px; border-radius: 50%; background-color: #ef4444; display: inline-block;"></span>
-                            <span style="width: 10px; height: 10px; border-radius: 50%; background-color: #f59e0b; display: inline-block;"></span>
-                            <span style="width: 10px; height: 10px; border-radius: 50%; background-color: #10b981; display: inline-block;"></span>
+                <div>
+                    <div class="lf-capability">
+                        <div class="lf-capability-index">01</div>
+                        <div>
+                            <h3>Short links, owned</h3>
+                            <p>Custom alias, expiry, QR PNG, and idempotent create. Deactivate without deleting history.</p>
                         </div>
                     </div>
-                    
-                    <!--/* Inside Mockup Content */-->
-                    <div class="row g-4 text-start">
-                        <!--/* Left pane: Mock Link list */-->
-                        <div class="col-md-8">
-                            <div class="card border-0 bg-transparent mb-0">
-                                <div class="card-header px-0 bg-transparent border-0 d-flex justify-content-between align-items-center mb-2">
-                                    <h4 class="card-title fw-bold text-dark mb-0"><i class="ti ti-list me-1 text-cyan"></i> Active Links</h4>
-                                    <span class="badge bg-cyan-lt text-cyan fw-semibold">Dashboard Preview</span>
-                                </div>
-                                <div class="table-responsive border rounded-3 bg-white">
-                                    <table class="table table-vcenter card-table mb-0" style="font-size: 0.875rem;">
-                                        <thead>
-                                            <tr class="bg-light text-muted fw-bold">
-                                                <th class="py-2 px-3">Short URL</th>
-                                                <th class="py-2 px-3">Destination</th>
-                                                <th class="py-2 px-3">Status</th>
-                                                <th class="py-2 px-3">Activity</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr class="border-bottom">
-                                                <td class="px-3 py-2.5"><code class="text-cyan fw-semibold bg-cyan-lt px-1.5 py-0.5 rounded">lnkf.co/campaign</code></td>
-                                                <td class="px-3 py-2.5 text-muted text-truncate" style="max-width: 200px;">https://yourwebsite.com/summer-promo</td>
-                                                <td class="px-3 py-2.5"><span class="badge bg-emerald-lt text-emerald border-0">Active</span></td>
-                                                <td class="px-3 py-2.5 text-secondary"><i class="ti ti-activity text-cyan me-1"></i> Tracking</td>
-                                            </tr>
-                                            <tr class="border-bottom">
-                                                <td class="px-3 py-2.5"><code class="text-cyan fw-semibold bg-cyan-lt px-1.5 py-0.5 rounded">lnkf.co/newsletter</code></td>
-                                                <td class="px-3 py-2.5 text-muted text-truncate" style="max-width: 200px;">https://yourwebsite.com/blog/june</td>
-                                                <td class="px-3 py-2.5"><span class="badge bg-emerald-lt text-emerald border-0">Active</span></td>
-                                                <td class="px-3 py-2.5 text-secondary"><i class="ti ti-activity text-cyan me-1"></i> Tracking</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="px-3 py-2.5"><code class="text-cyan fw-semibold bg-cyan-lt px-1.5 py-0.5 rounded">lnkf.co/docs</code></td>
-                                                <td class="px-3 py-2.5 text-muted text-truncate" style="max-width: 200px;">https://docs.yourwebsite.com/intro</td>
-                                                <td class="px-3 py-2.5"><span class="badge bg-emerald-lt text-emerald border-0">Active</span></td>
-                                                <td class="px-3 py-2.5 text-secondary"><i class="ti ti-activity text-cyan me-1"></i> Tracking</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                    <div class="lf-capability">
+                        <div class="lf-capability-index">02</div>
+                        <div>
+                            <h3>Limits that mean something</h3>
+                            <p>Sliding window in Lua, per user and per IP. Auth fails closed if Redis is down. Everything else fails open so redirects stay up.</p>
                         </div>
-                        
-                        <!--/* Right pane: Features / stats overview (visual highlights instead of fake absolute counts) */-->
-                        <div class="col-md-4 d-flex flex-column justify-content-between">
-                            <div class="card border-0 bg-transparent h-100 mb-0">
-                                <div class="card-header px-0 bg-transparent border-0 mb-2">
-                                    <h4 class="card-title fw-bold text-dark mb-0"><i class="ti ti-device-analytics me-1 text-green"></i> Live Telemetry</h4>
-                                </div>
-                                <div class="card-body p-0 d-flex flex-column gap-3">
-                                    <div class="p-3 border rounded-3 bg-light">
-                                        <div class="text-secondary small fw-bold text-uppercase mb-1" style="letter-spacing: 0.05em;">Link Referrers</div>
-                                        <div class="d-flex align-items-center justify-content-between mt-2">
-                                            <span class="small text-dark fw-semibold"><i class="ti ti-brand-twitter text-cyan me-1"></i> Social Media</span>
-                                            <span class="badge bg-green-lt border-0 text-green fw-bold">Active</span>
-                                        </div>
-                                        <div class="d-flex align-items-center justify-content-between mt-1.5">
-                                            <span class="small text-dark fw-semibold"><i class="ti ti-mail text-cyan me-1"></i> Email Campaigns</span>
-                                            <span class="badge bg-green-lt border-0 text-green fw-bold">Active</span>
-                                        </div>
-                                    </div>
-                                    <div class="p-3 border rounded-3 bg-light">
-                                        <div class="text-secondary small fw-bold text-uppercase mb-1" style="letter-spacing: 0.05em;">Redirection Analytics</div>
-                                        <ul class="list-unstyled mb-0 mt-2 small text-dark d-flex flex-column gap-1.5">
-                                            <li class="d-flex align-items-center gap-1.5">
-                                                <i class="ti ti-circle-check text-green fs-4"></i> IP addresses protected for privacy
-                                            </li>
-                                            <li class="d-flex align-items-center gap-1.5">
-                                                <i class="ti ti-circle-check text-green fs-4"></i> Geographic source mapping
-                                            </li>
-                                            <li class="d-flex align-items-center gap-1.5">
-                                                <i class="ti ti-circle-check text-green fs-4"></i> User-agent analytics tracked
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="lf-capability">
+                        <div class="lf-capability-index">03</div>
+                        <div>
+                            <h3>Clicks you can audit</h3>
+                            <p>Counts, 7/30/90-day trends, recent events. Visitor IPs are masked. No geo theatre — the product reports what it actually stores.</p>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!--/* How redirects work section */-->
-    <div class="card mb-6 overflow-hidden">
-        <div class="row g-0">
-            <div class="col-lg-4 bg-primary-lt p-5 d-flex flex-column justify-content-center" style="background-color: rgba(26, 109, 219, 0.03) !important;">
-                <h3 class="fw-bold fs-2 text-dark mb-3"><i class="ti ti-help-circle text-primary me-2"></i>How it works</h3>
-                <p class="text-muted mb-0">
-                    Get started with LinkFlow and begin monitoring redirect click performance in minutes.
+        <section class="lf-section pt-0">
+            <div class="container-xl">
+                <p class="lf-kicker lf-kicker-quiet"><span class="lf-kicker-dot"></span> Operator view</p>
+                <h2 class="mb-4">A console for the links you actually run.</h2>
+                <div class="lf-console">
+                    <div class="lf-console-bar">
+                        <span>Links</span>
+                        <span>Live cache · stream</span>
+                    </div>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Target</th>
+                            <th>Cache</th>
+                            <th>Clicks</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td><code class="lf-shortcode">docs</code></td>
+                            <td class="text-muted">https://example.com/docs</td>
+                            <td><span class="lf-pill">Fresh</span></td>
+                            <td>1,204</td>
+                        </tr>
+                        <tr>
+                            <td><code class="lf-shortcode">launch</code></td>
+                            <td class="text-muted">https://example.com/launch</td>
+                            <td><span class="lf-pill lf-pill-stale">Stale</span></td>
+                            <td>886</td>
+                        </tr>
+                        <tr>
+                            <td><code class="lf-shortcode">status</code></td>
+                            <td class="text-muted">https://status.example.com</td>
+                            <td><span class="lf-pill">Fresh</span></td>
+                            <td>312</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="lf-section lf-section-ink" id="observability">
+            <div class="container-xl">
+                <p class="lf-kicker"><span class="lf-kicker-dot"></span> How it is built</p>
+                <h2>One process. An edge that can say no.</h2>
+                <p class="lede mb-5">
+                    The API, schedulers, and schema live in one JVM. Nginx is the public edge.
+                    Prometheus scrapes privately. That is the system — not a slide.
                 </p>
+                <dl class="lf-facts">
+                    <div class="lf-fact">
+                        <dt>Runtime</dt>
+                        <dd>Java 21 · Spring Boot 3.4</dd>
+                    </div>
+                    <div class="lf-fact">
+                        <dt>Store</dt>
+                        <dd>PostgreSQL 16 · Redis 7</dd>
+                    </div>
+                    <div class="lf-fact">
+                        <dt>Edge</dt>
+                        <dd>Nginx · Gateway :8080</dd>
+                    </div>
+                    <div class="lf-fact">
+                        <dt>Signals</dt>
+                        <dd>Micrometer · Grafana</dd>
+                    </div>
+                </dl>
             </div>
-            <div class="col-lg-8 p-5">
-                <div class="row g-4">
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-start gap-3">
-                            <span class="badge bg-cyan-lt p-2 fs-3" style="width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;">1</span>
-                            <div>
-                                <h4 class="font-weight-bold mb-1 text-dark">Shorten URL</h4>
-                                <p class="text-muted mb-0 small">Register and enter your destination link to receive an instantly shareable short code.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-start gap-3">
-                            <span class="badge bg-green-lt p-2 fs-3" style="width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;">2</span>
-                            <div>
-                                <h4 class="font-weight-bold mb-1 text-dark">Share QR or Link</h4>
-                                <p class="text-muted mb-0 small">Distribute the shortened link directly or download the generated high-quality QR code.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-start gap-3">
-                            <span class="badge bg-purple-lt p-2 fs-3" style="width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;">3</span>
-                            <div>
-                                <h4 class="font-weight-bold mb-1 text-dark">Track Insights</h4>
-                                <p class="text-muted mb-0 small">Observe click telemetry details, referrers, and timestamps from your user dashboard.</p>
-                            </div>
-                        </div>
-                    </div>
+        </section>
+
+        <section class="lf-cta">
+            <div class="container-xl">
+                <h2>Issue a short link. Watch the path.</h2>
+                <p class="lede mb-4">Create an account, shorten a URL, and hit <code>/r/{code}</code>. The rest is instrumentation.</p>
+                <div class="lf-hero-actions">
+                    <a th:href="@{/register}" class="btn btn-primary">Create account</a>
+                    <a th:href="@{/login}" class="btn btn-light">Sign in</a>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <footer class="container-xl lf-foot">
+            <span>LinkFlow</span>
+            <span><a href="https://github.com/SlayerBit/linkflow" class="link-secondary" target="_blank" rel="noopener">Source</a></span>
+        </footer>
     </div>
 </div>
 </body>

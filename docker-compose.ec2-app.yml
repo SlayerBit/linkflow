@@ -22,7 +22,7 @@ services:
     <<: *jvm-service
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: infrastructure/Dockerfile
       target: app
     image: linkflow-app:latest
     ports:
@@ -72,7 +72,7 @@ services:
     <<: *jvm-service
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: infrastructure/Dockerfile
       target: web
     image: linkflow-web:latest
     ports:
@@ -109,7 +109,7 @@ services:
     <<: *jvm-service
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: infrastructure/Dockerfile
       target: gateway
     image: linkflow-gateway:latest
     ports:

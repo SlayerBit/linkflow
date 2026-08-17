@@ -46,7 +46,7 @@ public class MailConfigValidator implements InitializingBean {
             throw new IllegalStateException(
                     "Invalid production mail configuration — account verification and password reset "
                             + "would be non-functional:\n  - " + String.join("\n  - ", problems)
-                            + "\nSee DEPLOYMENT.md for SMTP provider setup.");
+                            + "\nSee docs/DEPLOYMENT.md for SMTP provider setup.");
         }
 
         log.info("Mail configuration validated: host={}, from={}, baseUrl={}",

@@ -20,7 +20,7 @@
 *.key
 # TLS material is mounted into the Nginx container at runtime and is never baked into an image.
 # Excluded so the private key is not even uploaded to the build daemon.
-docker/nginx/certs/
+infrastructure/nginx/certs/
 
 # Docs and CI (not needed in runtime image)
 docs/

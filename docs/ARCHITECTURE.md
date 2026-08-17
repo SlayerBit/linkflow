@@ -1,6 +1,6 @@
 # LinkFlow architecture
 
-How the current repository is structured. Run it with [README.md](README.md) and [DEPLOYMENT.md](DEPLOYMENT.md). Endpoints: [API.md](API.md).
+How the current repository is structured. Run it with [README.md](../README.md) and [DEPLOYMENT.md](DEPLOYMENT.md). Endpoints: [API.md](API.md).
 
 ## Hosted topology (2 EC2)
 
@@ -230,5 +230,5 @@ Thymeleaf + `tokens.css` / `layout.css` / `components.css` / `custom.css`. Layou
 | `click_events` | Retention job exists; table is unpartitioned |
 | Auth providers | Password + email only |
 | Analytics dimensions | Counts, trends, recent events — not geo/device |
-| Alerting | Rules in `docker/prometheus/alerts.yml`; no notifier container |
+| Alerting | Rules in `infrastructure/prometheus/alerts.yml`; no notifier container |
 | Load numbers | k6 gates are per-run only |

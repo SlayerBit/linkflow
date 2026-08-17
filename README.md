@@ -16,7 +16,7 @@ URL shortener built as a **modular monolith** in Java 21 and Spring Boot 3.4.1. 
 
 ## Hosted layout
 
-Two EC2 instances: **#1** is the public edge (Nginx, Redis, Prometheus, Grafana); **#2** runs gateway + app + web. PostgreSQL is Neon (external); SMTP is external. Details: [DEPLOYMENT.md](DEPLOYMENT.md).
+Two EC2 instances: **#1** is the public edge (Nginx, Redis, Prometheus, Grafana); **#2** runs gateway + app + web. PostgreSQL is Neon (external); SMTP is external. Details: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Processes
 
@@ -56,7 +56,7 @@ Feature modules depend only on `linkflow-common`. Cross-module calls use ports. 
 ```bash
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)   # macOS
 
-./docker/nginx/generate-dev-certs.sh
+./infrastructure/nginx/generate-dev-certs.sh
 cp .env.example .env                               # set LINKFLOW_JWT_SECRET
 docker compose up --build
 ```
@@ -84,14 +84,32 @@ mvn clean verify          # unit + integration; Docker required for Testcontaine
 
 GitHub Actions (`.github/workflows/ci.yml`) runs `mvn verify`, builds the three images, and validates Compose/Nginx config.
 
+## Repository layout
+
+```text
+.
+├── README.md
+├── pom.xml                         # Maven parent (modules stay at root)
+├── docker-compose.yml              # local stack: docker compose up
+├── docker-compose.dev.yml          # publish Postgres/Redis for host JARs
+├── docker-compose.perf.yml         # k6 overlay
+├── docker-compose.ec2-*.yml        # hosted edge + app node
+├── .env.example / .env.ec2.example # copy to .env at this directory
+├── docs/                           # architecture, API, deployment, interview
+├── infrastructure/                 # Dockerfile, Nginx, Prometheus, Grafana
+├── performance/                    # k6 scenarios and seed scripts
+├── linkflow-*/                     # Maven modules
+└── .github/workflows/ci.yml
+```
+
 ## Documentation
 
 | File | Contents |
 |------|----------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Modules, flows, Redis, schema, security |
-| [API.md](API.md) | REST inventory and web routes |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Local Compose, 2-EC2 hosted stack, env vars, load tests |
-| [INTERVIEW_GUIDE.md](INTERVIEW_GUIDE.md) | Pitches and design Q&A for this codebase |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Modules, flows, Redis, schema, security |
+| [docs/API.md](docs/API.md) | REST inventory and web routes |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Local Compose, 2-EC2 hosted stack, env vars, load tests |
+| [docs/INTERVIEW_GUIDE.md](docs/INTERVIEW_GUIDE.md) | Pitches and design Q&A for this codebase |
 
 ## Limitations
 

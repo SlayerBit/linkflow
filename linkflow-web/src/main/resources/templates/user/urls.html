@@ -5,59 +5,63 @@
 <head><title>My Links — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none mb-4">
-        <div class="row align-items-center">
+    <div class="page-header d-print-none">
+        <div class="row align-items-end">
             <div class="col">
-                <h2 class="page-title fw-bold text-dark fs-2">My Links</h2>
+                <div class="page-pretitle">Workspace</div>
+                <h2 class="page-title">My Links</h2>
             </div>
-            <div class="col-auto">
-                <a th:href="@{/urls/new}" class="btn btn-primary px-3 shadow-sm" style="border-radius: 8px; font-weight: 600;">
+            <div class="col-auto d-flex gap-2">
+                <a th:href="@{/urls/bulk}" class="btn btn-light">Bulk</a>
+                <a th:href="@{/urls/new}" class="btn btn-primary">
                     <i class="ti ti-plus me-1"></i> New Short URL
                 </a>
             </div>
         </div>
     </div>
 
-    <div class="card bg-white" th:if="${!#lists.isEmpty(urls.content)}">
-        <div class="card-header">
-            <h3 class="card-title fw-bold text-dark section-header-title color-cyan mb-0">
-                <i class="ti ti-link"></i> Shortened Links
-            </h3>
-        </div>
+    <div class="card" th:if="${!#lists.isEmpty(urls.content)}">
         <div class="table-responsive">
             <table class="table table-vcenter card-table table-hover table-stack">
                 <thead>
                     <tr>
-                        <th>Short Code</th>
-                        <th>Original Target URL</th>
+                        <th>Code</th>
+                        <th>Target</th>
                         <th>Status</th>
-                        <th>Expiry Date</th>
-                        <th>Created Date</th>
+                        <th class="col-optional">Expires</th>
+                        <th class="col-optional">Created</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="url : ${urls.content}">
-                        <td data-label="Short Code">
-                            <a class="fw-bold text-primary text-decoration-none" th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a>
+                        <td data-label="Code">
+                            <div class="d-flex align-items-center gap-2">
+                                <a class="lf-shortcode text-decoration-none" th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a>
+                                <button type="button" class="btn btn-sm btn-icon btn-light copy-btn"
+                                        th:attr="data-copy-url=${url.shortUrl}"
+                                        aria-label="Copy short URL">
+                                    <i class="ti ti-copy" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </td>
-                        <td class="text-truncate text-secondary" style="max-width:240px" data-label="Original Target URL" th:text="${url.originalUrl}">original</td>
+                        <td class="text-truncate text-muted" style="max-width:240px" data-label="Target" th:text="${url.originalUrl}" th:title="${url.originalUrl}">original</td>
                         <td data-label="Status">
-                            <span th:if="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())}" 
-                                  class="badge bg-warning-lt text-warning">Expired</span>
-                            <span th:if="${!(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" 
-                                  class="badge" th:classappend="${url.active} ? ' bg-green-lt text-green' : ' bg-red-lt text-red'"
+                            <span th:if="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())}"
+                                  class="badge bg-warning-lt">Expired</span>
+                            <span th:if="${!(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}"
+                                  class="badge" th:classappend="${url.active} ? ' bg-green-lt' : ' bg-red-lt'"
                                   th:text="${url.active} ? 'Active' : 'Inactive'">Active</span>
                         </td>
-                        <td class="text-secondary" data-label="Expiry Date" th:text="${url.expiresAt != null ? #temporals.format(url.expiresAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
-                        <td class="text-secondary" data-label="Created Date" th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd')}">date</td>
+                        <td class="text-muted col-optional" data-label="Expires" th:text="${url.expiresAt != null ? #temporals.format(url.expiresAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+                        <td class="text-muted col-optional" data-label="Created" th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd')}">date</td>
                         <td class="text-end table-actions" data-label="Actions">
                             <form th:if="${!url.active && !(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" th:action="@{/urls/{id}/reactivate(id=${url.id})}" method="post" class="d-inline"
                                   onsubmit="return confirm('Reactivate this URL?');">
-                                <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius: 6px;">Reactivate</button>
+                                <button type="submit" class="btn btn-sm btn-light">Reactivate</button>
                             </form>
-                            <a th:href="@{/urls/{id}(id=${url.id})}" class="btn btn-sm btn-light" style="border-radius: 6px;">View</a>
-                            <a th:href="@{/urls/{id}/analytics(id=${url.id})}" class="btn btn-sm btn-outline-primary" style="border-radius: 6px;">Analytics</a>
+                            <a th:href="@{/urls/{id}(id=${url.id})}" class="btn btn-sm btn-light">Open</a>
+                            <a th:href="@{/urls/{id}/analytics(id=${url.id})}" class="btn btn-sm btn-light">Analytics</a>
                         </td>
                     </tr>
                 </tbody>
@@ -65,11 +69,11 @@
         </div>
     </div>
 
-    <div class="card bg-white empty-state" th:if="${#lists.isEmpty(urls.content)}">
-        <div class="empty-state-icon"><i class="ti ti-link-off"></i></div>
+    <div class="card empty-state" th:if="${#lists.isEmpty(urls.content)}">
+        <div class="empty-state-icon"><i class="ti ti-link"></i></div>
         <div class="empty-state-title">No URLs yet</div>
-        <p class="empty-state-description">Generate short redirects to manage your targets easily.</p>
-        <a th:href="@{/urls/new}" class="btn btn-primary px-3 shadow-sm" style="border-radius: 8px;">Create URL</a>
+        <p class="empty-state-description">Create a short link. Alias and expiry are optional.</p>
+        <a th:href="@{/urls/new}" class="btn btn-primary">Create URL</a>
     </div>
 
     <div th:replace="~{fragments/alerts :: pagination(${urls}, '/urls', ${sortBy}, ${direction})}"></div>

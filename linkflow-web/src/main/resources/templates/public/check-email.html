@@ -5,37 +5,19 @@
 <head><title>Check your email — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="row justify-content-center py-4">
-        <div class="col-xl-5 col-lg-7">
-            <div class="card overflow-hidden" style="border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08); border-radius: 16px;">
-                <div class="card-body p-5 bg-white text-center">
-
-                    <span class="avatar avatar-xl bg-blue-lt rounded-circle mb-3" style="width: 5rem; height: 5rem; font-size: 2.25rem;">
-                        <i class="ti ti-mail-fast"></i>
-                    </span>
-                    <h2 class="fw-bold text-dark mb-2">Check your email</h2>
-
-                    <p class="text-muted mb-1">We sent an activation link to</p>
-                    <p class="fw-semibold text-dark mb-4" th:text="${email}">you@example.com</p>
-
-                    <p class="text-muted small mb-4">
-                        Open the link to finish setting up your account. It expires in 24 hours.
-                        If it hasn't arrived in a few minutes, check your spam folder.
-                    </p>
-
-                    <form th:action="@{/resend-verification}" method="post">
-                        <input type="hidden" name="email" th:value="${email}">
-                        <button type="submit" class="btn btn-outline-primary w-100 py-2" style="border-radius: 8px; font-weight: 600;">
-                            Resend the link
-                        </button>
-                    </form>
-
-                    <p class="text-center text-muted mt-4 mb-0">
-                        <a th:href="@{/login}" class="fw-semibold text-decoration-none">Back to sign in</a>
-                    </p>
-                </div>
-            </div>
-        </div>
+    <div class="lf-auth-narrow">
+        <h1 class="page-title mb-2">Check your email</h1>
+        <p class="text-muted mb-1">We sent an activation link to</p>
+        <p class="fw-semibold mb-4" th:text="${email}">you@example.com</p>
+        <p class="text-muted small mb-4">
+            Open the link to finish setting up your account. It expires in 24 hours.
+            If it hasn't arrived in a few minutes, check your spam folder.
+        </p>
+        <form th:action="@{/resend-verification}" method="post">
+            <input type="hidden" name="email" th:value="${email}">
+            <button type="submit" class="btn btn-outline-primary w-100">Resend the link</button>
+        </form>
+        <p class="mt-4 mb-0"><a th:href="@{/login}">Back to sign in</a></p>
     </div>
 </div>
 </body>

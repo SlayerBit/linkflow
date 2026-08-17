@@ -6,7 +6,7 @@
 <body>
 <div layout:fragment="content">
     <div class="page-header d-print-none mb-4">
-        <h2 class="page-title fw-bold text-dark fs-2">Admin Dashboard</h2>
+        <h2 class="page-title">Admin Dashboard</h2>
     </div>
 
     <!--/* Metric Grid */-->
@@ -186,52 +186,40 @@
     <script th:inline="javascript" th:if="${!#lists.isEmpty(topUrls)}" th:attr="nonce=${cspNonce}">
         /*<![CDATA[*/
         const topUrls = (/*[[${topUrls}]]*/ []).slice(0, 5);
-        
+        const t = lfTheme();
         const topCtx = document.getElementById('adminTopChart').getContext('2d');
-        const topGradient = topCtx.createLinearGradient(0, 0, 400, 0);
-        topGradient.addColorStop(0, '#1a6ddb');
-        topGradient.addColorStop(1, '#0891b2');
 
         new Chart(topCtx, {
             type: 'bar',
             data: {
                 labels: topUrls.map(u => u.shortCode),
-                datasets: [{ 
-                    label: 'Clicks', 
-                    data: topUrls.map(u => u.totalClicks), 
-                    backgroundColor: topGradient,
-                    borderRadius: 6,
-                    borderSkipped: false
+                datasets: [{
+                    label: 'Clicks',
+                    data: topUrls.map(u => u.totalClicks),
+                    backgroundColor: t.signal,
+                    borderRadius: 2,
+                    borderSkipped: false,
+                    barThickness: 14
                 }]
             },
-            options: { 
-                indexAxis: 'y', 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins: { 
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        titleFont: { family: 'Inter', size: 12, weight: 'bold' },
-                        bodyFont: { family: 'Inter', size: 12 },
-                        padding: 10,
-                        cornerRadius: 8,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                return ' ' + context.raw + ' clicks';
-                            }
-                        }
-                    }
+                    tooltip: Object.assign(lfTooltip(), {
+                        callbacks: { label: function(context) { return context.raw + ' clicks'; } }
+                    })
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(15, 23, 42, 0.03)', drawTicks: false },
-                        ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                        grid: { color: t.line, drawTicks: false },
+                        ticks: { color: t.muted }
                     },
                     y: {
                         grid: { display: false },
-                        ticks: { font: { family: 'Inter', size: 12, weight: '600' }, color: '#334155' }
+                        ticks: { color: t.ink, font: { weight: '600' } }
                     }
                 }
             }

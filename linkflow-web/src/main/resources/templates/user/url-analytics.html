@@ -5,72 +5,35 @@
 <head><title>Link Analytics — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none mb-4">
-        <div class="page-pretitle text-muted text-uppercase small fw-bold" style="letter-spacing: 0.05em;">
-            <a th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}" class="text-secondary text-decoration-none">code</a>
+    <div class="page-header d-print-none">
+        <div class="page-pretitle">
+            <a th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}" class="text-muted text-decoration-none">code</a>
         </div>
-        <h2 class="page-title fw-bold text-dark fs-2">Redirect Link Analytics</h2>
+        <h2 class="page-title">Analytics</h2>
+        <p class="text-muted mb-0">Counts and daily trends from flushed click events. IPs in the activity feed are masked.</p>
     </div>
 
-    <!--/* Stat cards */-->
-    <div class="row row-deck row-cards mb-4 g-3">
-        <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card card-green bg-white py-3 px-4">
-                <div class="d-flex align-items-center">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Total Clickthroughs</div>
-                        <div class="h2 fw-bold text-dark mb-0" th:text="${analytics.totalClicks}">0</div>
-                    </div>
-                    <div class="stat-card-icon bg-green-lt ms-auto">
-                        <i class="ti ti-mouse-click"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card card-blue bg-white py-3 px-4">
-                <div class="d-flex align-items-center">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Last Accessed</div>
-                        <div class="h3 fw-semibold text-secondary mb-0" th:text="${analytics.lastAccessedAt != null ? #temporals.format(analytics.lastAccessedAt, 'yyyy-MM-dd HH:mm ''UTC''') : 'Never'}">Never</div>
-                    </div>
-                    <div class="stat-card-icon bg-blue-lt ms-auto">
-                        <i class="ti ti-clock"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-lg-4">
-            <div class="card stat-card card-cyan bg-white py-3 px-4">
-                <div class="d-flex align-items-center">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Short Redirect URL</div>
-                        <code class="text-break px-2 py-1 bg-light text-primary rounded fw-bold" th:text="${url.shortUrl}">short</code>
-                    </div>
-                    <div class="stat-card-icon bg-cyan-lt ms-auto">
-                        <i class="ti ti-link"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="lf-metric mb-4">
+        <div class="metric-label">Total clicks</div>
+        <div class="metric-value lf-metric-hero mt-2" th:text="${analytics.totalClicks}">0</div>
+        <div class="metric-subtext">
+            Last accessed
+            <span th:text="${analytics.lastAccessedAt != null ? #temporals.format(analytics.lastAccessedAt, 'yyyy-MM-dd HH:mm ''UTC''') : 'never'}">never</span>
+            · counts and daily trends from flushed events
         </div>
     </div>
 
-    <!--/* Trend line chart */-->
-    <div class="card bg-white">
-        <div class="card-header d-flex align-items-center">
-            <h3 class="card-title fw-bold text-dark section-header-title color-cyan mb-0">
-                <i class="ti ti-chart-line"></i> Click Trends Over Time
-            </h3>
-            <div class="ms-auto">
-                <div class="btn-group" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    <button type="button" class="btn btn-sm btn-light border btn-trend-range" id="btn-trend-7" onclick="renderChart(7)" style="font-weight: 600;">7D</button>
-                    <button type="button" class="btn btn-sm btn-light border btn-trend-range" id="btn-trend-30" onclick="renderChart(30)" style="font-weight: 600;">30D</button>
-                    <button type="button" class="btn btn-sm btn-light border btn-trend-range" id="btn-trend-90" onclick="renderChart(90)" style="font-weight: 600;">90D</button>
-                </div>
+    <div class="card">
+        <div class="card-header d-flex align-items-center flex-wrap gap-2">
+            <h3 class="card-title mb-0">Click trend</h3>
+            <div class="ms-auto segmented-control" role="group" aria-label="Trend range">
+                <button type="button" class="btn-segmented btn-trend-range" id="btn-trend-7">7D</button>
+                <button type="button" class="btn-segmented btn-trend-range" id="btn-trend-30">30D</button>
+                <button type="button" class="btn-segmented btn-trend-range" id="btn-trend-90">90D</button>
             </div>
         </div>
         <div class="card-body">
-            <div class="chart-container" style="position: relative; height: 320px;">
+            <div class="chart-container chart-trend">
                 <div class="skeleton skeleton-chart-lg" data-chart-skeleton aria-hidden="true"></div>
                 <canvas id="clickTrendChart" data-chart-canvas hidden></canvas>
             </div>
@@ -106,8 +69,7 @@
                     dataMap[item.date] = item.clicks;
                 }
             });
-            const dataPoints = labels.map(l => dataMap[l]);
-            return { labels, dataPoints };
+            return { labels, dataPoints: labels.map(l => dataMap[l]) };
         }
 
         let currentChart = null;
@@ -119,15 +81,13 @@
             else rawData = data30d;
 
             const { labels, dataPoints } = getPaddedData(rawData, days);
+            if (currentChart) currentChart.destroy();
 
-            if (currentChart) {
-                currentChart.destroy();
-            }
-
+            const t = lfTheme();
             const ctx = document.getElementById('clickTrendChart').getContext('2d');
-            const lineGradient = ctx.createLinearGradient(0, 0, 0, 300);
-            lineGradient.addColorStop(0, 'rgba(8, 145, 178, 0.15)');
-            lineGradient.addColorStop(1, 'rgba(8, 145, 178, 0)');
+            const fill = ctx.createLinearGradient(0, 0, 0, 300);
+            fill.addColorStop(0, 'rgba(194, 78, 28, 0.18)');
+            fill.addColorStop(1, 'rgba(194, 78, 28, 0)');
 
             currentChart = new Chart(ctx, {
                 type: 'line',
@@ -136,67 +96,51 @@
                     datasets: [{
                         label: 'Clicks',
                         data: dataPoints,
-                        borderColor: '#0891b2',
-                        backgroundColor: lineGradient,
+                        borderColor: t.signal,
+                        backgroundColor: fill,
                         fill: true,
-                        tension: 0.4,
-                        borderWidth: 2.5,
-                        pointRadius: days > 30 ? 1 : 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#0891b2',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2
+                        tension: 0.25,
+                        borderWidth: 2,
+                        pointRadius: days > 30 ? 0 : 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: t.signal,
+                        pointBorderColor: '#fbfaf6',
+                        pointBorderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
                     plugins: {
                         legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            titleFont: { family: 'Inter', size: 12, weight: 'bold' },
-                            bodyFont: { family: 'Inter', size: 12 },
-                            padding: 10,
-                            cornerRadius: 8,
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return ' ' + context.raw + ' clicks';
-                                }
-                            }
-                        }
+                        tooltip: Object.assign(lfTooltip(), {
+                            callbacks: { label: function (c) { return c.raw + ' clicks'; } }
+                        })
                     },
                     scales: {
                         x: {
                             grid: { display: false },
-                            ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                            ticks: { color: t.muted, maxTicksLimit: 8 }
                         },
                         y: {
                             beginAtZero: true,
-                            grid: { color: 'rgba(15, 23, 42, 0.03)', drawTicks: false },
-                            ticks: { precision: 0, font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                            grid: { color: t.line, drawTicks: false },
+                            ticks: { precision: 0, color: t.muted }
                         }
                     }
                 }
             });
 
-            document.querySelectorAll('.btn-trend-range').forEach(btn => {
-                btn.classList.remove('btn-primary');
-                btn.classList.remove('text-white');
-                btn.classList.add('btn-light');
-            });
+            document.querySelectorAll('.btn-trend-range').forEach(btn => btn.classList.remove('active', 'btn-primary'));
             const activeBtn = document.getElementById('btn-trend-' + days);
-            if (activeBtn) {
-                activeBtn.classList.remove('btn-light');
-                activeBtn.classList.add('btn-primary');
-                activeBtn.classList.add('text-white');
-            }
+            if (activeBtn) activeBtn.classList.add('active');
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            renderChart(30);
-        });
+        document.getElementById('btn-trend-7').addEventListener('click', function () { renderChart(7); });
+        document.getElementById('btn-trend-30').addEventListener('click', function () { renderChart(30); });
+        document.getElementById('btn-trend-90').addEventListener('click', function () { renderChart(90); });
+        document.addEventListener('DOMContentLoaded', function () { renderChart(30); });
     </script>
 </th:block>
 </body>

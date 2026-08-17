@@ -10,10 +10,10 @@
 services:
   nginx:
     volumes:
-      - ./docker/nginx/nginx.perf.conf:/etc/nginx/nginx.conf:ro
+      - ./infrastructure/nginx/nginx.perf.conf:/etc/nginx/nginx.conf:ro
       # Overlay only the site file; keep it outside conf.d/ so the directory mount does not
       # also load a duplicate *.perf.conf server block.
-      - ./docker/nginx/linkflow.perf.conf:/etc/nginx/conf.d/linkflow.conf:ro
+      - ./infrastructure/nginx/linkflow.perf.conf:/etc/nginx/conf.d/linkflow.conf:ro
 
   linkflow-app:
     environment:

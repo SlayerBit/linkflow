@@ -5,82 +5,61 @@
 <head><title>Dashboard — LinkFlow</title></head>
 <body>
 <div layout:fragment="content">
-    <div class="page-header d-print-none mb-4">
-        <div class="row align-items-center">
+    <div class="page-header d-print-none">
+        <div class="row align-items-end">
             <div class="col">
-                <div class="page-pretitle text-muted text-uppercase small fw-bold" style="letter-spacing: 0.05em;">Overview</div>
-                <h2 class="page-title fw-bold text-dark fs-2">Welcome, <span th:text="${auth.firstName()}">User</span></h2>
+                <div class="page-pretitle">Overview</div>
+                <h2 class="page-title">Welcome, <span th:text="${auth.firstName()}">User</span></h2>
             </div>
             <div class="col-auto">
-                <a th:href="@{/urls/new}" class="btn btn-primary px-3 shadow-sm" style="border-radius: 8px; font-weight: 600;">
-                    <i class="ti ti-plus me-1"></i> Create Short URL
+                <a th:href="@{/urls/new}" class="btn btn-primary">
+                    <i class="ti ti-plus me-1"></i> New link
                 </a>
             </div>
         </div>
     </div>
 
-    <!--/* Summary Metrics */-->
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-lg-6">
-            <div class="card stat-card card-cyan py-3 px-4 bg-white">
-                <div class="d-flex align-items-center">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Recent Links</div>
-                        <div class="h2 fw-bold text-dark" th:text="${#lists.size(recentUrls)}">0</div>
-                    </div>
-                    <div class="stat-card-icon bg-cyan-lt ms-auto">
-                        <i class="ti ti-link"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="lf-metrics" th:with="sumClicks=${topUrls != null && !topUrls.isEmpty() ? #aggregates.sum(topUrls.![totalClicks]) : 0}">
+        <div class="lf-metric">
+            <div class="metric-label">Clicks on top links</div>
+            <div class="metric-value lf-metric-hero mt-2" th:text="${sumClicks}">0</div>
+            <div class="metric-subtext">Sum of the current top-5 — not a workspace-wide total</div>
         </div>
-        <div class="col-sm-6 col-lg-6">
-            <div class="card stat-card card-green py-3 px-4 bg-white" th:with="sumClicks=${topUrls != null && !topUrls.isEmpty() ? #aggregates.sum(topUrls.![totalClicks]) : 0}">
-                <div class="d-flex align-items-center">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 0.05em;">Total Link Clicks</div>
-                        <div class="h2 fw-bold text-dark" th:text="${sumClicks}">0</div>
-                    </div>
-                    <div class="stat-card-icon bg-green-lt ms-auto">
-                        <i class="ti ti-chart-line"></i>
-                    </div>
-                </div>
-            </div>
+        <div class="lf-metric">
+            <div class="metric-label">Recent links</div>
+            <div class="metric-value mt-2" th:text="${#lists.size(recentUrls)}">0</div>
+            <div class="metric-subtext">Last five in this workspace</div>
         </div>
     </div>
 
-    <div class="row row-deck row-cards mb-4 g-4">
-        <div class="col-lg-6">
-            <div class="card bg-white h-100">
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="card h-100">
                 <div class="card-header d-flex align-items-center">
-                    <h3 class="card-title fw-bold text-dark section-header-title color-cyan mb-0">
-                        <i class="ti ti-link"></i> Recent Links
-                    </h3>
-                    <div class="card-actions ms-auto">
-                        <a th:href="@{/urls}" class="btn btn-sm btn-light" style="border-radius: 6px;">View all</a>
-                    </div>
+                    <h3 class="card-title mb-0">Recent links</h3>
+                    <a th:href="@{/urls}" class="btn btn-sm btn-light ms-auto">View all</a>
                 </div>
                 <div class="card-body p-0" th:if="${!#lists.isEmpty(recentUrls)}">
                     <div class="table-responsive">
-                        <table class="table table-vcenter card-table table-hover">
+                        <table class="table table-vcenter card-table table-hover table-stack">
                             <thead>
                                 <tr>
                                     <th>Code</th>
-                                    <th>Original Target URL</th>
+                                    <th>Target</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr th:each="url : ${recentUrls}">
-                                    <td>
-                                        <a class="fw-bold text-primary text-decoration-none" th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a>
+                                    <td data-label="Code">
+                                        <a class="lf-shortcode text-decoration-none" th:href="@{/urls/{id}(id=${url.id})}" th:text="${url.shortCode}">code</a>
                                     </td>
-                                    <td class="text-truncate text-muted" style="max-width:260px" th:text="${url.originalUrl}">url</td>
-                                    <td>
-                                        <span th:if="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())}" 
-                                              class="badge bg-warning-lt text-warning">Expired</span>
-                                        <span th:if="${!(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}" 
-                                              class="badge" th:classappend="${url.active} ? ' bg-green-lt text-green' : ' bg-red-lt text-red'"
+                                    <td class="text-truncate text-muted" data-label="Target" style="max-width:260px" th:text="${url.originalUrl}" th:title="${url.originalUrl}">url</td>
+                                    <td data-label="Status">
+                                        <span th:if="${url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now())}"
+                                              class="badge bg-warning-lt">Expired</span>
+                                        <span th:if="${!(url.expiresAt != null && url.expiresAt.isBefore(T(java.time.Instant).now()))}"
+                                              class="badge" th:classappend="${url.active} ? ' bg-green-lt' : ' bg-red-lt'"
                                               th:text="${url.active} ? 'Active' : 'Inactive'">Active</span>
                                     </td>
                                 </tr>
@@ -89,75 +68,65 @@
                     </div>
                 </div>
                 <div class="empty-state" th:if="${#lists.isEmpty(recentUrls)}">
-                    <div class="empty-state-icon"><i class="ti ti-link-off"></i></div>
-                    <div class="empty-state-title">No URLs yet</div>
-                    <p class="empty-state-description">Generate short redirects to manage your targets easily.</p>
-                    <a th:href="@{/urls/new}" class="btn btn-primary px-3 shadow-sm" style="border-radius: 8px;">Create your first URL</a>
+                    <div class="empty-state-icon"><i class="ti ti-link"></i></div>
+                    <div class="empty-state-title">No links yet</div>
+                    <p class="empty-state-description">Create a short URL. Redirects start counting as soon as the first 302 fires.</p>
+                    <a th:href="@{/urls/new}" class="btn btn-primary">Create your first URL</a>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card bg-white h-100">
+        <div class="col-lg-5">
+            <div class="card h-100">
                 <div class="card-header">
-                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
-                        <i class="ti ti-chart-bar"></i> Top Links
-                    </h3>
+                    <h3 class="card-title mb-0">Top links</h3>
                 </div>
-                <div class="card-body d-flex flex-column justify-content-center" style="position: relative; min-height: 160px; padding: 1.5rem;">
-                    <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}" style="position: relative; height: 130px; width: 100%;">
+                <div class="card-body" style="min-height: 180px;">
+                    <div class="chart-container" th:if="${!#lists.isEmpty(topUrls)}" style="height: 180px;">
                         <div class="skeleton skeleton-chart" data-chart-skeleton aria-hidden="true"></div>
                         <canvas id="topUrlsChart" data-chart-canvas hidden></canvas>
                     </div>
                     <div class="empty-state py-3" th:if="${#lists.isEmpty(topUrls)}">
-                        <div class="empty-state-icon" style="font-size: 2rem; padding: 0.5rem; background: #f8fafc; border-radius: 50%; display: inline-block; line-height: 1; color: #94a3b8;"><i class="ti ti-link-off"></i></div>
-                        <h4 class="empty-state-title fw-bold text-dark mt-2 mb-1" style="font-size: 1rem;">No link metrics yet</h4>
-                        <p class="empty-state-description text-muted small mb-0">Share your links to start tracking redirection performance analytics.</p>
+                        <div class="empty-state-title">No click data yet</div>
+                        <p class="empty-state-description mb-0">Share a link. This chart fills from recorded redirects.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row row-deck row-cards g-4">
-        <div class="col-12">
-            <div class="card bg-white">
-                <div class="card-header">
-                    <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
-                        <i class="ti ti-activity"></i> Recent Activity
-                    </h3>
-                </div>
-                <div class="card-body p-0" th:if="${!#lists.isEmpty(recentClicks)}">
-                    <div class="table-responsive">
-                        <table class="table table-vcenter card-table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Timestamp</th>
-                                    <th>Code</th>
-                                    <th>IP Address</th>
-                                    <th>Referrer</th>
-                                    <th>User Agent</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr th:each="click : ${recentClicks}">
-                                    <td class="text-secondary" th:text="${click.clickedAt != null ? #temporals.format(click.clickedAt, 'yyyy-MM-dd HH:mm ''UTC''') : ''}">Time</td>
-                                    <td>
-                                        <a class="fw-bold text-primary text-decoration-none" th:href="@{/urls/{id}/analytics(id=${click.shortUrlId})}" th:text="${click.shortCode}">code</a>
-                                    </td>
-                                    <td><code class="px-2 py-1 bg-light text-dark rounded" th:text="${click.ipAddress}">IP</code></td>
-                                    <td class="text-truncate text-secondary" style="max-width: 200px;" th:text="${click.referer != null && !click.referer.isEmpty() ? click.referer : 'Direct'}">Referrer</td>
-                                    <td class="text-truncate text-secondary" style="max-width: 250px;" th:text="${click.userAgent}">User Agent</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="empty-state py-4" th:if="${#lists.isEmpty(recentClicks)}">
-                    <div class="empty-state-icon" style="font-size: 2rem; padding: 0.5rem; background: #f8fafc; border-radius: 50%; display: inline-block; line-height: 1; color: #94a3b8;"><i class="ti ti-activity"></i></div>
-                    <h4 class="empty-state-title fw-bold text-dark mt-2 mb-1" style="font-size: 1rem;">No recent click activity</h4>
-                    <p class="empty-state-description text-muted small mb-0">Clicks on your short links will appear here in real-time once traffic arrives.</p>
-                </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title mb-0">Recent activity</h3>
+        </div>
+        <div class="card-body p-0" th:if="${!#lists.isEmpty(recentClicks)}">
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table table-hover table-stack">
+                    <thead>
+                        <tr>
+                            <th>When (UTC)</th>
+                            <th>Code</th>
+                            <th>IP</th>
+                            <th>Referrer</th>
+                            <th class="col-optional">User agent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="click : ${recentClicks}">
+                            <td data-label="When" class="text-muted" th:text="${click.clickedAt != null ? #temporals.format(click.clickedAt, 'yyyy-MM-dd HH:mm') : ''}">Time</td>
+                            <td data-label="Code">
+                                <a th:href="@{/urls/{id}/analytics(id=${click.shortUrlId})}" th:text="${click.shortCode}">code</a>
+                            </td>
+                            <td data-label="IP"><code class="lf-shortcode" th:text="${click.ipAddress}">IP</code></td>
+                            <td data-label="Referrer" class="text-truncate text-muted" style="max-width: 200px;" th:text="${click.referer != null && !click.referer.isEmpty() ? click.referer : 'Direct'}">Referrer</td>
+                            <td data-label="User agent" class="text-truncate text-muted col-optional" style="max-width: 250px;" th:text="${click.userAgent}">User Agent</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
+        <div class="empty-state py-4" th:if="${#lists.isEmpty(recentClicks)}">
+            <div class="empty-state-title">No recent clicks</div>
+            <p class="empty-state-description mb-0">Traffic on your short links appears here after the stream flushes.</p>
         </div>
     </div>
 </div>
@@ -167,52 +136,39 @@
     <script th:inline="javascript" th:if="${!#lists.isEmpty(topUrls)}" th:attr="nonce=${cspNonce}">
         /*<![CDATA[*/
         const topUrls = (/*[[${topUrls}]]*/ []).slice(0, 5);
-        
+        const t = lfTheme();
         const topCtx = document.getElementById('topUrlsChart').getContext('2d');
-        const topGradient = topCtx.createLinearGradient(0, 0, 400, 0);
-        topGradient.addColorStop(0, '#1a6ddb');
-        topGradient.addColorStop(1, '#0891b2');
-
         new Chart(topCtx, {
             type: 'bar',
-            data: { 
+            data: {
                 labels: topUrls.map(u => u.shortCode),
-                datasets: [{ 
-                    label: 'Clicks', 
-                    data: topUrls.map(u => u.totalClicks), 
-                    backgroundColor: topGradient,
-                    borderRadius: 6,
-                    borderSkipped: false
-                }] 
+                datasets: [{
+                    label: 'Clicks',
+                    data: topUrls.map(u => u.totalClicks),
+                    backgroundColor: t.signal,
+                    borderRadius: 2,
+                    borderSkipped: false,
+                    barThickness: 14
+                }]
             },
-            options: { 
-                indexAxis: 'y', 
-                responsive: true, 
+            options: {
+                indexAxis: 'y',
+                responsive: true,
                 maintainAspectRatio: false,
-                plugins: { 
+                plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        titleFont: { family: 'Inter', size: 12, weight: 'bold' },
-                        bodyFont: { family: 'Inter', size: 12 },
-                        padding: 10,
-                        cornerRadius: 8,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                return ' ' + context.raw + ' clicks';
-                            }
-                        }
-                    }
+                    tooltip: Object.assign(lfTooltip(), {
+                        callbacks: { label: function (ctx) { return ctx.raw + ' clicks'; } }
+                    })
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(15, 23, 42, 0.03)', drawTicks: false },
-                        ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                        grid: { color: t.line, drawTicks: false },
+                        ticks: { color: t.muted }
                     },
                     y: {
                         grid: { display: false },
-                        ticks: { font: { family: 'Inter', size: 12, weight: '600' }, color: '#334155' }
+                        ticks: { color: t.ink, font: { weight: '600' } }
                     }
                 }
             }

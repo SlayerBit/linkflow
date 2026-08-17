@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${pageTitle != null ? pageTitle + ' — LinkFlow' : 'LinkFlow'}">LinkFlow</title>
-    <meta name="description" content="LinkFlow is a production-grade URL shortener with real-time analytics, rate-limiting, and admin dashboards.">
+    <meta name="description" content="LinkFlow is URL infrastructure: cache-aside redirects, sliding-window rate limits, and click analytics that never block the 302.">
     <meta name="_csrf" th:content="${_csrf.token}" th:if="${_csrf}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}" th:if="${_csrf}"/>
     <link rel="stylesheet" th:href="@{/vendor/tabler/tabler.min.css}">
@@ -16,35 +16,41 @@
     <link rel="stylesheet" th:href="@{/css/components.css}">
     <link rel="stylesheet" th:href="@{/css/layout.css}">
     <link rel="stylesheet" th:href="@{/css/custom.css}">
+    <link rel="stylesheet" th:href="@{/css/marketing.css}">
     <th:block layout:fragment="head"></th:block>
 </head>
-<body>
+<body th:classappend="|${auth != null ? 'lf-app' : 'lf-public'}${fullBleed == true ? ' lf-landing-page' : ''}|">
 <a class="skip-link" href="#main-content">Skip to content</a>
 <div class="page">
-    <!--/* Authenticated: vertical sidebar (sibling of page-wrapper per Tabler layout) */-->
     <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark" th:if="${auth != null}">
         <div class="container-fluid">
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu"
                     aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <h1 class="navbar-brand navbar-brand-autodark">
-                <a th:href="@{/dashboard}" class="d-flex align-items-center text-decoration-none">
-                    <i class="ti ti-link fs-2" aria-hidden="true"></i>
-                    <span>LinkFlow</span>
-                </a>
+            <h1 class="navbar-brand navbar-brand-autodark mb-0">
+                <th:block th:replace="~{layout/brand :: logo(@{/dashboard})}"></th:block>
             </h1>
             <div class="collapse navbar-collapse" id="sidebar-menu">
-                <ul class="navbar-nav pt-lg-3">
+                <ul class="navbar-nav pt-lg-2">
                     <li class="nav-item" sec:authorize="hasRole('ADMIN')">
                         <span class="nav-link disabled nav-section-label">Admin</span>
                     </li>
                     <th:block sec:authorize="hasRole('ADMIN')" th:replace="~{layout/sidebar-admin :: adminNav}"></th:block>
                     <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-                        <span class="nav-link disabled nav-section-label mt-2">User</span>
+                        <span class="nav-link disabled nav-section-label">Workspace</span>
                     </li>
                     <th:block th:replace="~{layout/sidebar-user :: userNav}"></th:block>
                 </ul>
+                <div class="lf-sidebar-account d-lg-none">
+                    <div class="lf-userchip-name" th:text="${auth.displayName()}">User</div>
+                    <div class="small mb-2" th:text="${auth.email()}">email</div>
+                    <a th:href="@{/profile}">Profile</a>
+                    <span class="mx-2" aria-hidden="true">·</span>
+                    <form th:action="@{/logout}" method="post" class="d-inline">
+                        <button type="submit">Sign out</button>
+                    </form>
+                </div>
             </div>
         </div>
     </aside>
@@ -54,18 +60,18 @@
             <div class="container-xl">
                 <div class="navbar-nav flex-row order-md-last ms-auto">
                     <div class="nav-item dropdown">
-                        <a class="nav-link d-flex lh-1 text-reset p-0" href="#" data-bs-toggle="dropdown"
+                        <a class="nav-link lf-userchip p-0" href="#" data-bs-toggle="dropdown"
                            aria-label="Open user menu" aria-haspopup="true">
-                            <span class="avatar avatar-sm bg-primary-lt" aria-hidden="true"><i class="ti ti-user"></i></span>
-                            <div class="d-none d-xl-block ps-2">
-                                <div th:text="${auth.displayName()}" style="font-weight: 600; color: #1e293b;">User</div>
-                                <div class="mt-1 small text-muted" th:text="${auth.email()}">email</div>
+                            <span class="lf-avatar" aria-hidden="true"><i class="ti ti-user"></i></span>
+                            <div class="d-none d-xl-block">
+                                <div class="lf-userchip-name" th:text="${auth.displayName()}">User</div>
+                                <div class="small text-muted" th:text="${auth.email()}">email</div>
                             </div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end">
                             <a class="dropdown-item" th:href="@{/profile}">Profile</a>
                             <form th:action="@{/logout}" method="post">
-                                <button type="submit" class="dropdown-item">Logout</button>
+                                <button type="submit" class="dropdown-item">Sign out</button>
                             </form>
                         </div>
                     </div>
@@ -82,30 +88,17 @@
         </div>
         <footer class="footer footer-transparent d-print-none py-3 mt-auto lf-footer">
             <div class="container-xl">
-                <div class="row text-center align-items-center flex-row-reverse">
-                    <div class="col-lg-auto ms-lg-auto">
-                        <ul class="list-inline list-inline-dots mb-0">
-                            <li class="list-inline-item"><a href="https://github.com/SlayerBit/linkflow" class="link-secondary" target="_blank" rel="noopener">GitHub</a></li>
-                        </ul>
-                    </div>
-                    <div class="col-12 col-lg-auto mt-3 mt-lg-0">
-                        <ul class="list-inline list-inline-dots mb-0">
-                            <li class="list-inline-item">
-                                Copyright &copy; 2026
-                                <a th:href="@{/}" class="link-secondary">LinkFlow</a>.
-                                All rights reserved.
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+                <span>LinkFlow</span>
+                <span class="mx-2" aria-hidden="true">·</span>
+                <a href="https://github.com/SlayerBit/linkflow" class="link-secondary" target="_blank" rel="noopener">GitHub</a>
             </div>
         </footer>
     </div>
 
     <th:block th:if="${auth == null}" th:replace="~{layout/public-nav :: publicNav}"></th:block>
 
-    <div class="page-body" th:if="${auth == null}">
-        <div class="container-xl">
+    <div class="page-body" th:if="${auth == null}" th:classappend="${fullBleed == true} ? ' page-body-flush'">
+        <div th:class="${fullBleed == true} ? 'container-fluid px-0' : 'container-xl'">
             <div th:replace="~{fragments/alerts :: alerts}"></div>
             <main id="main-content" tabindex="-1">
                 <div layout:fragment="content"></div>
@@ -116,6 +109,7 @@
 
 <script th:src="@{/vendor/tabler/tabler.min.js}"></script>
 <script th:src="@{/js/app.js}"></script>
+<div id="lf-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
 <th:block layout:fragment="scripts"></th:block>
 </body>
 </html>

@@ -6,10 +6,10 @@
 <body>
 <div layout:fragment="content">
     <div class="page-header d-print-none mb-4">
-        <h2 class="page-title fw-bold text-dark fs-2">My Profile</h2>
+        <h2 class="page-title">My Profile</h2>
     </div>
     
-    <div class="alert alert-info alert-premium d-flex align-items-start mb-4 shadow-sm" th:if="${emailChangeNewEmail}">
+    <div class="alert alert-info alert-premium d-flex align-items-start mb-4" th:if="${emailChangeNewEmail}">
         <i class="ti ti-mail-fast fs-2 me-3 mt-1 text-info"></i>
         <div>
             <h4 class="alert-title fw-bold mb-1">Confirm your new address</h4>
@@ -27,7 +27,7 @@
             <!--/* Profile Summary Card */-->
             <div class="card mb-4 bg-white stat-card card-purple">
                 <div class="card-body text-center py-4 px-3">
-                    <span class="avatar avatar-xl bg-purple-lt rounded-circle mb-3" style="width: 5rem; height: 5rem; font-size: 2.25rem;">
+                    <span class="avatar avatar-xl bg-purple-lt mb-3" style="width: 4.25rem; height: 4.25rem; font-size: 1.75rem;">
                         <i class="ti ti-user"></i>
                     </span>
                     <h3 class="fw-bold text-dark mb-1" th:text="${user.firstName + ' ' + (user.lastName != null ? user.lastName : '')}">John Doe</h3>
@@ -48,9 +48,7 @@
             <!--/* Statistics Card */-->
             <div class="card bg-white mb-4">
                 <div class="card-header py-3">
-                    <h3 class="card-title fw-bold text-dark section-header-title color-blue mb-0">
-                        <i class="ti ti-chart-bar"></i> Account Stats
-                    </h3>
+                    <h3 class="card-title mb-0">Account</h3>
                 </div>
                 <div class="card-body py-3">
                     <div class="d-flex flex-column gap-3">
@@ -75,9 +73,7 @@
         <div class="col-lg-8">
             <div class="card bg-white">
                 <div class="card-header py-3">
-                    <h3 class="card-title fw-bold text-dark section-header-title color-purple mb-0">
-                        <i class="ti ti-settings"></i> Edit Profile Details
-                    </h3>
+                    <h3 class="card-title mb-0">Profile</h3>
                 </div>
                 <div class="card-body">
                     <form th:action="@{/profile}" th:object="${updateProfileForm}" method="post">
@@ -93,7 +89,7 @@
                                 <div class="field-error" id="lastName-error" data-field="lastName" th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}"></div>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Save Changes</button>
+                        <button type="submit" class="btn btn-primary mt-2">Save Changes</button>
                     </form>
                 </div>
             </div>
@@ -124,7 +120,7 @@
                                 <div class="field-error" id="confirmPassword-error" data-field="confirmPassword" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Update Password</button>
+                        <button type="submit" class="btn btn-primary mt-2">Update Password</button>
                     </form>
                 </div>
             </div>
@@ -148,7 +144,7 @@
                             <input type="password" class="form-control" id="email-change-current-password" th:field="*{currentPassword}" required placeholder="Verify with current password" autocomplete="current-password">
                             <div class="field-error" id="email-change-current-password-error" data-field="currentPassword" th:if="${#fields.hasErrors('currentPassword')}" th:errors="*{currentPassword}"></div>
                         </div>
-                        <button type="submit" class="btn btn-primary px-4 mt-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">Request Email Change</button>
+                        <button type="submit" class="btn btn-primary mt-2">Request Email Change</button>
                     </form>
                 </div>
             </div>
