@@ -106,7 +106,7 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
       - ./infrastructure/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./infrastructure/grafana/provisioning/datasources/prometheus-ec2.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+      - ./infrastructure/grafana/provisioning/datasources/prometheus.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
       - grafana-data:/var/lib/grafana
     depends_on:
       prometheus:

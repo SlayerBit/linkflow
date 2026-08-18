@@ -2,76 +2,120 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>LinkFlow — URL infrastructure</title></head>
+<head><title>LinkFlow — Short links, real-time analytics</title></head>
 <body>
 <div layout:fragment="content">
     <div class="lf-landing">
         <section class="lf-hero">
             <div class="container-xl lf-hero-inner">
                 <div class="lf-reveal">
-                    <p class="lf-kicker"><span class="lf-kicker-dot" aria-hidden="true"></span> URL infrastructure</p>
-                    <h1>The 302 should not wait on a write.</h1>
+                    <p class="lf-kicker"><span class="lf-kicker-dot" aria-hidden="true"></span> Link management platform</p>
+                    <h1>Shorten. Track. Own every redirect.</h1>
                     <p class="lf-hero-lead">
-                        Redis answers the redirect. Clicks enqueue and flush later.
-                        Postgres remains the source of truth — it just is not on the 302.
+                        Beautiful short links with real-time analytics and full control over every click.
                     </p>
                     <div class="lf-hero-actions">
-                        <a th:href="@{/register}" class="btn btn-primary">Create account</a>
+                        <a th:href="@{/register}" class="btn btn-primary">Get started</a>
                         <a th:href="@{/login}" class="btn btn-ghost">Sign in</a>
                     </div>
                 </div>
-                <div class="lf-pathboard" aria-hidden="true">
-                    <div class="lf-pathboard-label">Redirect path</div>
-                    <svg class="lf-flow" viewBox="0 0 460 228" width="100%" preserveAspectRatio="xMidYMid meet">
-                        <path class="lf-wire lf-wire-hot" d="M48 40 H252 V184"/>
-                        <rect class="lf-node" x="20" y="22" width="56" height="36" rx="3"/>
-                        <rect class="lf-node" x="124" y="22" width="56" height="36" rx="3"/>
-                        <rect class="lf-node" x="220" y="22" width="64" height="36" rx="3"/>
-                        <rect class="lf-node" x="224" y="94" width="56" height="36" rx="3"/>
-                        <rect class="lf-node" x="224" y="166" width="56" height="36" rx="3"/>
-                        <text class="lf-flow-label" x="48" y="45" text-anchor="middle">Client</text>
-                        <text class="lf-flow-label" x="152" y="45" text-anchor="middle">Nginx</text>
-                        <text class="lf-flow-label" x="252" y="45" text-anchor="middle">Gateway</text>
-                        <text class="lf-flow-label" x="252" y="117" text-anchor="middle">Redis</text>
-                        <text class="lf-flow-label" x="252" y="189" text-anchor="middle">App</text>
-                        <text class="lf-flow-note" x="300" y="117">fresh · stale · miss</text>
-                        <text class="lf-flow-note" x="300" y="189">302 · stream</text>
+                <div class="lf-hero-visual" aria-hidden="true">
+                    <svg class="lf-motif" viewBox="0 0 480 320" width="100%" preserveAspectRatio="xMidYMid meet">
+                        <!-- Abstract brand composition: connected nodes with flowing lines -->
+                        <defs>
+                            <linearGradient id="lf-glow" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#c24e1c" stop-opacity="0.6"/>
+                                <stop offset="100%" stop-color="#c24e1c" stop-opacity="0"/>
+                            </linearGradient>
+                            <linearGradient id="lf-wire-grad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="rgba(244,240,232,0.08)"/>
+                                <stop offset="50%" stop-color="rgba(244,240,232,0.25)"/>
+                                <stop offset="100%" stop-color="rgba(244,240,232,0.08)"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Ambient glow -->
+                        <circle cx="240" cy="160" r="120" fill="url(#lf-glow)" opacity="0.35"/>
+                        <!-- Grid of subtle dots -->
+                        <g opacity="0.12">
+                            <circle cx="60" cy="60" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="120" cy="60" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="180" cy="60" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="240" cy="60" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="300" cy="60" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="360" cy="60" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="420" cy="60" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="60" cy="120" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="120" cy="120" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="180" cy="120" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="300" cy="120" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="360" cy="120" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="420" cy="120" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="60" cy="180" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="120" cy="180" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="300" cy="180" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="360" cy="180" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="420" cy="180" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="60" cy="240" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="120" cy="240" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="180" cy="240" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="240" cy="240" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="300" cy="240" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="360" cy="240" r="1.5" fill="#f4f0e8"/>
+                            <circle cx="420" cy="240" r="1.5" fill="#f4f0e8"/>
+                        </g>
+                        <!-- Flowing connection paths -->
+                        <path class="lf-motif-wire lf-motif-wire-1" d="M80 160 Q160 100, 240 160 Q320 220, 400 160" fill="none" stroke="url(#lf-wire-grad)" stroke-width="1.5"/>
+                        <path class="lf-motif-wire lf-motif-wire-2" d="M60 200 Q140 140, 220 200 Q300 260, 380 200" fill="none" stroke="url(#lf-wire-grad)" stroke-width="1" opacity="0.5"/>
+                        <path class="lf-motif-wire lf-motif-wire-3" d="M100 120 Q180 60, 260 120 Q340 180, 420 120" fill="none" stroke="url(#lf-wire-grad)" stroke-width="1" opacity="0.4"/>
+                        <!-- Animated signal path -->
+                        <path class="lf-motif-signal" d="M80 160 Q160 100, 240 160 Q320 220, 400 160" fill="none" stroke="#c24e1c" stroke-width="2" stroke-dasharray="6 20" opacity="0.7"/>
+                        <!-- Primary nodes (brand motif: dot-wave-dot) -->
+                        <circle cx="80" cy="160" r="8" fill="#1f2128" stroke="rgba(244,240,232,0.25)" stroke-width="1.5"/>
+                        <circle cx="80" cy="160" r="3.5" fill="#c24e1c"/>
+                        <circle cx="400" cy="160" r="8" fill="#1f2128" stroke="rgba(244,240,232,0.25)" stroke-width="1.5"/>
+                        <circle cx="400" cy="160" r="3.5" fill="#c24e1c"/>
+                        <!-- Secondary nodes -->
+                        <circle cx="240" cy="160" r="6" fill="#1f2128" stroke="rgba(244,240,232,0.18)" stroke-width="1"/>
+                        <circle cx="240" cy="160" r="2.5" fill="rgba(244,240,232,0.5)"/>
+                        <circle cx="160" cy="130" r="4" fill="#1f2128" stroke="rgba(244,240,232,0.12)" stroke-width="1"/>
+                        <circle cx="160" cy="130" r="1.8" fill="rgba(244,240,232,0.35)"/>
+                        <circle cx="320" cy="190" r="4" fill="#1f2128" stroke="rgba(244,240,232,0.12)" stroke-width="1"/>
+                        <circle cx="320" cy="190" r="1.8" fill="rgba(244,240,232,0.35)"/>
                     </svg>
                 </div>
             </div>
         </section>
 
-        <section class="lf-section" id="path">
+        <section class="lf-section" id="features">
             <div class="container-xl lf-split">
                 <div>
-                    <p class="lf-kicker lf-kicker-quiet"><span class="lf-kicker-dot"></span> Hot path</p>
-                    <h2>Cache first. Database when it matters.</h2>
+                    <p class="lf-kicker lf-kicker-quiet"><span class="lf-kicker-dot"></span> Features</p>
+                    <h2>Everything you need, nothing you don't.</h2>
                     <p class="lede">
-                        A redirect is four states, not a query: fresh, stale-while-revalidate,
-                        negative cache, or a locked miss. The click is recorded after the 302
-                        has already left.
+                        Create short links in seconds. Track every click with detailed analytics.
+                        Stay in control with expiry, custom aliases, and instant deactivation.
                     </p>
                 </div>
                 <div>
                     <div class="lf-capability">
                         <div class="lf-capability-index">01</div>
                         <div>
-                            <h3>Short links, owned</h3>
-                            <p>Custom alias, expiry, QR PNG, and idempotent create. Deactivate without deleting history.</p>
+                            <h3>Custom short links</h3>
+                            <p>Choose your own alias, set an expiry date, generate QR codes, and deactivate links without losing your click history.</p>
                         </div>
                     </div>
                     <div class="lf-capability">
                         <div class="lf-capability-index">02</div>
                         <div>
-                            <h3>Limits that mean something</h3>
-                            <p>Sliding window in Lua, per user and per IP. Auth fails closed if Redis is down. Everything else fails open so redirects stay up.</p>
+                            <h3>Intelligent rate limiting</h3>
+                            <p>Per-user and per-IP sliding window limits protect your links from abuse. Your redirects stay fast, even under pressure.</p>
                         </div>
                     </div>
                     <div class="lf-capability">
                         <div class="lf-capability-index">03</div>
                         <div>
-                            <h3>Clicks you can audit</h3>
-                            <p>Counts, 7/30/90-day trends, recent events. Visitor IPs are masked. No geo theatre — the product reports what it actually stores.</p>
+                            <h3>Transparent analytics</h3>
+                            <p>Click counts, trend charts, and recent events — all in real time. No guesswork, no inflated numbers. Just honest data.</p>
                         </div>
                     </div>
                 </div>
@@ -80,19 +124,19 @@
 
         <section class="lf-section pt-0">
             <div class="container-xl">
-                <p class="lf-kicker lf-kicker-quiet"><span class="lf-kicker-dot"></span> Operator view</p>
-                <h2 class="mb-4">A console for the links you actually run.</h2>
+                <p class="lf-kicker lf-kicker-quiet"><span class="lf-kicker-dot"></span> Your dashboard</p>
+                <h2 class="mb-4">A clean workspace for all your links.</h2>
                 <div class="lf-console">
                     <div class="lf-console-bar">
                         <span>Links</span>
-                        <span>Live cache · stream</span>
+                        <span>Real-time · updated live</span>
                     </div>
                     <table>
                         <thead>
                         <tr>
                             <th>Code</th>
                             <th>Target</th>
-                            <th>Cache</th>
+                            <th>Status</th>
                             <th>Clicks</th>
                         </tr>
                         </thead>
@@ -100,19 +144,19 @@
                         <tr>
                             <td><code class="lf-shortcode">docs</code></td>
                             <td class="text-muted">https://example.com/docs</td>
-                            <td><span class="lf-pill">Fresh</span></td>
+                            <td><span class="lf-pill">Active</span></td>
                             <td>1,204</td>
                         </tr>
                         <tr>
                             <td><code class="lf-shortcode">launch</code></td>
                             <td class="text-muted">https://example.com/launch</td>
-                            <td><span class="lf-pill lf-pill-stale">Stale</span></td>
+                            <td><span class="lf-pill lf-pill-stale">Expiring</span></td>
                             <td>886</td>
                         </tr>
                         <tr>
                             <td><code class="lf-shortcode">status</code></td>
                             <td class="text-muted">https://status.example.com</td>
-                            <td><span class="lf-pill">Fresh</span></td>
+                            <td><span class="lf-pill">Active</span></td>
                             <td>312</td>
                         </tr>
                         </tbody>
@@ -121,30 +165,30 @@
             </div>
         </section>
 
-        <section class="lf-section lf-section-ink" id="observability">
+        <section class="lf-section lf-section-ink" id="quality">
             <div class="container-xl">
-                <p class="lf-kicker"><span class="lf-kicker-dot"></span> How it is built</p>
-                <h2>One process. An edge that can say no.</h2>
+                <p class="lf-kicker"><span class="lf-kicker-dot"></span> Built for reliability</p>
+                <h2>Fast redirects. Honest analytics. Always on.</h2>
                 <p class="lede mb-5">
-                    The API, schedulers, and schema live in one JVM. Nginx is the public edge.
-                    Prometheus scrapes privately. That is the system — not a slide.
+                    Every redirect is served instantly. Every click is recorded accurately.
+                    Your links work around the clock — no maintenance windows, no surprises.
                 </p>
                 <dl class="lf-facts">
                     <div class="lf-fact">
-                        <dt>Runtime</dt>
-                        <dd>Java 21 · Spring Boot 3.4</dd>
+                        <dt>Redirects</dt>
+                        <dd>Instant · cached</dd>
                     </div>
                     <div class="lf-fact">
-                        <dt>Store</dt>
-                        <dd>PostgreSQL 16 · Redis 7</dd>
+                        <dt>Analytics</dt>
+                        <dd>Real-time · accurate</dd>
                     </div>
                     <div class="lf-fact">
-                        <dt>Edge</dt>
-                        <dd>Nginx · Gateway :8080</dd>
+                        <dt>Security</dt>
+                        <dd>Rate-limited · protected</dd>
                     </div>
                     <div class="lf-fact">
-                        <dt>Signals</dt>
-                        <dd>Micrometer · Grafana</dd>
+                        <dt>Monitoring</dt>
+                        <dd>Metrics · alerting</dd>
                     </div>
                 </dl>
             </div>
@@ -152,10 +196,10 @@
 
         <section class="lf-cta">
             <div class="container-xl">
-                <h2>Issue a short link. Watch the path.</h2>
-                <p class="lede mb-4">Create an account, shorten a URL, and hit <code>/r/{code}</code>. The rest is instrumentation.</p>
+                <h2>Start shortening links today.</h2>
+                <p class="lede mb-4">Create an account in seconds. Your first short link is one click away.</p>
                 <div class="lf-hero-actions">
-                    <a th:href="@{/register}" class="btn btn-primary">Create account</a>
+                    <a th:href="@{/register}" class="btn btn-primary">Get started free</a>
                     <a th:href="@{/login}" class="btn btn-light">Sign in</a>
                 </div>
             </div>
