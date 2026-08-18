@@ -1,7 +1,9 @@
 /* LinkFlow identity: copper signal on warm paper. Semantic roles only. */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-    --lf-font: "Segoe UI", ui-sans-serif, system-ui, -apple-system, Helvetica, Arial, sans-serif;
+    --lf-font: "Inter", "Segoe UI", ui-sans-serif, system-ui, -apple-system, Helvetica, Arial, sans-serif;
     --lf-font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace;
 
     --lf-ink: #16181d;
@@ -41,17 +43,21 @@
     --lf-space-6: 2rem;
     --lf-space-8: 3.5rem;
     --lf-space-10: 5rem;
+    --lf-space-12: 6rem;
+    --lf-space-16: 8rem;
 
     --lf-radius-sm: 3px;
-    --lf-radius-md: 4px;
-    --lf-radius-lg: 6px;
+    --lf-radius-md: 5px;
+    --lf-radius-lg: 8px;
 
-    --lf-shadow-sm: none;
-    --lf-shadow-md: none;
+    --lf-shadow-sm: 0 1px 2px rgba(22, 24, 29, 0.04);
+    --lf-shadow-md: 0 4px 16px -4px rgba(22, 24, 29, 0.08);
     --lf-shadow-lg: 0 24px 48px -28px rgba(22, 24, 29, 0.35);
 
     --lf-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --lf-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --lf-motion: 220ms;
+    --lf-motion-slow: 600ms;
 
     --lf-color-bg: var(--lf-paper);
     --lf-color-surface: var(--lf-surface);
@@ -92,6 +98,7 @@
 @media (prefers-reduced-motion: reduce) {
     :root {
         --lf-motion: 0s;
+        --lf-motion-slow: 0s;
     }
 
     *,

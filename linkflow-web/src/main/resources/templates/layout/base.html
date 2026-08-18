@@ -7,9 +7,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${pageTitle != null ? pageTitle + ' — LinkFlow' : 'LinkFlow'}">LinkFlow</title>
-    <meta name="description" content="LinkFlow is URL infrastructure: cache-aside redirects, sliding-window rate limits, and click analytics that never block the 302.">
+    <meta name="description" content="LinkFlow — beautiful short links with real-time analytics and full control over every redirect.">
     <meta name="_csrf" th:content="${_csrf.token}" th:if="${_csrf}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}" th:if="${_csrf}"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" th:href="@{/vendor/tabler/tabler.min.css}">
     <link rel="stylesheet" th:href="@{/vendor/tabler-icons/tabler-icons.min.css}">
     <link rel="stylesheet" th:href="@{/css/tokens.css}">
