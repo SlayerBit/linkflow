@@ -79,7 +79,10 @@ TRUST_POLICY=$(cat <<EOF
           "${OIDC_PROVIDER_URL}:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "${OIDC_PROVIDER_URL}:sub": "repo:${REPO}:ref:refs/heads/main"
+          "${OIDC_PROVIDER_URL}:sub": [
+            "repo:${REPO}:ref:refs/heads/main",
+            "repo:${REPO}:environment:production"
+          ]
         }
       }
     }
