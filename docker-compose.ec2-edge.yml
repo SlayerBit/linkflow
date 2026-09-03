@@ -26,16 +26,9 @@ services:
       - "app1:${APP_NODE_1_IP}"
       - "app2:${APP_NODE_2_IP}"
       - "app3:${APP_NODE_3_IP}"
-    environment:
-      # The nginx entrypoint runs envsubst on files in /etc/nginx/templates/ and writes the
-      # result to /etc/nginx/conf.d/. DOMAIN_NAME is the only variable substituted — it
-      # drives server_name and the Let's Encrypt certificate path.
-      DOMAIN_NAME: ${DOMAIN_NAME}
     volumes:
       - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # Mounted as a template: the entrypoint substitutes ${DOMAIN_NAME} and writes the
-      # processed file to /etc/nginx/conf.d/linkflow.conf at container start.
-      - ./infrastructure/nginx/linkflow-ec2.conf:/etc/nginx/templates/linkflow.conf.template:ro
+      - ./infrastructure/nginx/linkflow-ec2.conf:/etc/nginx/conf.d/linkflow.conf:ro
       - ./infrastructure/nginx/conf.d/proxy-headers.inc:/etc/nginx/conf.d/proxy-headers.inc:ro
       - /dev/null:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
