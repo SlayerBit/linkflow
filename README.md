@@ -111,3 +111,11 @@ GitHub Actions (`.github/workflows/ci.yml`) runs `mvn verify`, builds the three 
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Local Compose, 2-EC2 hosted stack, env vars, load tests |
 | [docs/INTERVIEW_GUIDE.md](docs/INTERVIEW_GUIDE.md) | Pitches and design Q&A for this codebase |
 
+## Limitations
+
+- Compose ships demo credentials (bootstrap admin, Grafana, local DB/Redis passwords)
+- JWT role changes apply on the next refresh, not instantly
+- `click_events` is retained (default 365 days) but not partitioned
+- Password and email only — no social login; no geo/device analytics
+- Prometheus alert rules evaluate in Prometheus; there is no notifier container
+- k6 thresholds are per-run gates, not published SLOs
