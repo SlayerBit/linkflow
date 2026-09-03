@@ -16,7 +16,7 @@ URL shortener built as a **modular monolith** in Java 21 and Spring Boot 3.4.1. 
 
 ## Hosted layout
 
-Two EC2 instances: **#1** is the public edge (Nginx, Redis, Prometheus, Grafana); **#2** runs gateway + app + web. PostgreSQL is Neon (external); SMTP is external. Details: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Four EC2 instances: **#1** is the public edge (Nginx, Redis, Prometheus, Grafana); **#2**, **#3**, and **#4** run identical gateway + app + web application nodes behind `least_conn` load balancing. PostgreSQL is Neon (external); SMTP is external. Automated CI/CD via GitHub Actions, ECR, and SSM. Details: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Processes
 
