@@ -81,6 +81,9 @@ services:
   prometheus:
     image: prom/prometheus:v2.54.1
     restart: unless-stopped
+    ports:
+      # Bound to localhost: access via SSH tunnel or local curl on EC2 #1.
+      - "127.0.0.1:9090:9090"
     # Prometheus also needs to resolve app1/app2/app3 for its scrape targets.
     extra_hosts:
       - "app1:${APP_NODE_1_IP}"
