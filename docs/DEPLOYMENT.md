@@ -39,12 +39,25 @@ flowchart LR
     A1 & A2 & A3 --> Redis
 ```
 
-| Instance | Role | Compose file |
-|----------|------|--------------|
-| EC2 #1 | Edge: Nginx (TLS + LB), Redis, Prometheus, Grafana | `docker-compose.ec2-edge.yml` |
-| EC2 #2 | App node 1: gateway + app + web | `docker-compose.ec2-app.yml` |
-| EC2 #3 | App node 2: gateway + app + web | `docker-compose.ec2-app.yml` |
-| EC2 #4 | App node 3: gateway + app + web | `docker-compose.ec2-app.yml` |
+| Instance | Role | Private IP | Instance ID | Compose file |
+|----------|------|------------|-------------|--------------|
+| EC2 #1 | Edge: Nginx (TLS + LB), Redis, Prometheus, Grafana | 172.31.4.98 | `i-09762b0270a4327dd` | `docker-compose.ec2-edge.yml` |
+| EC2 #2 | App node 1: gateway + app + web | 172.31.5.37 | `i-0c4f9bdb54bc90f35` | `docker-compose.ec2-app.yml` |
+| EC2 #3 | App node 2: gateway + app + web | 172.31.8.125 | `i-06b58e726a0c83746` | `docker-compose.ec2-app.yml` |
+| EC2 #4 | App node 3: gateway + app + web | 172.31.2.137 | `i-0016df717b7272284` | `docker-compose.ec2-app.yml` |
+
+### Active AWS Infrastructure Resources
+
+- **Region**: `ap-south-1`
+- **AWS Account**: `625408983712`
+- **Golden AMI**: `ami-02a04418acf670410` (created from validated EC2 #2)
+- **ECR Registry**: `625408983712.dkr.ecr.ap-south-1.amazonaws.com`
+  - `linkflow-app`
+  - `linkflow-gateway`
+  - `linkflow-web`
+- **IAM Instance Profile**: `linkflow-ec2-instance` (attached to all 4 instances, SSM + ECR pull enabled)
+- **GitHub Actions Role**: `arn:aws:iam::625408983712:role/linkflow-github-actions`
+- **OIDC Provider**: `token.actions.githubusercontent.com` (federated with `repo:SlayerBit/linkflow`)
 
 ---
 
