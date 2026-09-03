@@ -28,14 +28,21 @@
     {
       "Sid": "SSMSendCommand",
       "Effect": "Allow",
-      "Action": [
-        "ssm:SendCommand",
-        "ssm:GetCommandInvocation"
-      ],
+      "Action": "ssm:SendCommand",
       "Resource": [
         "arn:aws:ssm:*:*:document/AWS-RunShellScript",
         "arn:aws:ec2:*:*:instance/*"
       ]
+    },
+    {
+      "Sid": "SSMGetCommandInvocation",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetCommandInvocation",
+        "ssm:ListCommands",
+        "ssm:ListCommandInvocations"
+      ],
+      "Resource": "*"
     },
     {
       "Sid": "STSIdentity",
