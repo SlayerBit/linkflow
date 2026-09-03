@@ -2,50 +2,72 @@
 
 How the current repository is structured. Run it with [README.md](../README.md) and [DEPLOYMENT.md](DEPLOYMENT.md). Endpoints: [API.md](API.md).
 
-## Hosted topology (2 EC2)
+## Hosted topology (4 EC2)
 
-The **current hosted** layout is **two EC2 instances**. Nginx and Prometheus have a single active upstream: EC2 #2 (`172.31.5.37`). Commented `#3`/`#4` lines in those files are unused placeholders, not running hosts.
+The **current hosted** layout is **four EC2 instances**: one edge/infrastructure node and three identical application nodes behind `least_conn` load balancing.
+
+Nginx and Prometheus use stable upstream names (`app1`, `app2`, `app3`) resolved to private VPC IPs via Docker `extra_hosts` in the edge compose file. The Nginx and Prometheus configs are committed and deterministic — only `.env` on EC2 #1 varies per deployment.
 
 ```mermaid
 flowchart TB
     Internet((Internet)) --> Nginx
 
     subgraph Edge["EC2 #1 — edge / infra"]
-        Nginx["Nginx :80"]
+        Nginx["Nginx :80/:443"]
         Redis["Redis :6379"]
         Prom["Prometheus"]
         Grafana["Grafana :3000 localhost"]
     end
 
-    subgraph AppNode["EC2 #2 — application"]
-        GW["gateway :8080"]
-        App["app :8081"]
-        Web["web :8082"]
-        GW --> App
-        GW --> Web
-        Web --> GW
+    subgraph App1["EC2 #2 — app node 1"]
+        GW1["gateway :8080"]
+        A1["app :8081"]
+        W1["web :8082"]
+        GW1 --> A1
+        GW1 --> W1
+        W1 --> GW1
     end
 
-    Nginx -->|proxy :8080| GW
-    App --> PG[(Neon PostgreSQL)]
-    App --> Redis
-    Web --> Redis
-    App --> SMTP[[external SMTP]]
-    Prom -->|:8081 / :8080| App
-    Prom --> GW
+    subgraph App2["EC2 #3 — app node 2"]
+        GW2["gateway :8080"]
+        A2["app :8081"]
+        W2["web :8082"]
+        GW2 --> A2
+        GW2 --> W2
+        W2 --> GW2
+    end
+
+    subgraph App3["EC2 #4 — app node 3"]
+        GW3["gateway :8080"]
+        A3["app :8081"]
+        W3["web :8082"]
+        GW3 --> A3
+        GW3 --> W3
+        W3 --> GW3
+    end
+
+    Nginx -->|"least_conn :8080"| GW1 & GW2 & GW3
+    A1 & A2 & A3 --> PG[(Neon PostgreSQL)]
+    A1 & A2 & A3 --> Redis
+    W1 & W2 & W3 --> Redis
+    A1 & A2 & A3 --> SMTP[[external SMTP]]
+    Prom -->|scrape| A1 & A2 & A3
+    Prom -->|scrape| GW1 & GW2 & GW3
     Grafana --> Prom
 ```
 
 | Instance | Compose file | Runs |
 |----------|--------------|------|
-| EC2 #1 | `docker-compose.ec2-edge.yml` | Nginx (public entry), Redis, Prometheus, Grafana |
-| EC2 #2 | `docker-compose.ec2-app.yml` | gateway + app + web on a private Docker bridge |
+| EC2 #1 | `docker-compose.ec2-edge.yml` | Nginx (TLS + LB), Redis, Prometheus, Grafana |
+| EC2 #2 | `docker-compose.ec2-app.yml` | gateway + app + web (app node 1) |
+| EC2 #3 | `docker-compose.ec2-app.yml` | gateway + app + web (app node 2) |
+| EC2 #4 | `docker-compose.ec2-app.yml` | gateway + app + web (app node 3) |
 
-EC2 #2's 8080–8082 are for the private path from #1 (and Prometheus scrape), not public ingress. PostgreSQL is external Neon (`SPRING_DATASOURCE_*`). SMTP is external (`SPRING_MAIL_*`). Redis is only on #1 (`REDIS_HOST` on #2).
+Each app node's 8080–8082 are for the private path from EC2 #1 (Nginx proxy + Prometheus scrape), not public ingress. PostgreSQL is external Neon (`SPRING_DATASOURCE_*`). SMTP is external (`SPRING_MAIL_*`). Redis is only on #1 (`REDIS_HOST` on #2/#3/#4). All three app nodes run the same compose file with the same `.env`; they are identical and stateless.
 
 A laptop still uses `docker-compose.yml` (single host, bundled Postgres/Redis/MailHog). That is local development.
 
-Adding more app nodes is a **future** scale-out option (`docker-compose.ec2-app.yml` can be copied; Nginx/Prometheus `#3`/`#4` lines would need real IPs). It is not deployed today.
+Deployment is automated via GitHub Actions: push to `main` → build + test → ECR push → SSM rolling deploy (App1 → App2 → App3) → verify. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Processes
 

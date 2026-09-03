@@ -1,291 +1,387 @@
 # LinkFlow deployment
 
-What this repository actually runs. Architecture: [ARCHITECTURE.md](ARCHITECTURE.md).
+Run the application locally, on remote infrastructure, or via the automated CI/CD pipeline. Architecture details: [ARCHITECTURE.md](ARCHITECTURE.md). API endpoints: [API.md](API.md).
 
-## What is supported
+## Deployment models
 
-| Model | Evidence | Profile |
-|-------|----------|---------|
-| Full Docker Compose | `docker-compose.yml` | `docker` |
-| Host JARs + published Postgres/Redis/MailHog | `docker-compose.dev.yml` overlay | `dev` on the JARs |
-| Raised rate limits for k6 | `docker-compose.perf.yml` | still `docker` |
-| 2-EC2 hosted stack | `docker-compose.ec2-edge.yml` + `docker-compose.ec2-app.yml` | `prod` on EC2 #2 |
+| Model | Compose file | When to use |
+|-------|-------------|-------------|
+| Full local stack | `docker-compose.yml` | Development — starts everything including PostgreSQL, Redis, MailHog |
+| Dev overlay | `docker-compose.yml` + `docker-compose.dev.yml` | Hot-reload development |
+| Host JARs | none | Running JARs directly (IDE / debugging) |
+| **4-EC2 production** | `docker-compose.ec2-edge.yml` + `docker-compose.ec2-app.yml` | **Hosted production** |
 
-`prod` refuses to start without a JWT secret (≥64 decoded bytes), Redis password, explicit CORS origins (not `*`), `https` base/mail URLs, enabled mail, and a non-`@linkflow.local` sender. Compose uses `docker` so a laptop can run without a real SMTP domain.
+---
 
-## Prerequisites
+## Production architecture (4 EC2)
 
-- JDK 21 for host JAR builds (`JAVA_HOME` must be 21)
-- Maven 3.9+
-- Docker (Compose stack, Testcontainers, image builds)
-- k6 only if you run the load suite
+```mermaid
+flowchart LR
+    Internet((Internet)) --> Nginx
 
-`.mvn/jvm.config` must be empty or contain only JVM flags — `#` comments are passed as a main class name.
+    subgraph Edge["EC2 #1 — edge"]
+        Nginx["Nginx :443"]
+        Redis["Redis :6379"]
+    end
 
-## Full Compose (primary local stack)
+    subgraph N1["EC2 #2"]
+        GW1["gw"] --> A1["app"] & W1["web"]
+    end
+    subgraph N2["EC2 #3"]
+        GW2["gw"] --> A2["app"] & W2["web"]
+    end
+    subgraph N3["EC2 #4"]
+        GW3["gw"] --> A3["app"] & W3["web"]
+    end
+
+    Nginx -->|"least_conn"| GW1 & GW2 & GW3
+    A1 & A2 & A3 --> PG[(Neon PG)]
+    A1 & A2 & A3 --> Redis
+```
+
+| Instance | Role | Compose file |
+|----------|------|--------------|
+| EC2 #1 | Edge: Nginx (TLS + LB), Redis, Prometheus, Grafana | `docker-compose.ec2-edge.yml` |
+| EC2 #2 | App node 1: gateway + app + web | `docker-compose.ec2-app.yml` |
+| EC2 #3 | App node 2: gateway + app + web | `docker-compose.ec2-app.yml` |
+| EC2 #4 | App node 3: gateway + app + web | `docker-compose.ec2-app.yml` |
+
+---
+
+## CI/CD pipeline
+
+Every push to `main` triggers a fully automated pipeline. No manual steps required.
+
+```mermaid
+flowchart LR
+    Push["git push main"] --> Test["Build & Test"]
+    Test --> ECR["Push to ECR"]
+    ECR --> D1["Deploy App1"]
+    D1 -->|"healthy"| D2["Deploy App2"]
+    D2 -->|"healthy"| D3["Deploy App3"]
+    ECR --> Edge["Update Edge"]
+    D3 & Edge --> Verify["Verify All"]
+    Verify --> Notify["Notify"]
+
+    D1 -.->|"unhealthy"| R1["Rollback App1"]
+    D2 -.->|"unhealthy"| R2["Rollback App2"]
+    D3 -.->|"unhealthy"| R3["Rollback App3"]
+```
+
+**Pipeline stages:**
+
+1. **Build & Test** — `mvn clean verify` (unit + integration tests via Testcontainers)
+2. **Build & Push** — builds `linux/amd64` images for app, gateway, web; pushes to ECR with SHA tag + `latest`
+3. **Rolling Deploy** — deploys to app nodes sequentially via SSM Run Command. Each node: pull → restart → health check → proceed or rollback
+4. **Edge Update** — `git fetch + reset` + `docker compose up -d` on EC2 #1 (only recreates changed services)
+5. **Verify** — health checks all nodes from edge
+6. **Notify** — optional Slack/Discord webhook
+
+**Key properties:**
+- No SSH keys or long-lived AWS credentials — GitHub OIDC + SSM
+- Deployment concurrency lock — a running deploy is never interrupted
+- Automatic rollback on health failure
+- ECR lifecycle policy retains the 20 most recent images
+
+---
+
+## AWS prerequisites
+
+### 1. Run the OIDC setup script
+
+This creates the GitHub OIDC provider, IAM roles, and instance profiles:
 
 ```bash
-./infrastructure/nginx/generate-dev-certs.sh
-cp .env.example .env
-# set LINKFLOW_JWT_SECRET (openssl rand -base64 64)
-docker compose up --build
+./scripts/aws/github-oidc-setup.sh --region ap-south-1 --repo SlayerBit/linkflow
 ```
 
-Open **https://localhost**. Mail: http://localhost:8025. Prometheus: http://localhost:9090. Grafana: http://localhost:3000 (admin/admin).
+It creates:
+- OIDC provider for `token.actions.githubusercontent.com`
+- `linkflow-github-actions` role (trust policy scoped to `repo:SlayerBit/linkflow:ref:refs/heads/main`)
+- `linkflow-ec2-instance` role + instance profile (SSM + ECR pull)
 
-| Service | Published | Notes |
-|---------|-----------|-------|
-| nginx | 80, 443 | Only public application entry |
-| linkflow-gateway / app / web | — | Private network |
-| postgres / redis | — | Private; add the dev overlay to publish |
-| mailhog | 8025 | Inbox |
-| prometheus | 9090 | Scrapes app and gateway privately |
-| grafana | 3000 | Provisioned **LinkFlow Overview** |
-
-Bootstrap admin is **enabled** in Compose unless you override it (`admin@linkflow.local` / `ChangeMeAdmin1!`). Disable it after first use.
-
-### Dev overlay
+### 2. Create ECR repositories
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis mailhog
+./scripts/aws/create-ecr-repos.sh --region ap-south-1
 ```
 
-Publishes 5432, 6379, 1025 (and optionally 8080–8082 if you start those services). Needed for host JARs.
+Creates `linkflow-app`, `linkflow-gateway`, `linkflow-web` with lifecycle policies.
 
-### Host JARs
+### 3. Attach instance profile to all 4 EC2 instances
 
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)
-mvn clean package -DskipTests
-java -jar linkflow-app/target/linkflow-app-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
-export LINKFLOW_APP_URI=http://127.0.0.1:8081
-export LINKFLOW_WEB_URI=http://127.0.0.1:8082
-java -jar linkflow-gateway/target/linkflow-gateway-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
-java -jar linkflow-web/target/linkflow-web-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
+aws ec2 associate-iam-instance-profile \
+  --instance-id i-0xxxxxxxxxxxx \
+  --iam-instance-profile Name=linkflow-ec2-instance
 ```
 
-On macOS use `127.0.0.1` for gateway upstreams — `localhost` may resolve to `::1`.
+Repeat for all 4 instances.
 
-`SPRING_DATASOURCE_URL` has no default outside Compose; startup fails without it.
+### 4. Configure GitHub Secrets
 
-## Images
+| Secret | Value |
+|--------|-------|
+| `AWS_ROLE_ARN` | Output from OIDC setup script |
+| `AWS_REGION` | e.g. `ap-south-1` |
+| `ECR_REGISTRY` | e.g. `123456789012.dkr.ecr.ap-south-1.amazonaws.com` |
+| `EC2_EDGE_INSTANCE_ID` | Instance ID of EC2 #1 |
+| `EC2_APP1_INSTANCE_ID` | Instance ID of EC2 #2 |
+| `EC2_APP2_INSTANCE_ID` | Instance ID of EC2 #3 |
+| `EC2_APP3_INSTANCE_ID` | Instance ID of EC2 #4 |
+| `DEPLOY_WEBHOOK_URL` | *(optional)* Slack/Discord webhook URL |
+
+### 5. Create the `production` Deployment Environment
+
+In GitHub: Settings → Environments → New → `production`. Optional: add required reviewers.
+
+---
+
+## EC2 bootstrap
+
+Run on each fresh Amazon Linux 2023 instance:
 
 ```bash
-docker build -f infrastructure/Dockerfile --target app     -t linkflow-app .
-docker build -f infrastructure/Dockerfile --target gateway -t linkflow-gateway .
-docker build -f infrastructure/Dockerfile --target web     -t linkflow-web .
+# Copy the bootstrap script and run as root
+curl -fsSL https://raw.githubusercontent.com/SlayerBit/linkflow/main/scripts/ec2-bootstrap.sh | sudo bash
 ```
 
-One Maven build stage is shared. Images: UID 1001, layered JARs, `HEALTHCHECK` on `/actuator/health/readiness`, `MaxRAMPercentage=75`, `ExitOnOutOfMemoryError`, JVM as PID 1. Compose `stop_grace_period` is 40s (app graceful shutdown budget is 25s).
-
-## Nginx
-
-`infrastructure/nginx/nginx.conf` + `conf.d/linkflow.conf`:
-
-- TLS 1.2/1.3 at the edge; HTTP → HTTPS except `/.well-known/acme-challenge/`
-- HSTS set here, stripped from upstream
-- gzip for text/JSON/SVG
-- Edge rate-limit zones (credential paths tighter than general)
-- `/actuator` denied; `/nginx-health` answered by Nginx
-- Static assets `max-age=300, must-revalidate` (filenames are not content-hashed)
-- `/r/` is `no-store`
-- `/vendor/**` proxied with other static assets
-
-`generate-dev-certs.sh` writes a self-signed ECDSA cert (gitignored). Replace `infrastructure/nginx/certs/linkflow.crt` and `linkflow.key` for a real certificate.
-
-Trusted proxies in Compose are the two `/32` addresses `172.28.0.10` (Nginx) and `172.28.0.11` (gateway). A subnet-wide CIDR would treat real clients as proxies and collapse rate-limit buckets.
-
-## Health
-
-| Target | URL |
-|--------|-----|
-| Nginx | `GET /nginx-health` |
-| Liveness | `GET /actuator/health/liveness` (process only) |
-| Readiness | `GET /actuator/health/readiness` (app: DB + Redis; web: Redis; gateway: process) |
-| Metrics | `GET /actuator/prometheus` (private scrape) |
-
-Liveness excludes dependencies so a database blip does not restart a healthy JVM.
-
-## Email
-
-Sends after transaction commit. Retries `LINKFLOW_MAIL_MAX_ATTEMPTS` (default 3). Activation / email-change links: 24h, idempotent. Reset: 15m, not idempotent. Per-recipient cooldown default 60s (`0` in `dev`). Spent tokens reaped after 7 days.
-
-`LINKFLOW_MAIL_BASE_URL` must be reachable from a recipient's browser. Deliverability needs SPF/DKIM on a domain you control — Compose uses MailHog and does not prove that.
-
-## Hosted deployment (2 EC2)
-
-This is the **current** hosted topology. Nginx and Prometheus send traffic and scrapes to **EC2 #2 only**. There is no Terraform in the repo and no deploy script.
-
-```
-                         INTERNET
-                            |
-                            v
-                    +---------------+
-                    |    EC2 #1     |
-                    | Edge / infra  |
-                    | Nginx         |
-                    | Redis         |
-                    | Prometheus    |
-                    | Grafana       |
-                    +-------+-------+
-                            |
-                      private network
-                            |
-                            v
-                    +---------------+
-                    |    EC2 #2     |
-                    | Gateway       |
-                    | App           |
-                    | Web           |
-                    +-------+-------+
-                            |
-              Neon PostgreSQL + external SMTP
-```
-
-| Instance | File | Processes | Published by Compose |
-|----------|------|-----------|----------------------|
-| EC2 #1 | `docker-compose.ec2-edge.yml` | Nginx, Redis, Prometheus, Grafana | 80, 443; Redis `${REDIS_BIND_ADDRESS}:6379`; Grafana `127.0.0.1:3000`. Prometheus is not published |
-| EC2 #2 | `docker-compose.ec2-app.yml` | gateway :8080, app :8081, web :8082 | 8080, 8081, 8082 (private path from #1, not public ingress) |
-
-On #2 the three JVMs share Docker bridge `172.20.0.0/24` (gateway `172.20.0.10`, app `172.20.0.11`, web `172.20.0.12`). `LINKFLOW_TRUSTED_PROXIES` is `172.20.0.10/32`.
-
-| Path | Current behavior |
-|------|------------------|
-| Public entry | Nginx on #1 (`infrastructure/nginx/linkflow-ec2.conf`). **HTTP-only** in that file. Compose publishes 443 and mounts `/etc/letsencrypt`; no HTTPS `server` block yet |
-| To the app | One active upstream: `172.31.5.37:8080` (EC2 #2 gateway). `#3`/`#4` lines are commented placeholders |
-| Redis | Only on #1. #2 sets `REDIS_HOST` to #1's private IP |
-| PostgreSQL | Neon (external). `SPRING_DATASOURCE_*` on #2 |
-| SMTP | External. `SPRING_MAIL_*` on #2 |
-| Prometheus | On #1, unpublished. Scrapes `172.31.5.37:8081` and `:8080` only |
-| Grafana | On #1, `127.0.0.1:3000` (SSH tunnel) |
-
-AWS security-group IDs are not in this repository. Compose only states bound ports.
+Or clone manually:
 
 ```bash
-# EC2 #1
-cp .env.ec2.example .env   # Section A
-docker compose -f docker-compose.ec2-edge.yml up -d
-
-# EC2 #2
-cp .env.ec2.example .env   # Section B
-docker compose -f docker-compose.ec2-app.yml up -d --build
+sudo dnf install -y docker git
+sudo systemctl enable --now docker
+sudo mkdir -p /opt/linkflow
+sudo git clone https://github.com/SlayerBit/linkflow.git /opt/linkflow
+cd /opt/linkflow
+sudo cp .env.ec2.example .env
+sudo chmod +x scripts/*.sh scripts/aws/*.sh
 ```
 
-**Future scale-out (not deployed):** the same app Compose file could run on additional hosts; Nginx/Prometheus have commented `#3`/`#4` slots. Do not treat those as live.
+Then edit `.env`:
 
-### Health
+- **Edge (EC2 #1)**: Section A — `REDIS_PASSWORD`, `REDIS_BIND_ADDRESS`, `APP_NODE_*_IP`, `GRAFANA_ADMIN_PASSWORD`
+- **App nodes (EC2 #2–#4)**: Section B — `REGISTRY`, `AWS_REGION`, database, Redis host, JWT secret, SMTP
 
-Edge: `GET /nginx-health`. EC2 #2 healthchecks hit readiness on 8081/8082/8080. App nodes use the `prod` profile.
+---
+
+## First deploy checklist
+
+1. ✅ AWS OIDC + IAM configured (step 1-3 above)
+2. ✅ GitHub Secrets configured (step 4)
+3. ✅ All 4 EC2 instances bootstrapped
+4. ✅ `.env` edited on all 4 instances
+
+**Edge (EC2 #1):**
+
+```bash
+# Obtain TLS certificate
+sudo certbot certonly --standalone -d yourdomain.com
+
+# Start edge stack
+cd /opt/linkflow
+sudo docker compose -f docker-compose.ec2-edge.yml up -d
+
+# Verify
+sudo docker compose -f docker-compose.ec2-edge.yml ps
+curl http://localhost/nginx-health
+```
+
+**App nodes (EC2 #2–#4):**
+
+```bash
+# First deploy (manual)
+cd /opt/linkflow
+sudo ./scripts/deploy.sh latest
+
+# Verify
+sudo ./scripts/health-check.sh
+```
+
+**After first deploy**, all subsequent deployments are automatic via `git push origin main`.
+
+---
+
+## How deployment works
+
+When you push to `main`:
+
+1. GitHub Actions checks out the code and runs `mvn clean verify`
+2. On success, it assumes the OIDC role and pushes 3 Docker images to ECR (tagged `sha-abc1234` + `latest`)
+3. For each app node (sequentially):
+   - Sends an SSM command: `./scripts/deploy.sh sha-abc1234`
+   - `deploy.sh` on the EC2: syncs repo to `origin/main` (`git fetch + reset`) → saves the current tag for rollback → ECR login → pull images → restart containers → wait for health checks
+   - If healthy: proceed to next node
+   - If unhealthy: run `rollback.sh` → revert to previous tag → fail the workflow
+4. Simultaneously, updates edge: `git fetch + reset` + `docker compose up -d` (picks up Nginx/Prometheus config changes)
+5. Final verification: checks health on all nodes
+6. Optional notification via webhook
+
+**The deploy script syncs the EC2 to match `origin/main` exactly** (`git fetch origin && git reset --hard origin/main`), so compose file changes, script updates, and config changes are always picked up — even if someone modified files locally on the EC2.
+
+---
+
+## Rollback
+
+### Automatic (during deployment)
+
+If a node fails health check during deployment, `rollback.sh` runs automatically. It reads `.rollback-tag` (saved by `deploy.sh` before deploying) and reverts to that image.
+
+### Manual
+
+```bash
+# On the affected EC2 instance:
+cd /opt/linkflow
+
+# Rollback to previous tag
+sudo ./scripts/rollback.sh
+
+# Or rollback to a specific tag
+sudo ./scripts/rollback.sh sha-abc1234
+```
+
+### Full cluster rollback
+
+```bash
+# Get the desired tag from ECR
+aws ecr describe-images --repository-name linkflow-app --query 'imageDetails[*].imageTags' --output table
+
+# Deploy a specific tag to all nodes
+for INSTANCE in i-app1 i-app2 i-app3; do
+  aws ssm send-command \
+    --instance-ids "$INSTANCE" \
+    --document-name "AWS-RunShellScript" \
+    --parameters "commands=['cd /opt/linkflow && sudo ./scripts/deploy.sh sha-abc1234']"
+done
+```
+
+---
+
+## Recovery guide
+
+### Single node failure
+
+If one app node goes down, Nginx automatically routes traffic to the remaining two (`max_fails=3 fail_timeout=10s`). To recover:
+
+```bash
+# Check node status via SSM
+aws ssm send-command --instance-ids i-0xxx --document-name "AWS-RunShellScript" \
+  --parameters 'commands=["cd /opt/linkflow && sudo ./scripts/health-check.sh"]'
+
+# Restart containers
+aws ssm send-command --instance-ids i-0xxx --document-name "AWS-RunShellScript" \
+  --parameters 'commands=["cd /opt/linkflow && sudo docker compose -f docker-compose.ec2-app.yml restart"]'
+```
+
+### Edge failure
+
+If EC2 #1 goes down, all traffic stops (single point of ingress). Redis-backed sessions and rate limits are lost until Redis recovers.
+
+```bash
+# Restart edge stack
+cd /opt/linkflow
+sudo docker compose -f docker-compose.ec2-edge.yml up -d
+```
+
+### Database recovery
+
+Neon PostgreSQL is external and managed. Flyway migrations run on `linkflow-app` startup. If the database is restored from backup, restart all app nodes to re-run Flyway validation.
+
+---
+
+## Scaling (adding EC2 #5+)
+
+1. Bootstrap the new EC2 (same process as above)
+2. On EC2 #1, add to `.env`: `APP_NODE_4_IP=<new-private-ip>`
+3. In `docker-compose.ec2-edge.yml`, add `extra_hosts` entries for nginx and prometheus: `"app4:${APP_NODE_4_IP}"`
+4. In `infrastructure/nginx/linkflow-ec2.conf`, add: `server app4:8080 max_fails=3 fail_timeout=10s;`
+5. In `infrastructure/prometheus/prometheus-ec2.yml`, add targets: `"app4:8081"`, `"app4:8080"`
+6. In `.github/workflows/deploy.yml`, add a `deploy-app-4` job
+7. Add `EC2_APP4_INSTANCE_ID` to GitHub Secrets
+8. Commit, push, deploy
+
+---
+
+## Health endpoints
+
+| Endpoint | Port | Expected |
+|----------|------|----------|
+| `/nginx-health` | 80/443 | `ok\n` (edge only) |
+| `/actuator/health/readiness` | 8080 | `{"status":"UP"}` (gateway) |
+| `/actuator/health/readiness` | 8081 | `{"status":"UP"}` (app) |
+| `/actuator/health/readiness` | 8082 | `{"status":"UP"}` (web) |
+
+Quick verification from edge:
+
+```bash
+curl -s http://localhost/nginx-health
+curl -s http://app1:8081/actuator/health/readiness
+curl -s http://app2:8081/actuator/health/readiness
+curl -s http://app3:8081/actuator/health/readiness
+```
+
+---
 
 ## Environment variables
 
-Copy `.env.example` to `.env`. Minimum for the app container: `LINKFLOW_JWT_SECRET`.
+See [.env.ec2.example](../.env.ec2.example) for the complete template. Key variables:
 
-### App
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `REGISTRY` | App nodes | ECR registry URL with trailing slash |
+| `IMAGE_TAG` | App nodes | Container image tag (managed by deploy.sh) |
+| `AWS_REGION` | App nodes | AWS region for ECR login |
+| `APP_NODE_1_IP` / `2` / `3` | Edge | Private IPs of app nodes (for Nginx + Prometheus) |
+| `REDIS_BIND_ADDRESS` | Edge | EC2 #1 private IP (limits Redis to VPC) |
+| `REDIS_HOST` | App nodes | EC2 #1 private IP (Redis connection) |
+| `SERVER_SERVLET_SESSION_COOKIE_SECURE` | App nodes | `true` when behind HTTPS |
 
-| Variable | Default | Notes |
-|----------|---------|-------|
-| `SPRING_DATASOURCE_*` | required outside Compose | JDBC |
-| `SPRING_DATA_REDIS_HOST` / `PORT` / `PASSWORD` | localhost / 6379 / empty | Password required in `prod` |
-| `LINKFLOW_JWT_SECRET` | empty | Required in Compose. `JwtSecretValidator` (length + entropy) runs only on `prod` |
-| `LINKFLOW_JWT_ACCESS_EXPIRATION_MS` | `900000` | 15 min |
-| `LINKFLOW_JWT_REFRESH_EXPIRATION_MS` | `2592000000` | 30 days |
-| `LINKFLOW_BASE_URL` | `http://localhost:8080` | Short-link prefix |
-| `LINKFLOW_CORS_ALLOWED_ORIGINS` | `*` | `*` rejected in `prod` |
-| `LINKFLOW_TRUSTED_PROXIES` | empty | CIDRs; empty ignores XFF |
-| `LINKFLOW_RATE_LIMIT_USER_RPM` / `IP_RPM` | 100 / 200 | Sliding window |
-| `LINKFLOW_RATE_LIMIT_AUTH_FAIL_CLOSED` | `true` | 503 on auth if Redis down |
-| `LINKFLOW_SECURITY_SWAGGER_PUBLIC` | `true` | Off in `docker`/`prod` |
-| `LINKFLOW_SECURITY_ACTUATOR_PUBLIC` | `true` | Off in `docker`/`prod` |
-| `LINKFLOW_SECURITY_METRICS_PUBLIC` / `LINKFLOW_METRICS_PUBLIC` | `false` | Compose demo sets `true` |
-| `LINKFLOW_SECURITY_EMAIL_VERIFICATION_REQUIRED` | `true` | |
-| `LINKFLOW_URL_EXPIRED_CLEANUP_CRON` | `0 0 * * * *` | |
-| `LINKFLOW_AUTH_SINGLE_USE_TOKEN_RETENTION_DAYS` | `7` | |
-| `LINKFLOW_AUTH_REFRESH_TOKEN_REVOKED_RETENTION_DAYS` | `7` | |
-| `LINKFLOW_ANALYTICS_CLICK_EVENTS_RETENTION_DAYS` | `365` | |
-| `LINKFLOW_ANALYTICS_FLUSH_INTERVAL_MS` | `30000` | |
-| `LINKFLOW_BOOTSTRAP_ADMIN_*` | disabled | Compose enables with demo values |
-
-### Mail
-
-| Variable | Default | Notes |
-|----------|---------|-------|
-| `SPRING_MAIL_HOST` / `PORT` | localhost / 1025 | MailHog locally |
-| `SPRING_MAIL_SMTP_AUTH` / `STARTTLS` | false | Enable for a real relay |
-| `LINKFLOW_MAIL_ENABLED` | `true` | `false` rejected in `prod` |
-| `LINKFLOW_MAIL_FROM` | `no-reply@linkflow.local` | Rejected in `prod` |
-| `LINKFLOW_MAIL_BASE_URL` | `http://localhost:8080` | Must be `https` in `prod` |
-| `LINKFLOW_MAIL_MAX_ATTEMPTS` | `3` | |
-| `LINKFLOW_MAIL_COOLDOWN_INTERVAL` | `60s` | `0` in `dev` |
-
-### Gateway and web
-
-| Variable | Default | Notes |
-|----------|---------|-------|
-| `LINKFLOW_APP_URI` | `http://127.0.0.1:8081` | Gateway → app |
-| `LINKFLOW_WEB_URI` | `http://127.0.0.1:8082` | Gateway → web |
-| `LINKFLOW_GATEWAY_URL` | `http://127.0.0.1:8080` | Web → gateway |
-| `LINKFLOW_PUBLIC_GATEWAY_URL` | `http://localhost:8080` | Short links shown to users |
-| `SERVER_SERVLET_SESSION_COOKIE_SECURE` | `false` | `true` behind HTTPS |
-
-### Compose extras
-
-`POSTGRES_*`, `REDIS_PASSWORD`, `REDIS_MAXMEMORY` (eviction disabled), `GRAFANA_ADMIN_*`.
+---
 
 ## Observability
 
-Prometheus scrapes `linkflow-app:8081` and `linkflow-gateway:8080`. Alert rules (`infrastructure/prometheus/alerts.yml`): app/gateway scrape down, elevated 5xx, email delivery failures, rate-limiter Redis unavailable, analytics flush failures, high heap. They evaluate in Prometheus. Grafana dashboard: `infrastructure/grafana/provisioning/dashboards/json/linkflow-overview.json`.
+### Prometheus
 
-Business counters go through `LinkflowMetrics` (`linkflow_redirect_*`, URL cache, login, registration, URL create, rate-limit, analytics flush). Email delivery is recorded via `EmailDeliveryEvent`.
+Scrapes all 6 targets (3 app nodes × app + gateway) every 15 seconds. Alert rules in `infrastructure/prometheus/alerts.yml`.
 
-## CI
+Access: `http://localhost:9090` on EC2 #1 (not publicly exposed).
 
-`.github/workflows/ci.yml` on push/PR to `main`/`master`:
+### Grafana
 
-1. `mvn -B clean verify` (JDK 21)
-2. Build app, gateway, and web images (not pushed)
-3. `docker compose config` and `nginx -t`
-4. Advisory Trivy filesystem scan (does not fail the job)
-
-## Load testing
-
-k6 suite in `performance/`. Thresholds in `performance/thresholds/baseline.json` are **regression gates for one run**, not product SLOs. Do not quote them as measured performance.
+Access via SSH tunnel:
 
 ```bash
-docker compose up -d
-./performance/scripts/seed.sh          # MailHog + verified users → performance/data/seed.json
-./performance/run.sh smoke
+ssh -L 3000:127.0.0.1:3000 ec2-user@<edge-public-ip>
+# Then open http://localhost:3000
 ```
 
-Default Nginx/app limits will 429 a stress run. For stress/soak on a **disposable** database:
+Provisioned dashboards and Prometheus datasource are in `infrastructure/grafana/provisioning/`.
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.perf.yml up -d \
-  --force-recreate nginx linkflow-app
-```
+---
 
-`infrastructure/nginx/linkflow.perf.conf` stays **outside** `conf.d/` so it cannot load next to the normal site.
+## CI (pull request validation)
 
-| Scenario | Writes DB? | Needs seed? |
-|----------|------------|-------------|
-| `smoke`, `login`, `redirect`, `analytics` | no* | yes (except none for registration) |
-| `registration`, `url-creation`, `authenticated-mix`, `soak` | yes | see script |
+The `ci.yml` workflow runs on every push and PR. It is separate from deployment:
 
-\*Redirects still enqueue analytics.
+- `mvn clean verify` (unit + integration tests)
+- Docker image build validation (no push)
+- Compose config syntax validation
+- Nginx config syntax validation
+- Trivy vulnerability scan (advisory, non-blocking)
 
-Reports: `performance/reports/` (gitignored). `FLUSH_RATE_LIMITS=true` clears hot Redis keys. `docker compose down -v` destroys the local DB volume.
+---
 
 ## Troubleshooting
 
-| Symptom | What to check |
-|---------|----------------|
-| Maven Java version error | `JAVA_HOME` is JDK 21 |
-| `Could not find or load main class #` | `#` comments in `.mvn/jvm.config` |
-| `role "linkflow" does not exist` | Native Postgres already on 5432 |
-| Gateway 500 to app on macOS | `LINKFLOW_APP_URI=http://127.0.0.1:8081` |
-| JWT startup failure | `dev` profile or a ≥64-byte decoded secret |
-| `NOAUTH Authentication required` | Redis password (`linkflow-local-redis` locally) |
-| Redis connection refused on 6379 | Base Compose does not publish Redis — use the dev overlay |
-| Integration tests fail | Docker Desktop running |
-| Login after register does nothing | Open the MailHog activation link |
-| k6 drowned in 429s | Perf overlay; default Nginx auth zone is ~10/min |
+| Problem | Check |
+|---------|-------|
+| Deploy fails "SSM command timed out" | Verify SSM agent is running: `systemctl status amazon-ssm-agent` |
+| Deploy fails "ECR login failed" | Verify instance profile is attached: `aws sts get-caller-identity` on EC2 |
+| Containers start but fail health check | Check logs: `docker compose -f docker-compose.ec2-app.yml logs --tail=50` |
+| Nginx 502 Bad Gateway | Verify app nodes are running and ports 8080 are reachable from edge |
+| Redis connection refused | Verify `REDIS_BIND_ADDRESS` in edge `.env` matches the private IP |
+| Session lost across requests | Verify `REDIS_HOST` on all app nodes points to EC2 #1 |
+| TLS certificate expired | Run `sudo certbot renew` on EC2 #1 |
+| Rollback fails "no rollback tag" | First deployment — there is nothing to roll back to. Deploy manually |
+| GitHub Actions "no identity-based policy" | Verify OIDC trust policy allows the branch ref |
+| Prometheus shows targets as DOWN | Verify app node security groups allow inbound 8080-8082 from EC2 #1 |

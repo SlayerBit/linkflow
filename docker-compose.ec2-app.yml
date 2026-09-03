@@ -3,8 +3,15 @@
 # Runs Gateway, App, and Web containers on a local Docker bridge network.
 # Deploy this exact file on each of the 3 application EC2 instances.
 #
-# Usage on EC2 #2 / #3 / #4:
-#   docker compose -f docker-compose.ec2-app.yml up -d
+# Dual-mode images: both `build:` and `image:` are specified so the same file supports:
+#   - Local builds:  docker compose -f docker-compose.ec2-app.yml up --build
+#   - ECR pulls:     docker compose -f docker-compose.ec2-app.yml pull && up -d
+#
+# When REGISTRY is unset (local), images are named linkflow-app:latest etc.
+# When REGISTRY is set (production), images are pulled from ECR, e.g.:
+#   REGISTRY=123456789012.dkr.ecr.ap-south-1.amazonaws.com/
+#   IMAGE_TAG=abc1234
+#   → 123456789012.dkr.ecr.ap-south-1.amazonaws.com/linkflow-app:abc1234
 
 name: linkflow-app-node
 
@@ -24,7 +31,7 @@ services:
       context: .
       dockerfile: infrastructure/Dockerfile
       target: app
-    image: linkflow-app:latest
+    image: ${REGISTRY:-}linkflow-app:${IMAGE_TAG:-latest}
     ports:
       - "8081:8081"
     networks:
@@ -74,7 +81,7 @@ services:
       context: .
       dockerfile: infrastructure/Dockerfile
       target: web
-    image: linkflow-web:latest
+    image: ${REGISTRY:-}linkflow-web:${IMAGE_TAG:-latest}
     ports:
       - "8082:8082"
     networks:
@@ -88,7 +95,9 @@ services:
       LINKFLOW_GATEWAY_URL: http://linkflow-gateway:8080
       LINKFLOW_BACKEND_APP_URL: http://linkflow-app:8081
       LINKFLOW_PUBLIC_GATEWAY_URL: ${LINKFLOW_BASE_URL}
-      SERVER_SERVLET_SESSION_COOKIE_SECURE: ${SERVER_SERVLET_SESSION_COOKIE_SECURE:-false}
+      # Production default: true. Session cookies carry an authenticated identity and must be
+      # Secure when TLS terminates at the edge. Override to false only for local HTTP testing.
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: ${SERVER_SERVLET_SESSION_COOKIE_SECURE:-true}
     depends_on:
       linkflow-app:
         condition: service_healthy
@@ -111,7 +120,7 @@ services:
       context: .
       dockerfile: infrastructure/Dockerfile
       target: gateway
-    image: linkflow-gateway:latest
+    image: ${REGISTRY:-}linkflow-gateway:${IMAGE_TAG:-latest}
     ports:
       - "8080:8080"
     networks:
