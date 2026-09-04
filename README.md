@@ -69,60 +69,77 @@ Four EC2 instances: **#1** is the public edge (Nginx, Redis, Prometheus, Grafana
 
 ```mermaid
 flowchart TB
-    subgraph Internet["Public Internet"]
-        Client["Users & API Clients"]
-    end
+    Internet((🌐 Internet))
 
-    subgraph EC2_Edge["EC2 #1 — Edge (linkflow-edge)"]
-        Nginx["Nginx Reverse Proxy<br/>(Port 80, 443 | TLS, least_conn, Rate Limiting)"]
-        Redis[("Redis 7<br/>(Cache, Sessions, Rate Limits, Streams)")]
-        Prometheus["Prometheus v2.54<br/>(Scraping & Alert Rules)"]
-        Grafana["Grafana 11.2<br/>(Port 3000 via SSH Tunnel)"]
-    end
+    Internet -->|HTTP :80<br/>HTTPS :443| Edge
 
-    subgraph App_Cluster["Application Cluster (Private VPC)"]
-        subgraph EC2_App1["EC2 #2 — App Node 1"]
-            GW1["linkflow-gateway :8080"]
-            APP1["linkflow-app :8081"]
-            WEB1["linkflow-web :8082"]
+    subgraph VPC["AWS Private VPC"]
+        direction TB
+
+        subgraph EDGE["EC2 #1 — linkflow-edge"]
+            direction TB
+            Edge["Nginx Reverse Proxy<br/>:80 / :443"]
+            Redis[("Redis 7<br/>:6379")]
+            Prom["Prometheus<br/>:9090"]
+            Graf["Grafana<br/>:3000"]
         end
-        subgraph EC2_App2["EC2 #3 — App Node 2"]
-            GW2["linkflow-gateway :8080"]
-            APP2["linkflow-app :8081"]
-            WEB2["linkflow-web :8082"]
+
+        Edge -->|least_conn<br/>Private :8080| GW1
+        Edge -->|least_conn<br/>Private :8080| GW2
+        Edge -->|least_conn<br/>Private :8080| GW3
+
+        subgraph APP1["EC2 #2 — App Node 1"]
+            direction TB
+            GW1["Gateway :8080"]
+            A1["Spring Boot App :8081"]
+            W1["Web :8082"]
+            GW1 --> A1
+            GW1 --> W1
         end
-        subgraph EC2_App3["EC2 #4 — App Node 3"]
-            GW3["linkflow-gateway :8080"]
-            APP3["linkflow-app :8081"]
-            WEB3["linkflow-web :8082"]
+
+        subgraph APP2["EC2 #3 — App Node 2"]
+            direction TB
+            GW2["Gateway :8080"]
+            A2["Spring Boot App :8081"]
+            W2["Web :8082"]
+            GW2 --> A2
+            GW2 --> W2
         end
+
+        subgraph APP3["EC2 #4 — App Node 3"]
+            direction TB
+            GW3["Gateway :8080"]
+            A3["Spring Boot App :8081"]
+            W3["Web :8082"]
+            GW3 --> A3
+            GW3 --> W3
+        end
+
+        DB[("Neon PostgreSQL 16<br/>SSL")]
     end
 
-    subgraph External["External Managed Services"]
-        NeonDB[("Neon PostgreSQL 16<br/>(External Managed Database)")]
-        SMTP["External SMTP Relay<br/>(SES / Transactional Email)"]
-    end
+    A1 --> DB
+    A2 --> DB
+    A3 --> DB
 
-    Client -->|HTTPS 443| Nginx
-    Nginx -->|Upstream Round-Robin / least_conn| GW1
-    Nginx -->|Upstream Round-Robin / least_conn| GW2
-    Nginx -->|Upstream Round-Robin / least_conn| GW3
+    A1 -. Session / Cache .-> Redis
+    A2 -. Session / Cache .-> Redis
+    A3 -. Session / Cache .-> Redis
 
-    GW1 --> APP1
-    GW1 --> WEB1
-    GW2 --> APP2
-    GW2 --> WEB2
-    GW3 --> APP3
-    GW3 --> WEB3
-
-    APP1 & APP2 & APP3 -->|Private VPC :6379| Redis
-    WEB1 & WEB2 & WEB3 -->|Spring Session :6379| Redis
-    APP1 & APP2 & APP3 -->|TLS JDBC :5432| NeonDB
-    APP1 & APP2 & APP3 -->|STARTTLS :587| SMTP
-
-    Prometheus -.->|Scrape /actuator/prometheus| APP1 & APP2 & APP3
-    Grafana -.-> Prometheus
+    Prom -. Scrapes Metrics .-> A1
+    Prom -.-> A2
+    Prom -.-> A3
+    Graf --> Prom
 ```
+
+**Traffic Flow**
+
+1. Internet requests arrive at **EC2 #1** over HTTP/HTTPS.
+2. **Nginx** terminates TLS and distributes traffic using the **least_conn** load-balancing algorithm.
+3. Requests are forwarded through the **private VPC** to one of the three gateway nodes on **port 8080**.
+4. Each gateway routes requests to its local Spring Boot application (**8081**) and Web service (**8082**).
+5. All application nodes share a centralized **Redis** instance for sessions/cache and a managed **Neon PostgreSQL** database over SSL.
+6. **Prometheus** continuously scrapes metrics, while **Grafana** visualizes cluster health and performance.
 
 ### Request Lifecycle & Redirect Flow
 
