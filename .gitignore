@@ -35,14 +35,26 @@ Thumbs.db
 logs/
 *.log
 
-# Secrets and local env
+# Secrets and environment files
 .env
-.env.local
-.env.*.local
+.env.*
+!.env*.example
 *.pem
 *.key
+*.p12
+*.pfx
+*.pkcs12
+*.keystore
+*.jks
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+id_ecdsa
+id_ecdsa.*
 credentials.json
 secrets/
+.aws/
 
 # Build artifacts
 *.jar
