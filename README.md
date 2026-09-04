@@ -68,68 +68,71 @@ Four EC2 instances: **#1** is the public edge (Nginx, Redis, Prometheus, Grafana
 ### Distributed 4-EC2 Cluster Topology
 
 ```mermaid
-flowchart TB
+flowchart LR
     Internet((🌐 Internet))
 
-    Internet -->|HTTP :80<br/>HTTPS :443| Edge
+    Internet -->|HTTP :80<br/>HTTPS :443| Nginx
 
     subgraph VPC["AWS Private VPC"]
-        direction TB
 
-        subgraph EDGE["EC2 #1 — linkflow-edge"]
+        subgraph EC1["EC2 #1 — linkflow-edge"]
             direction TB
-            Edge["Nginx Reverse Proxy<br/>:80 / :443"]
-            Redis[("Redis 7<br/>:6379")]
-            Prom["Prometheus<br/>:9090"]
-            Graf["Grafana<br/>:3000"]
+            Grafana[Grafana<br/>:3000]
+            Prometheus[Prometheus<br/>:9090]
+            Nginx[Nginx Reverse Proxy<br/>:80 / :443]
+            Redis[(Redis 7<br/>:6379)]
+            Grafana --> Prometheus
         end
 
-        Edge -->|least_conn<br/>Private :8080| GW1
-        Edge -->|least_conn<br/>Private :8080| GW2
-        Edge -->|least_conn<br/>Private :8080| GW3
-
-        subgraph APP1["EC2 #2 — App Node 1"]
+        subgraph EC2["EC2 #2 — App Node 1"]
             direction TB
-            GW1["Gateway :8080"]
-            A1["Spring Boot App :8081"]
-            W1["Web :8082"]
-            GW1 --> A1
-            GW1 --> W1
+            GW1[Gateway<br/>:8080]
+            APP1[Spring Boot App<br/>:8081]
+            WEB1[Web<br/>:8082]
+            GW1 --> APP1
+            GW1 --> WEB1
         end
 
-        subgraph APP2["EC2 #3 — App Node 2"]
+        subgraph EC3["EC2 #3 — App Node 2"]
             direction TB
-            GW2["Gateway :8080"]
-            A2["Spring Boot App :8081"]
-            W2["Web :8082"]
-            GW2 --> A2
-            GW2 --> W2
+            GW2[Gateway<br/>:8080]
+            APP2[Spring Boot App<br/>:8081]
+            WEB2[Web<br/>:8082]
+            GW2 --> APP2
+            GW2 --> WEB2
         end
 
-        subgraph APP3["EC2 #4 — App Node 3"]
+        subgraph EC4["EC2 #4 — App Node 3"]
             direction TB
-            GW3["Gateway :8080"]
-            A3["Spring Boot App :8081"]
-            W3["Web :8082"]
-            GW3 --> A3
-            GW3 --> W3
+            GW3[Gateway<br/>:8080]
+            APP3[Spring Boot App<br/>:8081]
+            WEB3[Web<br/>:8082]
+            GW3 --> APP3
+            GW3 --> WEB3
         end
 
-        DB[("Neon PostgreSQL 16<br/>SSL")]
+        DB[(Neon PostgreSQL 16<br/>SSL)]
     end
 
-    A1 --> DB
-    A2 --> DB
-    A3 --> DB
+    Nginx -->|least_conn :8080| GW1
+    Nginx -->|least_conn :8080| GW2
+    Nginx -->|least_conn :8080| GW3
 
-    A1 -. Session / Cache .-> Redis
-    A2 -. Session / Cache .-> Redis
-    A3 -. Session / Cache .-> Redis
+    APP1 --> DB
+    APP2 --> DB
+    APP3 --> DB
 
-    Prom -. Scrapes Metrics .-> A1
-    Prom -.-> A2
-    Prom -.-> A3
-    Graf --> Prom
+    APP1 -. Session / Cache .-> Redis
+    APP2 -. Session / Cache .-> Redis
+    APP3 -. Session / Cache .-> Redis
+
+    Prometheus -. Scrapes Metrics .-> APP1
+    Prometheus -.-> APP2
+    Prometheus -.-> APP3
+
+    style Internet fill:#1f2937,color:#fff
+    style DB fill:#0f172a,color:#fff
+    style Redis fill:#111827,color:#fff
 ```
 
 **Traffic Flow**
