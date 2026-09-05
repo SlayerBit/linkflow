@@ -1,400 +1,306 @@
-# LinkFlow deployment
+# LinkFlow Deployment
 
 Run the application locally, on remote infrastructure, or via the automated CI/CD pipeline. Architecture details: [ARCHITECTURE.md](ARCHITECTURE.md). API endpoints: [API.md](API.md).
 
-## Deployment models
+## Deployment Models
 
-| Model | Compose file | When to use |
-|-------|-------------|-------------|
-| Full local stack | `docker-compose.yml` | Development — starts everything including PostgreSQL, Redis, MailHog |
-| Dev overlay | `docker-compose.yml` + `docker-compose.dev.yml` | Hot-reload development |
-| Host JARs | none | Running JARs directly (IDE / debugging) |
-| **4-EC2 production** | `docker-compose.ec2-edge.yml` + `docker-compose.ec2-app.yml` | **Hosted production** |
+| Model | Compose File | When to Use |
+|---|---|---|
+| **Full local stack** | `docker-compose.yml` | Development — starts everything including PostgreSQL, Redis, MailHog |
+| **Dev overlay** | `docker-compose.yml` + `docker-compose.dev.yml` | Hot-reload development with host JARs |
+| **Host JARs** | none | Running JARs directly (IDE / debugging) |
+| **4-EC2 production** | `docker-compose.ec2-edge.yml` + `docker-compose.ec2-app.yml` | **Hosted production cluster** |
 
 ---
 
-## Production architecture (4 EC2)
+## Production Architecture (4-EC2 Cluster)
+
+LinkFlow is publicly served at **`https://linkflow.slayerbit.me`**.
+
+> [!NOTE]
+> The root domain `https://slayerbit.me` is **not** LinkFlow. It is reserved for a future personal/portfolio site. LinkFlow is strictly hosted under the `linkflow` subdomain: **`https://linkflow.slayerbit.me`**.
+
+### Domain & Ingress Flow
+
+```mermaid
+flowchart TD
+    Client["Client Browser"] -->|DNS query| Namecheap["Namecheap DNS<br/>linkflow.slayerbit.me"]
+    Namecheap -->|Resolves to A record| EIP["AWS Elastic IP<br/>13.206.178.184"]
+    EIP -->|Port 80 / 443| Edge["linkflow-edge<br/>(EC2 #1)"]
+    Edge -->|Port 80: HTTP 301| HTTPS["Redirect to HTTPS"]
+    Edge -->|Port 443: Let's Encrypt TLS| Nginx["Nginx Reverse Proxy"]
+    Nginx -->|"least_conn :8080 (VPC)"| AppNodes["App Node 1 / App Node 2 / App Node 3"]
+```
+
+### DNS & IP Configuration
+
+- **DNS Provider**: Namecheap manages DNS for `slayerbit.me`.
+  ```text
+  @         A     13.206.178.184
+  www       A     13.206.178.184
+  linkflow  A     13.206.178.184
+  ```
+- **AWS Elastic IP**: `13.206.178.184` is allocated and associated with instance `linkflow-edge`. This provides a stable, static public IPv4 address that persists across EC2 stops, starts, and maintenance without requiring DNS updates.
+
+### Topology Diagram
 
 ```mermaid
 flowchart LR
-    Internet((Internet)) --> Nginx
+    Internet((Internet)) -->|HTTP :80 / HTTPS :443| Nginx
 
-    subgraph Edge["EC2 #1 — edge"]
-        Nginx["Nginx :443"]
-        Redis["Redis :6379"]
-    end
-
-    subgraph N1["EC2 #2"]
-        GW1["gw"] --> A1["app"] & W1["web"]
-    end
-    subgraph N2["EC2 #3"]
-        GW2["gw"] --> A2["app"] & W2["web"]
-    end
-    subgraph N3["EC2 #4"]
-        GW3["gw"] --> A3["app"] & W3["web"]
+    subgraph Edge["EC2 #1 — linkflow-edge (Elastic IP: 13.206.178.184)"]
+        direction TB
+        Nginx["Nginx 1.27<br/>TLS Termination & LB"]
+        Redis[("Redis 7<br/>Sessions, Cache, Limits")]
+        Prometheus["Prometheus<br/>Metrics Scrape"]
+        Grafana["Grafana<br/>Dashboards :3000"]
+        Grafana --> Prometheus
     end
 
-    Nginx -->|"least_conn"| GW1 & GW2 & GW3
-    A1 & A2 & A3 --> PG[(Neon PG)]
+    subgraph N1["EC2 #2 — linkflow-app-1"]
+        GW1["gateway :8080"] --> A1["app :8081"] & W1["web :8082"]
+    end
+    subgraph N2["EC2 #3 — linkflow-app-2"]
+        GW2["gateway :8080"] --> A2["app :8081"] & W2["web :8082"]
+    end
+    subgraph N3["EC2 #4 — linkflow-app-3"]
+        GW3["gateway :8080"] --> A3["app :8081"] & W3["web :8082"]
+    end
+
+    Nginx -->|"least_conn :8080"| GW1 & GW2 & GW3
+    A1 & A2 & A3 --> PG[(Neon PostgreSQL 16<br/>SSL)]
     A1 & A2 & A3 --> Redis
+    W1 & W2 & W3 --> Redis
+    A1 & A2 & A3 --> SMTP[[External SMTP Relay]]
+    Prometheus -->|scrape| A1 & A2 & A3 & GW1 & GW2 & GW3
 ```
 
-| Instance | Role | Private IP | Instance ID | Compose file |
-|----------|------|------------|-------------|--------------|
-| EC2 #1 | Edge: Nginx (TLS + LB), Redis, Prometheus, Grafana | 172.31.4.98 | `i-09762b0270a4327dd` | `docker-compose.ec2-edge.yml` |
-| EC2 #2 | App node 1: gateway + app + web | 172.31.5.37 | `i-0c4f9bdb54bc90f35` | `docker-compose.ec2-app.yml` |
-| EC2 #3 | App node 2: gateway + app + web | 172.31.8.125 | `i-06b58e726a0c83746` | `docker-compose.ec2-app.yml` |
-| EC2 #4 | App node 3: gateway + app + web | 172.31.2.137 | `i-0016df717b7272284` | `docker-compose.ec2-app.yml` |
+### Instance Inventory
+
+| Instance Name | Role | Private IP | Instance ID | Compose File |
+|---|---|---|---|---|
+| `linkflow-edge` (EC2 #1) | Edge: Nginx (TLS + LB), Redis, Prometheus, Grafana | 172.31.4.98 | `i-09762b0270a4327dd` | `docker-compose.ec2-edge.yml` |
+| `linkflow-app-1` (EC2 #2) | App node 1: gateway + app + web | 172.31.5.37 | `i-0c4f9bdb54bc90f35` | `docker-compose.ec2-app.yml` |
+| `linkflow-app-2` (EC2 #3) | App node 2: gateway + app + web | 172.31.8.125 | `i-06b58e726a0c83746` | `docker-compose.ec2-app.yml` |
+| `linkflow-app-3` (EC2 #4) | App node 3: gateway + app + web | 172.31.2.137 | `i-0016df717b7272284` | `docker-compose.ec2-app.yml` |
 
 ### Active AWS Infrastructure Resources
 
 - **Region**: `ap-south-1`
 - **AWS Account**: `625408983712`
-- **Golden AMI**: `ami-02a04418acf670410` (created from validated EC2 #2)
 - **ECR Registry**: `625408983712.dkr.ecr.ap-south-1.amazonaws.com`
   - `linkflow-app`
   - `linkflow-gateway`
   - `linkflow-web`
-- **IAM Instance Profile**: `linkflow-ec2-instance` (attached to all 4 instances, SSM + ECR pull enabled)
+- **IAM Instance Profile**: `linkflow-ec2-instance` (attached to all 4 instances; enables SSM Run Command and ECR image pull)
 - **GitHub Actions Role**: `arn:aws:iam::625408983712:role/linkflow-github-actions`
 - **OIDC Provider**: `token.actions.githubusercontent.com` (federated with `repo:SlayerBit/linkflow`)
 
 ---
 
-## CI/CD pipeline
+## Production TLS & Let's Encrypt
 
-Every push to `main` triggers a fully automated pipeline. No manual steps required.
+- **Certificate Authority**: Let's Encrypt.
+- **Certificate Path**: `/etc/letsencrypt/live/linkflow.slayerbit.me/fullchain.pem`
+- **Private Key Path**: `/etc/letsencrypt/live/linkflow.slayerbit.me/privkey.pem`
+- **HTTP to HTTPS**: Port 80 redirects all requests to `https://linkflow.slayerbit.me/` with HTTP 301.
+- **Automated Renewal**: Certbot renewal is enabled on `linkflow-edge` with webroot verification. Renewal dry-run verified successfully:
+  ```bash
+  sudo certbot renew --dry-run
+  ```
+
+> [!IMPORTANT]
+> **Production vs CI Certificate Distinction**:
+> - **Production**: Real Let's Encrypt certificates provisioned on `linkflow-edge` via Certbot. Never committed to Git.
+> - **CI (`ci.yml`)**: GitHub Actions dynamically generates a temporary self-signed test certificate at `$WORK_DIR/letsencrypt/live/linkflow.slayerbit.me/` matching the exact path in `linkflow-ec2.conf`. This enables `nginx:1.27-alpine nginx -t` to validate the committed production Nginx configuration in CI without requiring or exposing production private keys.
+
+---
+
+## Email Verification Architecture
+
+Registration and account security require email verification. Verification links are generated with the public production base URL:
+
+```text
+https://linkflow.slayerbit.me/verify-email?token=<secure-token>
+```
 
 ```mermaid
-flowchart LR
-    Push["git push main"] --> Test["Build & Test"]
-    Test --> ECR["Push to ECR"]
-    ECR --> D1["Deploy App1"]
-    D1 -->|"healthy"| D2["Deploy App2"]
-    D2 -->|"healthy"| D3["Deploy App3"]
-    ECR --> Edge["Update Edge"]
-    D3 & Edge --> Verify["Verify All"]
-    Verify --> Notify["Notify"]
+sequenceDiagram
+    autonumber
+    actor User as User
+    participant Web as linkflow-web (:8082)
+    participant App as linkflow-app (:8081)
+    participant DB as Neon PostgreSQL
+    participant SMTP as SMTP Relay
 
-    D1 -.->|"unhealthy"| R1["Rollback App1"]
-    D2 -.->|"unhealthy"| R2["Rollback App2"]
-    D3 -.->|"unhealthy"| R3["Rollback App3"]
+    User->>Web: Submit registration form
+    Web->>App: POST /api/v1/auth/register
+    App->>DB: Save user (email_verified=false)
+    App->>DB: Save SHA-256 hash of verification token
+    App-)SMTP: Dispatch email with https://linkflow.slayerbit.me/verify-email?token=...
+    SMTP-->>User: Delivery to inbox
+    User->>Web: Click https://linkflow.slayerbit.me/verify-email?token=...
+    Web->>App: POST /api/v1/auth/verify-email {token}
+    App->>DB: Validate token, mark used=true, email_verified=true
+    App-->>Web: Verification confirmed
+    Web-->>User: Render activation success & login form
 ```
 
-**Pipeline stages:**
-
-1. **Build & Test** — `mvn clean verify` (unit + integration tests via Testcontainers)
-2. **Build & Push** — builds `linux/amd64` images for app, gateway, web; pushes to ECR with SHA tag + `latest`
-3. **Rolling Deploy** — deploys to app nodes sequentially via SSM Run Command. Each node: pull → restart → health check → proceed or rollback
-4. **Edge Update** — `git fetch + reset` + `docker compose up -d` on EC2 #1 (only recreates changed services)
-5. **Verify** — health checks all nodes from edge
-6. **Notify** — optional Slack/Discord webhook
-
-**Key properties:**
-- No SSH keys or long-lived AWS credentials — GitHub OIDC + SSM
-- Deployment concurrency lock — a running deploy is never interrupted
-- Automatic rollback on health failure
-- ECR lifecycle policy retains the 20 most recent images
+### Configuration & Fallback Hierarchy
+In `application.yml` and `application-docker.yml`:
+```yaml
+linkflow:
+  mail:
+    base-url: ${LINKFLOW_MAIL_BASE_URL:${linkflow.base-url}}
+```
+`LINKFLOW_MAIL_BASE_URL` falls back directly to `LINKFLOW_BASE_URL` (`https://linkflow.slayerbit.me`). If an unverified user attempts to log in before verifying, the system rejects the request with HTTP 401 and error code `EMAIL_NOT_VERIFIED`.
 
 ---
 
-## AWS prerequisites
+## Continuous Deployment (CI/CD) Pipeline
 
-### 1. Run the OIDC setup script
+Continuous Deployment is triggered automatically on every push to `main` via `.github/workflows/deploy.yml`.
 
-This creates the GitHub OIDC provider, IAM roles, and instance profiles:
+```mermaid
+flowchart TD
+    Push["git push origin main"] --> Stage1["1. Build and Test<br/>(JDK 21, mvn clean verify)"]
+    Stage1 --> Stage2["2. Build & Push Images<br/>(ECR: tag sha-&lt;commit&gt;)"]
+    Stage2 --> Stage3["3. Deploy App Node 1<br/>(SSM: deploy.sh sha-&lt;commit&gt;)"]
+    Stage2 --> Stage4["4. Update Edge<br/>(SSM: Nginx/Prometheus config)"]
+    Stage3 -->|healthy| Stage5["5. Deploy App Node 2<br/>(SSM: deploy.sh sha-&lt;commit&gt;)"]
+    Stage5 -->|healthy| Stage6["6. Deploy App Node 3<br/>(SSM: deploy.sh sha-&lt;commit&gt;)"]
+    Stage6 & Stage4 --> Stage7["7. Post-Deploy Verification<br/>(Probes Edge & All 3 App Nodes)"]
+    Stage7 --> Stage8["8. Notify<br/>(Webhook summary)"]
 
-```bash
-./scripts/aws/github-oidc-setup.sh --region ap-south-1 --repo SlayerBit/linkflow
+    Stage3 -.->|unhealthy| R1["Rollback App Node 1<br/>(rollback.sh)"]
+    Stage5 -.->|unhealthy| R2["Rollback App Node 2<br/>(rollback.sh)"]
+    Stage6 -.->|unhealthy| R3["Rollback App Node 3<br/>(rollback.sh)"]
 ```
 
-It creates:
-- OIDC provider for `token.actions.githubusercontent.com`
-- `linkflow-github-actions` role (trust policy scoped to `repo:SlayerBit/linkflow:ref:refs/heads/main`)
-- `linkflow-ec2-instance` role + instance profile (SSM + ECR pull)
+### Key Deployment Properties
 
-### 2. Create ECR repositories
-
-```bash
-./scripts/aws/create-ecr-repos.sh --region ap-south-1
-```
-
-Creates `linkflow-app`, `linkflow-gateway`, `linkflow-web` with lifecycle policies.
-
-### 3. Attach instance profile to all 4 EC2 instances
-
-```bash
-aws ec2 associate-iam-instance-profile \
-  --instance-id i-0xxxxxxxxxxxx \
-  --iam-instance-profile Name=linkflow-ec2-instance
-```
-
-Repeat for all 4 instances.
-
-### 4. Configure GitHub Secrets
-
-| Secret | Value |
-|--------|-------|
-| `AWS_ROLE_ARN` | Output from OIDC setup script |
-| `AWS_REGION` | e.g. `ap-south-1` |
-| `ECR_REGISTRY` | e.g. `123456789012.dkr.ecr.ap-south-1.amazonaws.com` |
-| `EC2_EDGE_INSTANCE_ID` | Instance ID of EC2 #1 |
-| `EC2_APP1_INSTANCE_ID` | Instance ID of EC2 #2 |
-| `EC2_APP2_INSTANCE_ID` | Instance ID of EC2 #3 |
-| `EC2_APP3_INSTANCE_ID` | Instance ID of EC2 #4 |
-| `DEPLOY_WEBHOOK_URL` | *(optional)* Slack/Discord webhook URL |
-
-### 5. Create the `production` Deployment Environment
-
-In GitHub: Settings → Environments → New → `production`. Optional: add required reviewers.
+1. **Immutable Image Tagging**:
+   Every deployment uses an immutable, commit-derived image tag (e.g. `sha-e9d1420`). The exact tag is built by GitHub Actions, pushed to ECR, passed through SSM, and deployed by Docker Compose. The production deployment **never** relies on or falls back to `latest`.
+2. **Keyless AWS Authentication**:
+   GitHub Actions assumes the IAM role `linkflow-github-actions` via GitHub OIDC federation. No long-lived AWS credentials or SSH keys exist in GitHub Secrets.
+3. **Sequential Rolling Deployment**:
+   App Node 1 is deployed and must pass readiness health checks before App Node 2 begins, followed by App Node 3.
+4. **Deployment Resiliency**:
+   `scripts/deploy.sh` connects to GitHub with strict connect timeouts (`http.connectTimeout=10`) and low-speed limits (`http.lowSpeedLimit=1000 -c http.lowSpeedTime=15`) with a 3-attempt retry loop.
+   - **Key Design Principle**: Because pre-built container images already reside in AWS ECR (`ap-south-1`), a temporary GitHub network blip should not block deployment. If GitHub is unreachable after 3 attempts, `deploy.sh` logs a warning and proceeds using the existing local compose file—**always deploying the exact requested `IMAGE_TAG`**.
+   - **Safe Interpreter Re-Execution**: When repository synchronization succeeds, `deploy.sh` executes `LINKFLOW_DEPLOY_SYNCED=1 exec bash "$0" "$@"` to reload the updated script from byte 0, avoiding bash file descriptor offset corruption.
+5. **Automated Rollback**:
+   Before updating containers, `deploy.sh` saves the active tag to `.rollback-tag`. If readiness probes fail during deployment, `scripts/rollback.sh` is triggered automatically, pulling the previous known-good image from ECR and restoring service.
 
 ---
 
-## EC2 bootstrap
+## First Deploy Checklist
 
-Run on each fresh Amazon Linux 2023 instance:
-
-```bash
-# Copy the bootstrap script and run as root
-curl -fsSL https://raw.githubusercontent.com/SlayerBit/linkflow/main/scripts/ec2-bootstrap.sh | sudo bash
-```
-
-Or clone manually:
-
-```bash
-sudo dnf install -y docker git
-sudo systemctl enable --now docker
-sudo mkdir -p /opt/linkflow
-sudo git clone https://github.com/SlayerBit/linkflow.git /opt/linkflow
-cd /opt/linkflow
-sudo cp .env.ec2.example .env
-sudo chmod +x scripts/*.sh scripts/aws/*.sh
-```
-
-Then edit `.env`:
-
-- **Edge (EC2 #1)**: Section A — `REDIS_PASSWORD`, `REDIS_BIND_ADDRESS`, `APP_NODE_*_IP`, `GRAFANA_ADMIN_PASSWORD`
-- **App nodes (EC2 #2–#4)**: Section B — `REGISTRY`, `AWS_REGION`, database, Redis host, JWT secret, SMTP
-
----
-
-## First deploy checklist
-
-1. ✅ AWS OIDC + IAM configured (step 1-3 above)
-2. ✅ GitHub Secrets configured (step 4)
-3. ✅ All 4 EC2 instances bootstrapped
-4. ✅ `.env` edited on all 4 instances
+1. ✅ AWS OIDC + IAM configured
+2. ✅ GitHub Secrets configured
+3. ✅ All 4 EC2 instances bootstrapped (`scripts/ec2-bootstrap.sh`)
+4. ✅ `.env` configured on all 4 instances
 
 **Edge (EC2 #1):**
-
 ```bash
-# Obtain TLS certificate
-sudo certbot certonly --standalone -d yourdomain.com
+# Obtain Let's Encrypt certificate
+sudo certbot certonly --standalone -d linkflow.slayerbit.me
 
 # Start edge stack
 cd /opt/linkflow
 sudo docker compose -f docker-compose.ec2-edge.yml up -d
 
 # Verify
-sudo docker compose -f docker-compose.ec2-edge.yml ps
 curl http://localhost/nginx-health
 ```
 
-**App nodes (EC2 #2–#4):**
-
+**App Nodes (EC2 #2–#4):**
 ```bash
-# First deploy (manual)
 cd /opt/linkflow
-sudo ./scripts/deploy.sh latest
-
-# Verify
+sudo ./scripts/deploy.sh sha-<commit-hash>
 sudo ./scripts/health-check.sh
 ```
 
-**After first deploy**, all subsequent deployments are automatic via `git push origin main`.
+Subsequent deployments are 100% automated upon push to `main`.
 
 ---
 
-## How deployment works
+## Health & Verification Endpoints
 
-When you push to `main`:
+| Endpoint | Port | Expected Response | Node |
+|---|---|---|---|
+| `/nginx-health` | 80 / 443 | `ok\n` | `linkflow-edge` |
+| `/actuator/health/readiness` | 8080 | `{"status":"UP"}` | `linkflow-gateway` |
+| `/actuator/health/readiness` | 8081 | `{"status":"UP"}` | `linkflow-app` |
+| `/actuator/health/readiness` | 8082 | `{"status":"UP"}` | `linkflow-web` |
 
-1. GitHub Actions checks out the code and runs `mvn clean verify`
-2. On success, it assumes the OIDC role and pushes 3 Docker images to ECR (tagged `sha-abc1234` + `latest`)
-3. For each app node (sequentially):
-   - Sends an SSM command: `./scripts/deploy.sh sha-abc1234`
-   - `deploy.sh` on the EC2: syncs repo to `origin/main` (`git fetch + reset`) → saves the current tag for rollback → ECR login → pull images → restart containers → wait for health checks
-   - If healthy: proceed to next node
-   - If unhealthy: run `rollback.sh` → revert to previous tag → fail the workflow
-4. Simultaneously, updates edge: `git fetch + reset` + `docker compose up -d` (picks up Nginx/Prometheus config changes)
-5. Final verification: checks health on all nodes
-6. Optional notification via webhook
-
-**The deploy script syncs the EC2 to match `origin/main` exactly** (`git fetch origin && git reset --hard origin/main`), so compose file changes, script updates, and config changes are always picked up — even if someone modified files locally on the EC2.
-
----
-
-## Rollback
-
-### Automatic (during deployment)
-
-If a node fails health check during deployment, `rollback.sh` runs automatically. It reads `.rollback-tag` (saved by `deploy.sh` before deploying) and reverts to that image.
-
-### Manual
+### Live Verification Commands
 
 ```bash
-# On the affected EC2 instance:
-cd /opt/linkflow
+# Public HTTP to HTTPS redirect
+curl -i http://linkflow.slayerbit.me
+# Expected: HTTP/1.1 301 Moved Permanently -> Location: https://linkflow.slayerbit.me/
 
-# Rollback to previous tag
-sudo ./scripts/rollback.sh
+# Public HTTPS 200 response
+curl -sI https://linkflow.slayerbit.me
+# Expected: HTTP/2 200
 
-# Or rollback to a specific tag
-sudo ./scripts/rollback.sh sha-abc1234
-```
+# Public Nginx health probe
+curl -i https://linkflow.slayerbit.me/nginx-health
+# Expected: HTTP/2 200 (content: ok)
 
-### Full cluster rollback
-
-```bash
-# Get the desired tag from ECR
-aws ecr describe-images --repository-name linkflow-app --query 'imageDetails[*].imageTags' --output table
-
-# Deploy a specific tag to all nodes
-for INSTANCE in i-app1 i-app2 i-app3; do
-  aws ssm send-command \
-    --instance-ids "$INSTANCE" \
-    --document-name "AWS-RunShellScript" \
-    --parameters "commands=['cd /opt/linkflow && sudo ./scripts/deploy.sh sha-abc1234']"
-done
+# Actuator readiness on each app node (from VPC or internal SSH)
+curl -s http://127.0.0.1:8080/actuator/health/readiness
+curl -s http://127.0.0.1:8081/actuator/health/readiness
+curl -s http://127.0.0.1:8082/actuator/health/readiness
 ```
 
 ---
 
-## Recovery guide
+## Production Environment Variables
 
-### Single node failure
+See [.env.ec2.example](../.env.ec2.example) for reference. Critical production settings:
 
-If one app node goes down, Nginx automatically routes traffic to the remaining two (`max_fails=3 fail_timeout=10s`). To recover:
-
-```bash
-# Check node status via SSM
-aws ssm send-command --instance-ids i-0xxx --document-name "AWS-RunShellScript" \
-  --parameters 'commands=["cd /opt/linkflow && sudo ./scripts/health-check.sh"]'
-
-# Restart containers
-aws ssm send-command --instance-ids i-0xxx --document-name "AWS-RunShellScript" \
-  --parameters 'commands=["cd /opt/linkflow && sudo docker compose -f docker-compose.ec2-app.yml restart"]'
-```
-
-### Edge failure
-
-If EC2 #1 goes down, all traffic stops (single point of ingress). Redis-backed sessions and rate limits are lost until Redis recovers.
-
-```bash
-# Restart edge stack
-cd /opt/linkflow
-sudo docker compose -f docker-compose.ec2-edge.yml up -d
-```
-
-### Database recovery
-
-Neon PostgreSQL is external and managed. Flyway migrations run on `linkflow-app` startup. If the database is restored from backup, restart all app nodes to re-run Flyway validation.
-
----
-
-## Scaling (adding EC2 #5+)
-
-1. Bootstrap the new EC2 (same process as above)
-2. On EC2 #1, add to `.env`: `APP_NODE_4_IP=<new-private-ip>`
-3. In `docker-compose.ec2-edge.yml`, add `extra_hosts` entries for nginx and prometheus: `"app4:${APP_NODE_4_IP}"`
-4. In `infrastructure/nginx/linkflow-ec2.conf`, add: `server app4:8080 max_fails=3 fail_timeout=10s;`
-5. In `infrastructure/prometheus/prometheus-ec2.yml`, add targets: `"app4:8081"`, `"app4:8080"`
-6. In `.github/workflows/deploy.yml`, add a `deploy-app-4` job
-7. Add `EC2_APP4_INSTANCE_ID` to GitHub Secrets
-8. Commit, push, deploy
-
----
-
-## Health endpoints
-
-| Endpoint | Port | Expected |
-|----------|------|----------|
-| `/nginx-health` | 80/443 | `ok\n` (edge only) |
-| `/actuator/health/readiness` | 8080 | `{"status":"UP"}` (gateway) |
-| `/actuator/health/readiness` | 8081 | `{"status":"UP"}` (app) |
-| `/actuator/health/readiness` | 8082 | `{"status":"UP"}` (web) |
-
-Quick verification from edge:
-
-```bash
-curl -s http://localhost/nginx-health
-curl -s http://app1:8081/actuator/health/readiness
-curl -s http://app2:8081/actuator/health/readiness
-curl -s http://app3:8081/actuator/health/readiness
-```
-
----
-
-## Environment variables
-
-See [.env.ec2.example](../.env.ec2.example) for the complete template. Key variables:
-
-| Variable | Where | Purpose |
-|----------|-------|---------|
+| Variable | Target Node | Purpose |
+|---|---|---|
+| `LINKFLOW_BASE_URL` | App nodes | Public base URL (`https://linkflow.slayerbit.me`) |
+| `LINKFLOW_MAIL_BASE_URL` | App nodes | Email action base URL (`https://linkflow.slayerbit.me`) |
+| `LINKFLOW_CORS_ALLOWED_ORIGINS` | App nodes | Allowed origins (`https://linkflow.slayerbit.me`) |
+| `SERVER_SERVLET_SESSION_COOKIE_SECURE` | App nodes | `true` (enforces `Secure` flag on HTTPS cookies) |
+| `SPRING_PROFILES_ACTIVE` | App nodes | `docker` (runtime container profile) |
 | `REGISTRY` | App nodes | ECR registry URL with trailing slash |
-| `IMAGE_TAG` | App nodes | Container image tag (managed by deploy.sh) |
-| `AWS_REGION` | App nodes | AWS region for ECR login |
-| `APP_NODE_1_IP` / `2` / `3` | Edge | Private IPs of app nodes (for Nginx + Prometheus) |
-| `REDIS_BIND_ADDRESS` | Edge | EC2 #1 private IP (limits Redis to VPC) |
+| `IMAGE_TAG` | App nodes | Target container image tag (propagated by `deploy.sh`) |
+| `AWS_REGION` | All nodes | AWS region (`ap-south-1`) |
+| `APP_NODE_1_IP` / `2` / `3` | Edge | Private VPC IPs of the application nodes |
+| `REDIS_BIND_ADDRESS` | Edge | EC2 #1 private IP (restricts Redis access to VPC) |
 | `REDIS_HOST` | App nodes | EC2 #1 private IP (Redis connection) |
-| `SERVER_SERVLET_SESSION_COOKIE_SECURE` | App nodes | `true` when behind HTTPS |
 
 ---
 
 ## Observability
 
 ### Prometheus
-
-Scrapes all 6 targets (3 app nodes × app + gateway) every 15 seconds. Alert rules in `infrastructure/prometheus/alerts.yml`.
-
-Access: `http://localhost:9090` on EC2 #1 (not publicly exposed).
+Scrapes all 6 application targets (3 app nodes × app + gateway) every 15 seconds over the private VPC.
+- Access: `http://localhost:9090` on `linkflow-edge` (bound to localhost; access via SSH tunnel).
 
 ### Grafana
-
-Access via SSH tunnel:
-
-```bash
-ssh -L 3000:127.0.0.1:3000 ec2-user@<edge-public-ip>
-# Then open http://localhost:3000
-```
-
-Provisioned dashboards and Prometheus datasource are in `infrastructure/grafana/provisioning/`.
+Dashboards visualize cluster health, JVM metrics, and redirect throughput.
+- Access via SSH tunnel:
+  ```bash
+  ssh -L 3000:127.0.0.1:3000 ec2-user@13.206.178.184
+  # Open http://localhost:3000 in your browser
+  ```
 
 ---
 
-## CI (pull request validation)
+## Troubleshooting Guide
 
-The `ci.yml` workflow runs on every push and PR. It is separate from deployment:
-
-- `mvn clean verify` (unit + integration tests)
-- Docker image build validation (no push)
-- Compose config syntax validation
-- Nginx config syntax validation
-- Trivy vulnerability scan (advisory, non-blocking)
-
----
-
-## Troubleshooting
-
-| Problem | Check |
-|---------|-------|
-| Deploy fails "SSM command timed out" | Verify SSM agent is running: `systemctl status amazon-ssm-agent` |
-| Deploy fails "ECR login failed" | Verify instance profile is attached: `aws sts get-caller-identity` on EC2 |
-| Containers start but fail health check | Check logs: `docker compose -f docker-compose.ec2-app.yml logs --tail=50` |
-| Nginx 502 Bad Gateway | Verify app nodes are running and ports 8080 are reachable from edge |
-| Redis connection refused | Verify `REDIS_BIND_ADDRESS` in edge `.env` matches the private IP |
-| Session lost across requests | Verify `REDIS_HOST` on all app nodes points to EC2 #1 |
-| TLS certificate expired | Run `sudo certbot renew` on EC2 #1 |
-| Rollback fails "no rollback tag" | First deployment — there is nothing to roll back to. Deploy manually |
-| GitHub Actions "no identity-based policy" | Verify OIDC trust policy allows the branch ref |
-| Prometheus shows targets as DOWN | Verify app node security groups allow inbound 8080-8082 from EC2 #1 |
+| Problem | Cause | Resolution |
+|---|---|---|
+| Deploy fails "SSM command timed out" | SSM agent inactive or instance offline | Check `systemctl status amazon-ssm-agent` on target instance |
+| Deploy fails "ECR login failed" | Missing IAM instance profile permissions | Verify `linkflow-ec2-instance` profile is attached to instance |
+| Containers fail health check | Database/Redis unreachable or misconfigured `.env` | Check container logs: `docker compose -f docker-compose.ec2-app.yml logs --tail=50` |
+| Nginx returns 502 Bad Gateway | App nodes down or private VPC ports blocked | Verify app nodes are healthy and security group allows inbound 8080 from edge |
+| Redis connection refused | Wrong `REDIS_BIND_ADDRESS` or firewall | Verify `REDIS_BIND_ADDRESS` in edge `.env` matches private IP |
+| TLS certificate expired | Let's Encrypt renewal needed | Run `sudo certbot renew` on `linkflow-edge` |
+| Git fetch timeout during deploy | Transient GitHub connection drop | The updated `deploy.sh` retries 3 times and falls back to local compose with the requested `IMAGE_TAG` |

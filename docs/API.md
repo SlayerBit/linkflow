@@ -5,12 +5,13 @@ REST inventory generated against the controllers in this repository. Interactive
 **Base URL**
 
 | How you run | Base |
-|-------------|------|
+|---|---|
+| Hosted production | `https://linkflow.slayerbit.me` |
 | Compose (Nginx) | `https://localhost` |
 | Gateway on the host | `http://localhost:8080` |
 | App direct | `http://localhost:8081` |
 
-Paths are the same in all three cases. There are **45** JSON/PNG/redirect endpoints on the backend plus the SSR web routes listed at the end.
+Paths are the same in all cases. There are **45** JSON/PNG/redirect endpoints on the backend plus the SSR web routes listed at the end.
 
 ## Envelopes
 

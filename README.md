@@ -1,375 +1,479 @@
 <p align="center">
   <h1 align="center">⚡ LinkFlow</h1>
   <p align="center">
-    <strong>Production-Grade URL Shortener & Analytics Platform</strong><br/>
-    Built as a Modular Monolith in Java 21 & Spring Boot 3.4.1
+    <strong>High-Performance Distributed URL Shortener & Analytics Platform</strong><br/>
+    Built as a Modular Monolith in Java 21 & Spring Boot 3.4.1 • Distributed 4-EC2 AWS Cluster
   </p>
   <p align="center">
+    <a href="https://linkflow.slayerbit.me"><img src="https://img.shields.io/badge/Live_Demo-linkflow.slayerbit.me-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="Live Demo" /></a>
     <img src="https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21" />
     <img src="https://img.shields.io/badge/Spring_Boot-3.4.1-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 3.4.1" />
-    <img src="https://img.shields.io/badge/Architecture-Modular_Monolith-blue?style=for-the-badge" alt="Modular Monolith" />
-    <img src="https://img.shields.io/badge/Database-PostgreSQL_16_(Neon)-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL 16" />
-    <img src="https://img.shields.io/badge/Cache-Redis_7-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis 7" />
-    <img src="https://img.shields.io/badge/Proxy-Nginx_1.27-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="Nginx" />
-    <img src="https://img.shields.io/badge/Containers-Docker_Compose_v2-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Compose" />
-    <img src="https://img.shields.io/badge/Cloud-AWS_4--EC2-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white" alt="AWS 4-EC2" />
-    <img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions" />
-    <img src="https://img.shields.io/badge/Monitoring-Prometheus_%26_Grafana-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" alt="Prometheus & Grafana" />
+    <img src="https://img.shields.io/badge/AWS-4--EC2_Cluster-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white" alt="AWS Cluster" />
+    <img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_%2B_SSM-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions" />
   </p>
 </p>
 
 ---
 
-URL shortener built as a **modular monolith** in Java 21 and Spring Boot 3.4.1. Users create short links (optional alias and expiry). Visitors follow `GET /r/{shortCode}`. Clicks are recorded asynchronously. Operators use a REST API or a server-rendered web UI.
+> 🌐 **Production Application**: [https://linkflow.slayerbit.me](https://linkflow.slayerbit.me)<br/>
+> 🩺 **System Edge Health Probe**: [https://linkflow.slayerbit.me/nginx-health](https://linkflow.slayerbit.me/nginx-health)<br/>
+> 📖 **Deep Documentation**: [Architecture](docs/ARCHITECTURE.md) • [Deployment](docs/DEPLOYMENT.md) • [REST API](docs/API.md) • [Interview Guide](docs/INTERVIEW_GUIDE.md)
 
 ---
 
 ## Table of Contents
 
-- [Features](#features)
-- [Hosted Layout & Architecture](#hosted-layout-architecture)
-  - [Distributed 4-EC2 Cluster Topology](#distributed-4-ec2-cluster-topology)
-  - [Request Lifecycle & Redirect Flow](#request-lifecycle-redirect-flow)
+- [What is LinkFlow?](#what-is-linkflow)
+- [At a Glance](#at-a-glance)
+- [Core Capabilities](#core-capabilities)
+- [Application Architecture](#application-architecture)
+- [Request Lifecycle & Redirect Flow](#request-lifecycle--redirect-flow)
+- [Production AWS Cluster Architecture](#production-aws-cluster-architecture)
+- [Email Verification & Account Security](#email-verification--account-security)
+- [CI/CD & Rolling Deployment Pipeline](#cicd--rolling-deployment-pipeline)
+- [Security & Defense-in-Depth](#security--defense-in-depth)
 - [Technology Stack](#technology-stack)
-- [Processes](#processes)
-- [Modules](#modules)
-- [Quick Start](#quick-start)
-  - [Prerequisites](#prerequisites)
-  - [Full Local Stack (Docker Compose)](#full-local-stack-docker-compose)
-  - [Host JAR Workflow (Selective Containers)](#host-jar-workflow-selective-containers)
-  - [Configuration Profiles (dev vs docker vs prod)](#configuration-profiles-dev-vs-docker-vs-prod)
-- [Build and Test](#build-and-test)
-- [CI/CD Pipeline](#cicd-pipeline)
-- [Core Endpoints & API Reference](#core-endpoints-api-reference)
-- [Repository Layout](#repository-layout)
-- [Documentation](#documentation)
-- [Limitations](#limitations)
+- [Module Architecture](#module-architecture)
+- [Quick Start (Local Development)](#quick-start-local-development)
+- [Testing](#testing)
+- [Observability](#observability)
+- [Core API Reference](#core-api-reference)
+- [Limitations & Roadmap](#limitations--roadmap)
 
 ---
 
-## Features
+## What is LinkFlow?
 
-- **Auth & Tokens**: Register, login, refresh, logout — JWT access tokens (HS512) and rotating opaque refresh tokens.
-- **Account Recovery**: Email activation, resend, password reset, and email change over SMTP (hashed single-use tokens).
-- **URL Management**: Single and bulk URL create with optional `Idempotency-Key`.
-- **High-Performance Redirects**: Public redirect with Redis cache-aside (stale-while-revalidate, negative cache, stampede lock).
-- **Analytics Engine**: Per-URL and system analytics (aggregates, 7/30/90-day trends, recent feeds; user IPs masked).
-- **QR Code Generation**: QR PNG (ZXing).
-- **Multi-Tier Rate Limiting**: Redis Lua sliding-window rate limits (per user / per IP) plus Nginx edge limits in Compose.
-- **Administration**: Admin API and UI: users (disable/enable/delete/roles), URLs, analytics, system health.
-- **Telemetry & Alerts**: Prometheus metrics, Grafana **LinkFlow Overview**, Prometheus alert rules.
+**LinkFlow** is a production-grade URL shortening, QR generation, and real-time click analytics platform. Designed to demonstrate robust enterprise backend engineering, it marries clean modular architecture with high-throughput operational resiliency.
+
+Visitors follow `GET /r/{shortCode}` to be redirected via an optimized Redis cache-aside layer, while click attribution data is ingested asynchronously through Redis Streams without adding latency to the redirect hot path. Operators and users interact via an authenticated REST API and a server-rendered administration dashboard.
+
+### What Makes It Technically Interesting?
+
+- **Strict Modular Monolith**: Enforced boundaries across 11 Maven modules using port-based interfaces (`UserLookupPort`, `TokenRevocationPort`, `ClickTrackingPort`) without cross-feature compile dependencies.
+- **Decoupled Asynchronous Click Ingest**: Redirects complete in single-digit milliseconds via Redis cache-aside (with stale-while-revalidate and stampede locking); click streams are flushed in background batches to PostgreSQL.
+- **Distributed Multi-Tier Rate Limiting**: Lua-scripted sliding-window rate limiters in Redis (per user / per IP) coupled with coarse Nginx edge drops.
+- **Zero-Downtime Keyless CI/CD**: Pushes to `main` trigger GitHub Actions to build immutable commit-tagged Docker images (`sha-<hash>`), publish to Amazon ECR, and execute sequential rolling deployments across 3 application EC2 nodes via AWS Systems Manager (SSM) with automatic health probes and rollback.
 
 ---
 
-## Hosted Layout & Architecture
+## At a Glance
 
-Four EC2 instances: **#1** is the public edge (Nginx, Redis, Prometheus, Grafana); **#2**, **#3**, and **#4** run identical gateway + app + web application nodes behind `least_conn` load balancing. PostgreSQL is Neon (external); SMTP is external. Automated CI/CD via GitHub Actions, ECR, and SSM. Details: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+| Dimension | Production Implementation |
+|---|---|
+| **Live Domain** | [`https://linkflow.slayerbit.me`](https://linkflow.slayerbit.me) *(root domain `slayerbit.me` is reserved)* |
+| **DNS & Ingress** | Namecheap DNS → AWS Elastic IP (`13.206.178.184`) → `linkflow-edge` EC2 |
+| **TLS & Certificates** | Let's Encrypt automated TLS via Certbot; automatic HTTP (port 80) to HTTPS (301) redirect |
+| **Cluster Topology** | 4 Amazon EC2 instances: 1 Edge Proxy + 3 Application Nodes behind a private VPC |
+| **Backend Architecture**| Java 21 LTS + Spring Boot 3.4.1 (Modular Monolith) + Spring Cloud Gateway |
+| **State & Cache** | Redis 7 (L2 Cache, Streams, Lua Rate Limiting, Spring Sessions) |
+| **Database** | Neon PostgreSQL 16 over SSL with Flyway schema migrations (V1–V11) |
+| **Authentication** | Stateless JWT (HS512) + rotating opaque refresh tokens + SMTP email verification |
+| **Continuous Delivery**| Keyless GitHub Actions OIDC → Amazon ECR → AWS SSM rolling deploys with auto-rollback |
 
-### Distributed 4-EC2 Cluster Topology
+---
+
+## Core Capabilities
+
+- **High-Performance Redirects**: Cache-aside resolution with 15-minute freshness, 30-minute stale-while-revalidate (SWR), negative caching for missing codes, and distributed stampede locks (`SETNX`).
+- **Real-Time Click Analytics**: Non-blocking click ingestion into Redis Streams (`XADD`) with background scheduled batch writes to PostgreSQL. IP addresses are anonymized before storage.
+- **Email Verification & Account Recovery**: Registration triggers verification emails with single-use hashed tokens. Unverified users cannot log in (`EMAIL_NOT_VERIFIED`). Password resets and email-change requests are fully secured over SMTP.
+- **QR Code Generation**: On-the-fly QR PNG generation via ZXing with process-local Caffeine caching.
+- **Multi-Tier Rate Limiting**: Redis Lua sliding-window rate limiters (per-user / per-IP) with configurable fail-closed security on auth endpoints.
+- **Administrative Dashboard**: Server-rendered UI using Thymeleaf, Tabler, and Chart.js for managing users, roles, URLs, and real-time analytics trends.
+- **Full-Stack Telemetry**: Actuator metrics exported to Prometheus and visualized with pre-configured Grafana dashboards.
+
+---
+
+## Application Architecture
+
+LinkFlow is structured as an edge-terminated modular monolith. Public traffic enters through Nginx on the edge node and is load-balanced across the internal application cluster:
 
 ```mermaid
-flowchart LR
-    Internet((🌐 Internet))
-
-    Internet -->|HTTP :80<br/>HTTPS :443| Nginx
+flowchart TB
+    Client((🌐 Client)) -->|HTTPS :443| Nginx["Nginx Reverse Proxy<br/>(Edge Node: linkflow-edge)"]
 
     subgraph VPC["AWS Private VPC"]
+        Nginx -->|"least_conn :8080"| GW1["Gateway :8080<br/>App Node 1"]
+        Nginx -->|"least_conn :8080"| GW2["Gateway :8080<br/>App Node 2"]
+        Nginx -->|"least_conn :8080"| GW3["Gateway :8080<br/>App Node 3"]
 
-        subgraph EC1["EC2 #1 — linkflow-edge"]
-            direction TB
-            Grafana[Grafana<br/>:3000]
-            Prometheus[Prometheus<br/>:9090]
-            Nginx[Nginx Reverse Proxy<br/>:80 / :443]
-            Redis[(Redis 7<br/>:6379)]
-            Grafana --> Prometheus
-        end
+        GW1 --> App1["App :8081"] & Web1["Web UI :8082"]
+        GW2 --> App2["App :8081"] & Web2["Web UI :8082"]
+        GW3 --> App3["App :8081"] & Web3["Web UI :8082"]
 
-        subgraph EC2["EC2 #2 — App Node 1"]
-            direction TB
-            GW1[Gateway<br/>:8080]
-            APP1[Spring Boot App<br/>:8081]
-            WEB1[Web<br/>:8082]
-            GW1 --> APP1
-            GW1 --> WEB1
-        end
-
-        subgraph EC3["EC2 #3 — App Node 2"]
-            direction TB
-            GW2[Gateway<br/>:8080]
-            APP2[Spring Boot App<br/>:8081]
-            WEB2[Web<br/>:8082]
-            GW2 --> APP2
-            GW2 --> WEB2
-        end
-
-        subgraph EC4["EC2 #4 — App Node 3"]
-            direction TB
-            GW3[Gateway<br/>:8080]
-            APP3[Spring Boot App<br/>:8081]
-            WEB3[Web<br/>:8082]
-            GW3 --> APP3
-            GW3 --> WEB3
-        end
-
-        DB[(Neon PostgreSQL 16<br/>SSL)]
+        App1 & App2 & App3 --> PG[(Neon PostgreSQL 16<br/>ACID Source of Truth)]
+        App1 & App2 & App3 --> Redis[("Redis 7 (Edge Node)<br/>Cache, Streams, Sessions")]
+        Web1 & Web2 & Web3 --> Redis
     end
 
-    Nginx -->|least_conn :8080| GW1
-    Nginx -->|least_conn :8080| GW2
-    Nginx -->|least_conn :8080| GW3
-
-    APP1 --> DB
-    APP2 --> DB
-    APP3 --> DB
-
-    APP1 -. Session / Cache .-> Redis
-    APP2 -. Session / Cache .-> Redis
-    APP3 -. Session / Cache .-> Redis
-
-    Prometheus -. Scrapes Metrics .-> APP1
-    Prometheus -.-> APP2
-    Prometheus -.-> APP3
-
-    style Internet fill:#1f2937,color:#fff
-    style DB fill:#0f172a,color:#fff
-    style Redis fill:#111827,color:#fff
+    App1 & App2 & App3 --> SMTP[[External SMTP Relay]]
 ```
 
-**Traffic Flow**
+### Process Isolation on Each Node
 
-1. Internet requests arrive at **EC2 #1** over HTTP/HTTPS.
-2. **Nginx** terminates TLS and distributes traffic using the **least_conn** load-balancing algorithm.
-3. Requests are forwarded through the **private VPC** to one of the three gateway nodes on **port 8080**.
-4. Each gateway routes requests to its local Spring Boot application (**8081**) and Web service (**8082**).
-5. All application nodes share a centralized **Redis** instance for sessions/cache and a managed **Neon PostgreSQL** database over SSL.
-6. **Prometheus** continuously scrapes metrics, while **Grafana** visualizes cluster health and performance.
+| Process | Internal Port | Responsibility |
+|---|---|---|
+| `nginx` | `80`, `443` | Edge TLS termination, HTTP→HTTPS redirect, coarse rate limiting, `/actuator` denial |
+| `linkflow-gateway` | `8080` | Spring Cloud Gateway: path routing (`/api/**`, `/r/**`, `/`), correlation ID injection |
+| `linkflow-app` | `8081` | Core business logic, domain modules, Flyway migrations, background schedulers |
+| `linkflow-web` | `8082` | Thymeleaf SSR web frontend; user JWTs stored in Redis-backed `HttpSession` |
 
-### Request Lifecycle & Redirect Flow
+---
+
+## Request Lifecycle & Redirect Flow
+
+The redirect hot path is optimized to eliminate synchronous database writes from the critical path:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Visitor as Visitor Client
+    actor Visitor as Visitor
     participant Nginx as Nginx (Edge)
     participant Gateway as linkflow-gateway
     participant App as linkflow-app
     participant Redis as Redis 7
-    participant DB as Neon PostgreSQL
+    participant DB as PostgreSQL
 
     Visitor->>Nginx: GET /r/{shortCode}
-    Nginx->>Gateway: Forward HTTP :8080
+    Nginx->>Gateway: Forward to gateway :8080
     Gateway->>App: Route to RedirectController :8081
     App->>Redis: GET url:code:{shortCode}
     alt Cache Hit (Active)
         Redis-->>App: Destination URL
-    else Cache Stale / Miss (Negative Cache / Stampede Lock)
+    else Cache Stale / Miss
         App->>Redis: SETNX lock:resolve:{shortCode}
         App->>DB: Query ShortUrl by code
         DB-->>App: Entity & Expiry
         App->>Redis: SET url:code:{shortCode} (TTL + jitter)
     end
-    App-->>Gateway: HTTP 302 Found (Location: target)
+    App-->>Gateway: HTTP 302 Found (Location: destination)
     Gateway-->>Nginx: HTTP 302 Found
     Nginx-->>Visitor: HTTP 302 Redirect
-    Note over App,Redis: Asynchronous Ingest
-    App-)Redis: XADD analytics:clicks:stream (masked IP, user agent, referrer)
-    Note over Redis,DB: Background Scheduled Flush
-    App-)DB: Batch flush click events & counters to PostgreSQL
+    Note over App,Redis: Asynchronous Non-Blocking Tracking
+    App-)Redis: XADD analytics:clicks:stream (masked IP, UA, Referrer)
+    Note over Redis,DB: Background Scheduled Flush (every 30s)
+    App-)DB: Batch insert click_events & increment counters
 ```
+
+---
+
+## Production AWS Cluster Architecture
+
+The live cluster runs on 4 Amazon EC2 instances in `ap-south-1` within a private VPC:
+
+```mermaid
+flowchart LR
+    Internet((🌐 Internet)) -->|DNS: linkflow.slayerbit.me| Namecheap["Namecheap DNS"]
+    Namecheap -->|A Record| EIP["AWS Elastic IP<br/>13.206.178.184"]
+    EIP -->|Port 80 / 443| Edge["EC2 #1: linkflow-edge"]
+
+    subgraph Cluster["AWS Private VPC (ap-south-1)"]
+        direction TB
+
+        subgraph EdgeNode["linkflow-edge (172.31.4.98)"]
+            Nginx["Nginx 1.27<br/>(Let's Encrypt TLS)"]
+            Redis[("Redis 7<br/>:6379")]
+            Prometheus["Prometheus<br/>:9090"]
+            Grafana["Grafana<br/>:3000"]
+            Grafana --> Prometheus
+        end
+
+        subgraph Node1["linkflow-app-1 (172.31.5.37)"]
+            GW1["Gateway :8080"] --> A1["App :8081"] & W1["Web :8082"]
+        end
+
+        subgraph Node2["linkflow-app-2 (172.31.8.125)"]
+            GW2["Gateway :8080"] --> A2["App :8081"] & W2["Web :8082"]
+        end
+
+        subgraph Node3["linkflow-app-3 (172.31.2.137)"]
+            GW3["Gateway :8080"] --> A3["App :8081"] & W3["Web :8082"]
+        end
+
+        Nginx -->|"least_conn :8080"| GW1 & GW2 & GW3
+        A1 & A2 & A3 --> Redis
+        W1 & W2 & W3 --> Redis
+        Prometheus -->|scrape private IPs| A1 & A2 & A3 & GW1 & GW2 & GW3
+    end
+
+    A1 & A2 & A3 --> PG[(Neon PostgreSQL 16<br/>Managed Cloud DB)]
+```
+
+### Production Node Inventory
+
+| Node Name | Instance ID | Role | Private IP | Compose Stack |
+|---|---|---|---|---|
+| `linkflow-edge` | `i-09762b0270a4327dd` | Ingress TLS, Nginx LB, Redis 7, Prometheus, Grafana | `172.31.4.98` | `docker-compose.ec2-edge.yml` |
+| `linkflow-app-1` | `i-0c4f9bdb54bc90f35` | Application Node 1 (Gateway + App + Web) | `172.31.5.37` | `docker-compose.ec2-app.yml` |
+| `linkflow-app-2` | `i-06b58e726a0c83746` | Application Node 2 (Gateway + App + Web) | `172.31.8.125` | `docker-compose.ec2-app.yml` |
+| `linkflow-app-3` | `i-0016df717b7272284` | Application Node 3 (Gateway + App + Web) | `172.31.2.137` | `docker-compose.ec2-app.yml` |
+
+- **Elastic IP**: `13.206.178.184` is bound to `linkflow-edge` ensuring a persistent IPv4 address that does not change across instance restarts.
+- **VPC Isolation**: Application nodes are not exposed to the public internet; only `linkflow-edge` receives traffic from the internet on ports 80/443.
+
+---
+
+## Email Verification & Account Security
+
+LinkFlow enforces email verification for account activation to protect against spam and unverified access:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User
+    participant Web as linkflow-web (:8082)
+    participant App as linkflow-app (:8081)
+    participant DB as Neon PostgreSQL
+    participant SMTP as SMTP Relay
+
+    User->>Web: Submit registration form
+    Web->>App: POST /api/v1/auth/register
+    App->>DB: Save user (email_verified=false)
+    App->>DB: Save single-use token (SHA-256 hash)
+    App-)SMTP: Dispatch email with https://linkflow.slayerbit.me/verify-email?token=...
+    SMTP-->>User: Delivery to inbox
+    User->>Web: Click https://linkflow.slayerbit.me/verify-email?token=...
+    Web->>App: POST /api/v1/auth/verify-email {token}
+    App->>DB: Validate token, mark used=true, email_verified=true
+    App-->>Web: Verification confirmed
+    Web-->>User: Display success banner & login form
+```
+
+- **HTTPS URLs**: Verification links strictly resolve to `https://linkflow.slayerbit.me/verify-email?token=...`.
+- **Configuration Hierarchy**: `linkflow.mail.base-url` automatically falls back to `linkflow.base-url` (`https://linkflow.slayerbit.me`).
+- **Unverified Login Prevention**: Attempting to authenticate with unverified credentials yields HTTP 401 with `EMAIL_NOT_VERIFIED`.
+
+---
+
+## CI/CD & Rolling Deployment Pipeline
+
+Continuous Deployment is managed automatically on every push to `main` via `.github/workflows/deploy.yml`:
+
+```mermaid
+flowchart TD
+    Push["git push origin main"] --> S1["1. Build & Test<br/>(JDK 21, mvn clean verify)"]
+    S1 --> S2["2. Build & Push Images<br/>(Amazon ECR: tag sha-&lt;commit&gt;)"]
+    S2 --> S3["3. Deploy App Node 1<br/>(AWS SSM: deploy.sh sha-&lt;commit&gt;)"]
+    S2 --> S4["4. Update Edge<br/>(AWS SSM: Nginx/Prometheus config)"]
+    S3 -->|healthy| S5["5. Deploy App Node 2<br/>(AWS SSM: deploy.sh sha-&lt;commit&gt;)"]
+    S5 -->|healthy| S6["6. Deploy App Node 3<br/>(AWS SSM: deploy.sh sha-&lt;commit&gt;)"]
+    S6 & S4 --> S7["7. Post-Deploy Verification<br/>(Health Probes Edge & App Nodes)"]
+    S7 --> S8["8. Notify<br/>(Webhook Summary)"]
+
+    S3 -.->|unhealthy| R1["Rollback App Node 1<br/>(rollback.sh)"]
+    S5 -.->|unhealthy| R2["Rollback App Node 2<br/>(rollback.sh)"]
+    S6 -.->|unhealthy| R3["Rollback App Node 3<br/>(rollback.sh)"]
+```
+
+### Key Deployment Engineering Principles
+
+1. **Immutable Image Tagging**: Every build generates an immutable commit-derived tag (e.g. `sha-e9d1420`). The exact tag is propagated from GitHub Actions → ECR → SSM → EC2 → Docker Compose. The deployment pipeline **never** falls back to `latest`.
+2. **Keyless AWS Authentication**: Authenticates via GitHub OIDC federation with IAM role `linkflow-github-actions`. No long-lived AWS keys or SSH secrets exist in CI.
+3. **Deployment Resiliency**: `scripts/deploy.sh` connects to GitHub with a 10s connect timeout and a 3-attempt retry loop. If GitHub is temporarily unreachable, the script continues using the existing local compose configuration with the **requested immutable SHA tag**. Pre-built container images are pulled directly from AWS ECR in `ap-south-1`.
+4. **Safe Interpreter Re-Execution**: When the repository is synchronized, `deploy.sh` invokes `LINKFLOW_DEPLOY_SYNCED=1 exec bash "$0" "$@"` so bash re-executes cleanly from byte 0, eliminating any risk of in-place file descriptor corruption if `deploy.sh` was modified.
+5. **Automated Rollback**: If a node fails its readiness health checks during deployment, `scripts/rollback.sh` reverts the instance to `.rollback-tag` (saved prior to deploy), restoring the previous known-good release.
+6. **CI vs Production Certificate Validation**: In CI (`ci.yml`), a temporary self-signed test certificate is generated on-the-fly at the expected certificate path so `nginx:1.27-alpine nginx -t` tests the exact committed `linkflow-ec2.conf` without requiring or leaking production Let's Encrypt keys.
+
+---
+
+## Security & Defense-in-Depth
+
+```
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 1. EDGE: Nginx TLS (Let's Encrypt), HTTP 301, Edge Drop Rate │
+  └──────────────────────────────┬──────────────────────────────┘
+                                 │
+  ┌──────────────────────────────▼──────────────────────────────┐
+  │ 2. GATEWAY: Correlation ID, Routing, /actuator Denial       │
+  └──────────────────────────────┬──────────────────────────────┘
+                                 │
+  ┌──────────────────────────────▼──────────────────────────────┐
+  │ 3. APPLICATION: HS512 JWT, Rotating Refresh, BCrypt 12,     │
+  │    Redis Lua Rate Limits, Idempotency, Single-Use Tokens    │
+  └──────────────────────────────┬──────────────────────────────┘
+                                 │
+  ┌──────────────────────────────▼──────────────────────────────┐
+  │ 4. WEB UI: Nonce CSP, SameSite=Strict, HttpOnly Cookies     │
+  └─────────────────────────────────────────────────────────────┘
+```
+
+- **Transport Security**: HSTS, Let's Encrypt TLS with automated renewal on `https://linkflow.slayerbit.me`.
+- **Stateless Tokens**: HS512 JWT access tokens (15-minute expiry) with cryptographic issuer and audience verification.
+- **Refresh Token Rotation**: Opaque 30-day refresh tokens stored as SHA-256 hashes in PostgreSQL; reuse of a revoked token invalidates all active sessions for that user.
+- **Web UI Cookie Hardening**: `SERVER_SERVLET_SESSION_COOKIE_SECURE=true`, `SameSite=Strict`, `HttpOnly`. Tokens never reach browser JavaScript.
+- **Content Security Policy (CSP)**: Strict `default-src 'self'` with per-request cryptographic script nonces (`script-src 'self' 'nonce-...'`). No external CDN dependencies.
+- **Network Isolation**: Application nodes operate on private VPC IPs (`172.31.0.0/16`). Public ingress is confined to `linkflow-edge`.
 
 ---
 
 ## Technology Stack
 
 | Layer | Technology | Version | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Runtime & Language** | Java OpenJDK | 21 (LTS) | Modern language features, Virtual Threads, Records |
-| **Framework** | Spring Boot | 3.4.1 | Core backend framework, dependency injection, scheduler |
-| **API Gateway** | Spring Cloud Gateway | 2024.0.0 | Reactive routing, path predicates, `X-Correlation-ID` injection |
-| **Relational Database**| PostgreSQL / Neon | 16 | ACID source of truth, Flyway schema migrations (V1–V11) |
-| **In-Memory Store** | Redis | 7.x | L2 cache, Lua sliding-window rate limiters, Streams, HTTP sessions |
-| **Web Frontend** | Thymeleaf + Tabler | Modern HTML5/CSS3 | Responsive server-rendered operations and administration UI |
-| **Security** | Spring Security + jjwt | 0.12.6 | Stateless HS512 JWT verification, BCrypt (strength 12) |
-| **Observability** | Micrometer + Prometheus | v2.54.1 | Actuator metric collection, custom timers/counters, alert rules |
-| **Visualization** | Grafana | 11.2.0 | Dashboards for system KPIs, JVM metrics, and redirect throughput |
-| **Build & Packaging** | Apache Maven | 3.9+ | Multi-module reactor build, layered Docker packaging |
-| **Cloud Infrastructure**| AWS EC2 (Amazon Linux 2023) | 4 Instances | Distributed edge and application nodes behind VPC security groups |
-| **Continuous Delivery** | GitHub Actions + AWS SSM | Latest | Keyless OIDC AWS authentication, zero-downtime rolling deploys |
+|---|---|---|---|
+| **Language & Runtime** | OpenJDK Java | 21 (LTS) | Records, Virtual Threads, Pattern Matching |
+| **Framework** | Spring Boot | 3.4.1 | Dependency injection, MVC, Scheduling |
+| **API Gateway** | Spring Cloud Gateway | 2024.0.0 | Reactive routing, path predicates, correlation IDs |
+| **Database** | PostgreSQL (Neon) | 16 | ACID system of record, Flyway schema migrations (V1–V11) |
+| **Cache & Buffering** | Redis | 7-alpine | L2 cache, Lua sliding-window rate limiters, Streams |
+| **Edge Reverse Proxy** | Nginx | 1.27-alpine | TLS termination, load balancing, edge rate limits |
+| **Web Frontend** | Thymeleaf + Tabler | 1.0.0 | Responsive server-rendered administrative dashboard |
+| **Security** | Spring Security + jjwt | 0.12.6 | HS512 JWT validation, BCrypt (strength 12) |
+| **Observability** | Micrometer + Prometheus | v2.54.1 | Metric collection, custom timers/counters, alerts |
+| **Dashboards** | Grafana | 11.2.0 | Cluster KPIs, JVM memory, and throughput dashboards |
+| **Cloud Infrastructure**| AWS EC2 (Amazon Linux 2023) | 4 Instances | 1 Edge + 3 Application Nodes in private VPC |
+| **Continuous Delivery** | GitHub Actions + AWS SSM | Latest | Keyless OIDC AWS authentication, rolling deployments |
 
 ---
 
-## Processes
+## Module Architecture
 
-On a laptop, **Nginx** is the only public application entry (`https://localhost`). On the hosted stack, that role is EC2 #1.
-
-| Process | Port | Role |
-| :--- | :--- | :--- |
-| `nginx` | 80, 443 | TLS, edge rate limits, `/actuator` deny |
-| `linkflow-gateway` | 8080 | Routes `/api/**`, `/r/**`, Swagger, and the UI |
-| `linkflow-app` | 8081 | Backend — all feature modules, Flyway, schedulers |
-| `linkflow-web` | 8082 | Thymeleaf UI; JWTs live in a Redis `HttpSession` |
-
-Infrastructure in the full stack: PostgreSQL 16, Redis 7, MailHog, Prometheus, Grafana.
-
----
-
-## Modules
-
-Feature modules depend only on `linkflow-common`. Cross-module calls use ports. `linkflow-web` has no compile dependency on `com.linkflow.*`.
-
-| Module | Role |
-| :--- | :--- |
-| `linkflow-common` | Envelopes, exceptions, Redis config, ports, metrics interface |
-| `linkflow-auth` | JWT, refresh tokens, account recovery |
-| `linkflow-user` | Profiles, admin users |
-| `linkflow-url` | Short URLs, redirects, QR, cache, idempotency |
-| `linkflow-rate-limit` | Sliding-window limiter |
-| `linkflow-analytics` | Click stream, flush, queries |
-| `linkflow-notification` | SMTP + mail templates |
-| `linkflow-observability` | Actuator extras, Micrometer, Redis health |
-| `linkflow-app` | Runnable backend |
-| `linkflow-gateway` | Path routing + `X-Correlation-ID` |
-| `linkflow-web` | SSR UI |
-
----
-
-## Quick Start
-
-### Prerequisites
-
-**JDK 21** is required (`JAVA_HOME` must point at 21). Docker is required for the stack and for integration tests.
-
-### Full Local Stack (Docker Compose)
-
-```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)   # macOS
-
-./infrastructure/nginx/generate-dev-certs.sh
-cp .env.example .env                               # set LINKFLOW_JWT_SECRET
-docker compose up --build
-```
-
-Open **https://localhost**. The browser warns about the self-signed certificate. Read activation mail at http://localhost:8025.
-
-> [!NOTE]
-> The browser warns about the self-signed certificate generated by `generate-dev-certs.sh`. This is expected and safe for local development.
-
-### Host JAR Workflow (Selective Containers)
-
-Host JAR workflow (Postgres, Redis, MailHog published on localhost):
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis mailhog
-mvn clean package -DskipTests
-java -jar linkflow-app/target/linkflow-app-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
-# then gateway and web; on macOS use LINKFLOW_APP_URI=http://127.0.0.1:8081
-```
-
-### Configuration Profiles (dev vs docker vs prod)
-
-Use the `dev` profile for host JARs. Do not use `prod` locally — it refuses to start without a real SMTP relay, `https` mail/base URLs, explicit CORS origins, and a Redis password. Compose uses the `docker` profile for that reason.
-
-| Profile | Purpose | Characteristics |
-| :--- | :--- | :--- |
-| **`dev`** | Host JAR development | Embedded dev JWT secret fallback, connects to localhost backing services. |
-| **`docker`** | Local Docker Compose | Resolves container hostnames (`postgres`, `redis`, `mailhog`), uses local credentials. |
-| **`prod`** | Production AWS Cluster | **Strict validation**: Requires Base64 ≥64-byte `LINKFLOW_JWT_SECRET`, real SMTP relay, HTTPS base URL, explicit CORS origins, and Redis password. |
-
-> [!IMPORTANT]
-> Do not use `prod` locally — it refuses to start without a real SMTP relay, `https` mail/base URLs, explicit CORS origins, and a Redis password.
-
----
-
-## Build and Test
-
-```bash
-mvn clean package -DskipTests
-mvn test
-mvn clean verify          # unit + integration; Docker required for Testcontainers
-```
-
-GitHub Actions (`.github/workflows/ci.yml`) runs `mvn verify`, builds the three images, and validates Compose/Nginx config.
-
----
-
-## CI/CD Pipeline
-
-Automated continuous deployment is managed via GitHub Actions, Amazon ECR, and AWS Systems Manager (SSM):
+LinkFlow is engineered as a clean modular monolith:
 
 ```mermaid
-flowchart LR
-    Commit["Push to main"] --> CI["1. Build & Test<br/>(JDK 21, mvn verify)"]
-    CI --> ECR["2. ECR Publish<br/>(tag: sha-commit)"]
-    ECR --> SSM["3. AWS SSM Run Command<br/>(Keyless OIDC)"]
-    SSM --> Rolling["4. Rolling Deploy<br/>App 1 → App 2 → App 3 → Edge"]
-    Rolling --> Verify["5. Post-Deploy Verify<br/>(Health Probes)"]
+flowchart TB
+    App["linkflow-app (Runnable JAR)"]
+    Common["linkflow-common"]
+    Auth["linkflow-auth"]
+    User["linkflow-user"]
+    Url["linkflow-url"]
+    RL["linkflow-rate-limit"]
+    Analytics["linkflow-analytics"]
+    Notify["linkflow-notification"]
+    Obs["linkflow-observability"]
+    Gateway["linkflow-gateway"]
+    Web["linkflow-web"]
+
+    App --> Auth & User & Url & RL & Analytics & Notify & Obs & Common
+    Auth & User & Url & RL & Analytics & Notify & Obs --> Common
+    Gateway -.->|"HTTP :8081"| App
+    Web -.->|"RestClient via Gateway"| Gateway
 ```
 
-* **Keyless AWS Authentication**: Authenticates to AWS via GitHub OIDC without long-lived access keys (`role-to-assume: ${{ secrets.AWS_ROLE_ARN }}`).
-* **Rolling Application Deployment**: Uses AWS SSM to execute `scripts/deploy.sh <image-tag>` across App Node 1, Node 2, and Node 3 sequentially.
-* **Automated Rollback**: Triggers `scripts/rollback.sh` to revert to `.rollback-tag` if readiness health checks fail.
-* **Edge Synchronization**: Synchronizes Nginx and Prometheus configurations on EC2 #1 with zero downtime.
+### Module Responsibilities
+
+| Module | Core Responsibility |
+|---|---|
+| [`linkflow-common`](linkflow-common/) | Shared envelopes (`ApiResponse`), exceptions, ports, and Redis configuration |
+| [`linkflow-auth`](linkflow-auth/) | JWT generation/validation, refresh token rotation, account recovery |
+| [`linkflow-user`](linkflow-user/) | User profiles, role management, and administration |
+| [`linkflow-url`](linkflow-url/) | Short URL generation, custom aliases, cache-aside redirects, QR codes |
+| [`linkflow-rate-limit`](linkflow-rate-limit/) | Redis Lua sliding-window rate limiters |
+| [`linkflow-analytics`](linkflow-analytics/) | Click tracking stream (`XADD`), scheduled batch flushes, analytics queries |
+| [`linkflow-notification`](linkflow-notification/) | Transactional SMTP email delivery and HTML templates |
+| [`linkflow-observability`](linkflow-observability/) | Micrometer metrics, custom timers, Redis health indicators |
+| [`linkflow-app`](linkflow-app/) | Main runnable backend assembling all modules, Flyway, and schedulers |
+| [`linkflow-gateway`](linkflow-gateway/) | Spring Cloud Gateway for external routing and correlation ID injection |
+| [`linkflow-web`](linkflow-web/) | Thymeleaf server-rendered UI (BFF) |
 
 ---
 
-## Core Endpoints & API Reference
+## Quick Start (Local Development)
 
-| Method | Endpoint / Route | Module | Purpose |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/r/{shortCode}` | `linkflow-url` | Public redirect with Redis cache-aside resolution |
-| `POST` | `/api/v1/auth/register` | `linkflow-auth` | Register user account (sends email token) |
-| `POST` | `/api/v1/auth/login` | `linkflow-auth` | User login (returns HS512 JWT + opaque refresh token) |
-| `POST` | `/api/v1/auth/refresh` | `linkflow-auth` | Rotate refresh token and issue new JWT |
-| `POST` | `/api/v1/auth/logout` | `linkflow-auth` | Revoke refresh tokens and session |
-| `POST` | `/api/v1/urls` | `linkflow-url` | Create short link (optional alias, expiry, `Idempotency-Key`) |
-| `POST` | `/api/v1/urls/bulk` | `linkflow-url` | Bulk URL create with idempotency support |
-| `GET` | `/api/v1/urls/{id}/qr` | `linkflow-url` | Download QR code PNG image |
-| `GET` | `/api/v1/analytics/urls/{id}`| `linkflow-analytics` | Aggregates, 7/30/90-day trends, recent click feeds |
-| `GET` | `/api/v1/admin/users` | `linkflow-user` | Admin: user list, roles, disable/enable/delete |
-| `GET` | `/actuator/prometheus` | `linkflow-observability`| Prometheus scrape target |
-| `GET` | `/` | `linkflow-web` | Public landing page and link generation UI |
+### Prerequisites
+- **Java 21 LTS** (`JAVA_HOME` pointing to JDK 21)
+- **Docker & Docker Compose v2**
+- **Apache Maven 3.9+**
 
-Full endpoint definitions, parameters, and payloads are documented in [docs/API.md](docs/API.md).
+### Option A: Full Local Stack (Docker Compose)
+Runs the entire platform locally including Nginx, Gateway, App, Web, PostgreSQL, Redis, and MailHog:
 
----
+```bash
+# 1. Generate local development TLS certificates
+./infrastructure/nginx/generate-dev-certs.sh
 
-## Repository Layout
+# 2. Configure local environment variables
+cp .env.example .env
 
-```text
-.
-├── README.md                         # Project overview and quick start guide
-├── pom.xml                           # Maven parent (modules stay at root)
-├── docker-compose.yml                # local stack: docker compose up
-├── docker-compose.dev.yml            # publish Postgres/Redis for host JARs
-├── docker-compose.perf.yml           # k6 overlay
-├── docker-compose.ec2-*.yml          # hosted edge + app node
-├── .env.example / .env.ec2.example   # copy to .env at this directory
-├── docs/                             # architecture, API, deployment, interview
-├── infrastructure/                   # Dockerfile, Nginx, Prometheus, Grafana
-├── performance/                      # k6 scenarios and seed scripts
-├── scripts/                          # deployment, rollback, health-check, and AWS scripts
-├── linkflow-*/                       # Maven modules
-└── .github/workflows/ci.yml          # GitHub Actions CI workflow
+# 3. Start all services
+docker compose up --build
+```
+- Open **`https://localhost`** in your browser (accept the self-signed test certificate).
+- View development activation emails via MailHog at **`http://localhost:8025`**.
+
+### Option B: Host JAR Workflow (Fast Iteration)
+Start only the backing infrastructure in Docker and run the Spring Boot apps on your host:
+
+```bash
+# Start PostgreSQL, Redis, and MailHog
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis mailhog
+
+# Package application JARs
+mvn clean package -DskipTests
+
+# Run the backend with the dev profile
+java -jar linkflow-app/target/linkflow-app-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev
 ```
 
----
+### Configuration Profiles
 
-## Documentation
-
-| File | Contents |
-| :--- | :--- |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Modules, flows, Redis, schema, security |
-| [docs/API.md](docs/API.md) | REST inventory and web routes |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Local Compose, 2-EC2 hosted stack, env vars, load tests |
-| [docs/INTERVIEW_GUIDE.md](docs/INTERVIEW_GUIDE.md) | Pitches and design Q&A for this codebase |
+| Profile | Target Environment | Characteristics |
+|---|---|---|
+| **`dev`** | Host JAR development | Connects to `localhost` backing services; embedded JWT secret fallback |
+| **`docker`** | Docker Compose / EC2 | Resolves container network hostnames; loads container environment variables |
+| **`prod`** | Production AWS Cluster | **Strict validation**: Requires Base64 ≥64-byte `LINKFLOW_JWT_SECRET`, valid SMTP relay, HTTPS base URL, and Redis password |
 
 ---
 
-## Limitations
+## Testing
 
-- Compose ships demo credentials (bootstrap admin, Grafana, local DB/Redis passwords)
-- JWT role changes apply on the next refresh, not instantly
-- `click_events` is retained (default 365 days) but not partitioned
-- Password and email only — no social login; no geo/device analytics
-- Prometheus alert rules evaluate in Prometheus; there is no notifier container
-- k6 thresholds are per-run gates, not published SLOs
+LinkFlow maintains comprehensive automated test suites:
+
+```bash
+# Run unit tests across all modules
+mvn test
+
+# Run full integration test suite (requires Docker for Testcontainers)
+mvn clean verify
+```
+
+- **Integration Testing**: Powered by **Testcontainers** running real PostgreSQL 16 and Redis 7 containers.
+- **SMTP Verification**: Tested against GreenMail embedded servers.
+- **Web UI Smoke Tests**: Controller slice tests (`@WebMvcTest`) verify template rendering and security configurations.
+
+---
+
+## Observability
+
+- **Prometheus**: Scrapes metrics from `linkflow-app` and `linkflow-gateway` on each node every 15s. Pre-configured alert rules live in `infrastructure/prometheus/alerts.yml`.
+- **Grafana**: Pre-configured dashboards provide visibility into redirect latency, JVM heap, cache hit ratios, and Redis Stream throughput.
+- **Accessing Dashboards**: Grafana is bound to localhost on `linkflow-edge` for security. Access it via SSH tunnel:
+  ```bash
+  ssh -L 3000:127.0.0.1:3000 ec2-user@13.206.178.184
+  # Open http://localhost:3000 in your browser
+  ```
+
+---
+
+## Core API Reference
+
+The backend exposes 45 REST endpoints. Full specifications and payloads are documented in [docs/API.md](docs/API.md).
+
+| Method | Endpoint | Module | Purpose |
+|---|---|---|---|
+| `GET` | `/r/{shortCode}` | `linkflow-url` | Public 302 redirect with Redis cache-aside resolution |
+| `POST` | `/api/v1/auth/register` | `linkflow-auth` | User registration (triggers verification email) |
+| `POST` | `/api/v1/auth/login` | `linkflow-auth` | Authenticates user; returns JWT and opaque refresh token |
+| `POST` | `/api/v1/auth/verify-email` | `linkflow-auth` | Validates single-use token and activates account |
+| `POST` | `/api/v1/auth/refresh` | `linkflow-auth` | Rotates refresh token and issues new JWT |
+| `POST` | `/api/v1/urls` | `linkflow-url` | Creates short link (supports custom alias and TTL) |
+| `POST` | `/api/v1/urls/bulk` | `linkflow-url` | Bulk URL creation with `Idempotency-Key` support |
+| `GET` | `/api/v1/urls/{id}/qr` | `linkflow-url` | Generates QR code PNG image |
+| `GET` | `/api/v1/analytics/urls/{id}` | `linkflow-analytics` | Fetches click aggregations and 7/30/90-day trends |
+| `GET` | `/api/v1/admin/users` | `linkflow-user` | Admin: user management and role assignment |
+| `GET` | `/nginx-health` | `nginx` | Edge proxy health probe (returns `ok`) |
+
+---
+
+## Limitations & Roadmap
+
+- **Compose Demo Secrets**: Default passwords exist in local Compose files for rapid onboarding; production uses injected environment secrets.
+- **Table Partitioning**: The `click_events` table is pruned via a nightly retention job (default 365 days); native PostgreSQL range partitioning is planned for high-volume deployments.
+- **Authentication Scope**: Currently supports username/password + email verification; OAuth2/OIDC social login is roadmapped.
+- **Analytics Dimensions**: Tracks clicks, referrers, and user agents; geo-IP attribution is planned.
+
+---
+
+<p align="center">
+  <sub>Built with precision by SlayerBit • Designed for production scale.</sub>
+</p>

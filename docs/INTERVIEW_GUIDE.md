@@ -4,7 +4,7 @@ Answers about **this** repository. Diagrams: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## 30 seconds
 
-LinkFlow is a URL shortener implemented as a Java 21 modular monolith. Users create short links; visitors hit `GET /r/{code}` for a 302. PostgreSQL is the source of truth. Redis does redirect cache, sliding-window rate limits, click buffering, stampede locks, access-token revocation, web sessions, mail cooldown, and ShedLock. Auth is HS512 JWT plus rotating opaque refresh tokens, with SMTP activation and recovery. Hosted on two EC2 instances (edge + one app node). Spring Cloud Gateway on the app host routes API, redirects, and a Thymeleaf UI.
+LinkFlow is a URL shortener implemented as a Java 21 modular monolith. Users create short links; visitors hit `GET /r/{code}` for a 302. PostgreSQL is the source of truth. Redis does redirect cache, sliding-window rate limits, click buffering, stampede locks, access-token revocation, web sessions, mail cooldown, and ShedLock. Auth is HS512 JWT plus rotating opaque refresh tokens, with SMTP activation and recovery. Hosted on a distributed 4-EC2 cluster in AWS (edge proxy + 3 load-balanced application nodes) under `https://linkflow.slayerbit.me`. Spring Cloud Gateway on each app host routes API, redirects, and a Thymeleaf UI.
 
 ## 2 minutes
 
@@ -18,13 +18,13 @@ The web UI is a BFF with no `com.linkflow.*` compile dependency. JWTs sit in a R
 
 Add:
 
-**Email.** After-commit SMTP. Hashed 24h activation and email-change tokens (idempotent — scanners prefetch). 15-minute password reset (not idempotent). Resend/forgot always 200. Per-recipient cooldown, fail-open if Redis is down. `prod` will not start without a real mail config.
+**Email.** After-commit SMTP. Hashed 24h activation and email-change tokens (idempotent — scanners prefetch). 15-minute password reset (not idempotent). Resend/forgot always 200. Per-recipient cooldown, fail-open if Redis is down. `LINKFLOW_MAIL_BASE_URL` falls back to `LINKFLOW_BASE_URL` (`https://linkflow.slayerbit.me`). Login before verification returns 401 `EMAIL_NOT_VERIFIED`.
 
 **Schema.** Flyway V1–V11: users/roles, refresh tokens, short URLs, analytics, idempotency + body hash, stream dedup, password reset, email verification, email change.
 
 **Admin.** REST and UI: disable/enable/delete users, assign roles, deactivate/reactivate URLs, system stats and trends. Role changes in the JWT wait until refresh. Disabling a user goes through `TokenRevocationPort`.
 
-**Ops.** Hosted layout is two EC2 hosts: edge (Nginx, Redis, Prometheus, Grafana) and one app node (gateway + app + web). Neon PostgreSQL and external SMTP. One Dockerfile, three targets, UID 1001, 25s graceful shutdown. Extra app nodes are a future option, not deployed. GitHub Actions runs `mvn verify` and builds the images. k6 lives under `performance/`.
+**Ops.** Hosted layout is four EC2 instances: `linkflow-edge` (Nginx with Let's Encrypt TLS on AWS Elastic IP `13.206.178.184`, Redis, Prometheus, Grafana) and three identical app nodes (`linkflow-app-1`, `2`, `3` running gateway + app + web behind `least_conn`). Neon PostgreSQL and external SMTP. One Dockerfile, three targets, UID 1001, 25s graceful shutdown. Automated CI/CD via GitHub Actions: keyless OIDC, ECR push with immutable commit tags, AWS SSM sequential rolling deploy with automated rollback and resilient network timeouts. k6 lives under `performance/`.
 
 ## Why this shape
 
@@ -36,7 +36,7 @@ Add:
 
 **JWT + opaque refresh.** Access tokens validate without a session store. Refresh tokens are revocable and rotated; reuse revokes every session. HS512 matches a ≥64-byte key. Issuer `linkflow` and audience `linkflow-api` are required on verify.
 
-**Nginx and a Java gateway.** Nginx is the public edge (local Compose terminates TLS; the committed EC2 site file is HTTP-only). It proxies to EC2 #2's gateway :8080, drops floods, and denies `/actuator`. The gateway is the app-level URL and injects `X-Correlation-ID`. JWT stays in the app.
+**Nginx and a Java gateway.** Nginx is the public edge on `linkflow-edge` (terminates TLS via Let's Encrypt for `linkflow.slayerbit.me`, enforces HTTP 301 to HTTPS, applies edge rate limiting). It proxies via `least_conn` to the three app nodes' gateways :8080, drops floods, and denies `/actuator`. The gateway is the app-level URL and injects `X-Correlation-ID`. JWT stays in the app.
 
 **Fail-open vs fail-closed.** Unlimited login during a Redis outage is worse than 503. Redirects stay up. Mail cooldown fails open so recovery is not blocked by Redis.
 
@@ -44,7 +44,7 @@ Add:
 
 ## Likely questions
 
-**Processes and ports?** Hosted: EC2 #1 Nginx/Redis/Prometheus/Grafana; EC2 #2 gateway 8080 + app 8081 + web 8082. Local Compose: Nginx 443, then the same three JVM ports.
+**Processes and ports?** Hosted: EC2 #1 `linkflow-edge` Nginx/Redis/Prometheus/Grafana; EC2 #2/#3/#4 identical app nodes each with gateway 8080 + app 8081 + web 8082. Local Compose: Nginx 443, then the same three JVM ports.
 
 **Gateway routes?** App: `/api/**`, `/r/**`, swagger. Web: `/css/**`, `/js/**`, `/vendor/**`, `/webjars/**`, `/**`. Actuator is local to the gateway.
 

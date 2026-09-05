@@ -4,9 +4,17 @@ How the current repository is structured. Run it with [README.md](../README.md) 
 
 ## Hosted topology (4 EC2)
 
-The **current hosted** layout is **four EC2 instances**: one edge/infrastructure node and three identical application nodes behind `least_conn` load balancing.
+The **current hosted** layout is **four EC2 instances**: one edge/infrastructure node (`linkflow-edge`) and three identical application nodes (`linkflow-app-1`, `linkflow-app-2`, `linkflow-app-3`) behind `least_conn` load balancing.
 
-Nginx and Prometheus use stable upstream names (`app1`, `app2`, `app3`) resolved to private VPC IPs via Docker `extra_hosts` in the edge compose file. The Nginx and Prometheus configs are committed and deterministic — only `.env` on EC2 #1 varies per deployment.
+The production application is publicly served at **`https://linkflow.slayerbit.me`**.
+
+> [!NOTE]
+> The root domain `https://slayerbit.me` is reserved for a future personal site and is **not** LinkFlow. LinkFlow is served exclusively at `https://linkflow.slayerbit.me`.
+
+- **Namecheap DNS**: Resolves `linkflow.slayerbit.me` to the edge node's public IP.
+- **AWS Elastic IP**: `13.206.178.184` is associated with `linkflow-edge` to provide a static, stable public IPv4 address that does not change across instance stop/start cycles.
+- **TLS Termination**: Nginx terminates HTTPS using a valid Let's Encrypt certificate (`/etc/letsencrypt/live/linkflow.slayerbit.me/fullchain.pem`) with Certbot automated renewal. All HTTP traffic on port 80 is redirected to HTTPS (301).
+- **Internal Routing**: Nginx and Prometheus use stable upstream names (`app1`, `app2`, `app3`) resolved to private VPC IPs via Docker `extra_hosts` in `docker-compose.ec2-edge.yml`. The Nginx and Prometheus configs are committed and deterministic — only `.env` on EC2 #1 varies per deployment.
 
 ```mermaid
 flowchart TB
@@ -135,6 +143,38 @@ Feature modules compile only against `linkflow-common`. `linkflow-web` has no `c
 - Web session: `@EnableRedisHttpSession`, namespace `linkflow:web:session`, timeout 30 minutes. Cookie `httpOnly`, `SameSite=Strict`, `Secure` when `SERVER_SERVLET_SESSION_COOKIE_SECURE=true`. Tokens never reach JavaScript.
 - Roles: `USER` and `ADMIN` in `user_roles`. `PATCH /api/v1/admin/users/{id}/roles` exists. JWT roles stay stale until refresh.
 
+### Email Verification & Account Security
+
+New user registrations require email verification before account login is permitted.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User
+    participant Web as Web UI (:8082)
+    participant App as App (:8081)
+    participant DB as PostgreSQL
+    participant SMTP as SMTP Relay
+
+    User->>Web: Submit registration form
+    Web->>App: POST /api/v1/auth/register
+    App->>DB: Insert user (email_verified=false)
+    App->>DB: Insert email_verification_tokens (SHA-256 hash)
+    App-)SMTP: Dispatch verification email via TransactionalEmailDispatcher
+    SMTP-->>User: Delivery: https://linkflow.slayerbit.me/verify-email?token=...
+    Note over User,Web: User clicks HTTPS verification link
+    User->>Web: GET /verify-email?token=...
+    Web->>App: POST /api/v1/auth/verify-email {token}
+    App->>DB: Query token by hash, mark used=true, update email_verified=true
+    App-->>Web: Confirmation response
+    Web-->>User: Display success banner & login form
+```
+
+- **Base URL Configuration**: `linkflow.mail.base-url` defaults to `${linkflow.base-url}` (`https://linkflow.slayerbit.me` in production), ensuring verification links always use the secure production HTTPS domain.
+- **Single-Use Tokens**: Tokens are stored as SHA-256 hashes in `email_verification_tokens`. Once verified or superseded, old tokens cannot be reused.
+- **Login Rejection**: Attempting to log into an unverified account returns HTTP 401 with error code `EMAIL_NOT_VERIFIED`.
+- **Idempotency**: Email verification and email-change are idempotent to protect against automated corporate email security scanners pre-fetching links.
+
 ## Redirect path
 
 ```mermaid
@@ -239,9 +279,9 @@ Thymeleaf + `tokens.css` / `layout.css` / `components.css` / `custom.css`. Layou
 - **PostgreSQL + Flyway** — FKs, unique short codes, ACID for refresh rotation and idempotency. Hibernate only validates.
 - **Redis for the uses in the table above** — not a second source of truth. QR PNGs use a process-local Caffeine cache.
 - **JWT + opaque refresh** — stateless API validation; server-side revoke/rotation.
-- **Nginx + Spring Cloud Gateway** — Nginx is the public edge (TLS on local Compose; the committed EC2 site file is HTTP-only) and proxies to EC2 #2's gateway. JWT stays in the app.
+- **Nginx + Spring Cloud Gateway** — Nginx is the public edge on `linkflow-edge` (terminates TLS with Let's Encrypt certificates for `linkflow.slayerbit.me`, enforces HTTP-to-HTTPS 301 redirects, applies edge rate limiting) and reverse-proxies via `least_conn` to the three application nodes' gateways on port 8080. JWT stays in the app.
 - **Async click path** — redirect latency is not coupled to a Postgres write.
-- **`docker` vs `prod` profiles** — Compose cannot satisfy real SMTP and a public `https` mail URL; `prod` fail-fastes those checks instead of pretending.
+- **`docker` vs `prod` profiles** — Compose cannot satisfy real SMTP and a public `https` mail URL; `prod` fail-fastes those checks instead of pretending. App nodes in production run the `docker` container profile with production environment variables.
 
 ## Limitations
 
