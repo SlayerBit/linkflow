@@ -32,13 +32,45 @@ cd "$DEPLOY_DIR"
 echo "=== LinkFlow Deploy: tag=$IMAGE_TAG ==="
 echo "  Time: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-# ── Sync repository to match origin/main exactly ─────────────────────────
-# fetch + reset is deterministic: it always produces the exact state of origin/main regardless
-# of local modifications. git pull would fail on local drift or diverged history.
-echo "Syncing repository to origin/main..."
-git fetch origin 2>&1
-git checkout main 2>&1
-git reset --hard origin/main 2>&1
+# ── Sync repository to match origin/main if reachable ───────────────────
+# Attempt to fetch latest compose files, scripts, and configurations from GitHub.
+# Uses strict connect/low-speed timeouts and retries so transient network blips
+# do not hang or abort the deployment.
+#
+# CRITICAL INVARIANT: The requested IMAGE_TAG ($1) is immutable and always deployed
+# to this node. If GitHub sync fails, the script continues using existing local
+# compose configuration with the exact requested IMAGE_TAG. It NEVER falls back to 'latest'.
+if [ "${LINKFLOW_DEPLOY_SYNCED:-0}" != "1" ]; then
+    echo "Syncing repository to origin/main..."
+    sync_success=false
+    for attempt in 1 2 3; do
+        echo "  Attempt $attempt: fetching origin/main..."
+        if git -c http.connectTimeout=10 -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 fetch origin main 2>&1; then
+            sync_success=true
+            break
+        fi
+        echo "  Attempt $attempt failed. Waiting before retry..."
+        sleep 3
+    done
+
+    if [ "$sync_success" = true ]; then
+        git checkout main 2>&1
+        git reset --hard origin/main 2>&1
+        echo "  Repository successfully synced to $(git rev-parse --short HEAD)"
+        # Re-execute the script so bash re-opens from byte 0 in case deploy.sh itself
+        # was updated by the git reset.
+        export LINKFLOW_DEPLOY_SYNCED=1
+        exec bash "$0" "$@"
+    else
+        if [ -f "$COMPOSE_FILE" ]; then
+            echo "WARNING: Could not connect to GitHub to sync repository after 3 attempts."
+            echo "Proceeding with existing local configuration ($COMPOSE_FILE) for IMAGE_TAG=$IMAGE_TAG..."
+        else
+            echo "ERROR: Failed to sync repository and $COMPOSE_FILE does not exist locally."
+            exit 1
+        fi
+    fi
+fi
 
 # ── Source .env for REGISTRY and AWS_REGION ───────────────────────────────
 if [ ! -f .env ]; then
@@ -67,14 +99,16 @@ else
 fi
 
 # ── Override IMAGE_TAG (takes precedence over .env value) ────────────────
+# INVARIANT: The requested IMAGE_TAG takes precedence and is exported to docker compose.
 export IMAGE_TAG
+echo "Deploying target image tag: $IMAGE_TAG"
 
 # ── Pull new images ──────────────────────────────────────────────────────
 echo "Pulling images with tag: $IMAGE_TAG"
 docker compose -f "$COMPOSE_FILE" pull 2>&1
 
 # ── Restart containers (respects stop_grace_period for graceful drain) ───
-echo "Starting containers..."
+echo "Starting containers with tag: $IMAGE_TAG..."
 docker compose -f "$COMPOSE_FILE" up -d --remove-orphans 2>&1
 
 # ── Wait for all containers to become healthy ────────────────────────────
