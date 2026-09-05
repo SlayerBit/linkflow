@@ -146,29 +146,27 @@ jobs:
             -v "$PWD/infrastructure/nginx/certs:/etc/nginx/certs:ro" \
             nginx:1.27-alpine nginx -t
 
-      # EC2 Nginx config is a template with ${DOMAIN_NAME} for server_name and cert paths.
-      # Replicate the nginx container's entrypoint: envsubst the template, generate dummy
-      # certs at the expected path, then validate with nginx -t.
+      # Generate temporary self-signed certificates at the exact path expected by the committed
+      # EC2 Nginx configuration (/etc/letsencrypt/live/linkflow.slayerbit.me/), then validate with nginx -t.
       - name: Validate EC2 Nginx config
         run: |
-          TEST_DOMAIN="ci-test.example.com"
+          CERT_DOMAIN="linkflow.slayerbit.me"
           WORK_DIR=$(mktemp -d)
-          mkdir -p "$WORK_DIR/letsencrypt/live/$TEST_DOMAIN" "$WORK_DIR/conf.d"
+          mkdir -p "$WORK_DIR/letsencrypt/live/$CERT_DOMAIN"
           openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
-            -keyout "$WORK_DIR/letsencrypt/live/$TEST_DOMAIN/privkey.pem" \
-            -out "$WORK_DIR/letsencrypt/live/$TEST_DOMAIN/fullchain.pem" \
-            -subj "/CN=$TEST_DOMAIN" 2>/dev/null
-          DOMAIN_NAME="$TEST_DOMAIN" envsubst '${DOMAIN_NAME}' \
-            < infrastructure/nginx/linkflow-ec2.conf \
-            > "$WORK_DIR/conf.d/linkflow.conf"
+            -keyout "$WORK_DIR/letsencrypt/live/$CERT_DOMAIN/privkey.pem" \
+            -out "$WORK_DIR/letsencrypt/live/$CERT_DOMAIN/fullchain.pem" \
+            -subj "/CN=$CERT_DOMAIN" \
+            -addext "subjectAltName=DNS:$CERT_DOMAIN" 2>/dev/null
           docker run --rm \
             --add-host app1:127.0.0.1 --add-host app2:127.0.0.1 --add-host app3:127.0.0.1 \
             -v "$PWD/infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
-            -v "$WORK_DIR/conf.d/linkflow.conf:/etc/nginx/conf.d/linkflow.conf:ro" \
+            -v "$PWD/infrastructure/nginx/linkflow-ec2.conf:/etc/nginx/conf.d/linkflow.conf:ro" \
             -v "$PWD/infrastructure/nginx/conf.d/proxy-headers.inc:/etc/nginx/conf.d/proxy-headers.inc:ro" \
             -v /dev/null:/etc/nginx/conf.d/default.conf:ro \
             -v "$WORK_DIR/letsencrypt:/etc/letsencrypt:ro" \
             nginx:1.27-alpine nginx -t
+          rm -rf "$WORK_DIR"
 
   scan:
     name: Vulnerability scan

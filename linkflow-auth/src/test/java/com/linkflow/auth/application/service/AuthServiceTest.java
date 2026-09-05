@@ -3,12 +3,14 @@ package com.linkflow.auth.application.service;
 import com.linkflow.auth.api.dto.LoginRequest;
 import com.linkflow.auth.api.dto.RegisterRequest;
 import com.linkflow.auth.domain.entity.EmailVerificationToken;
+import com.linkflow.auth.domain.exception.EmailNotVerifiedException;
 import com.linkflow.auth.domain.exception.InvalidCredentialsException;
 import com.linkflow.auth.domain.repository.EmailVerificationTokenRepository;
 import com.linkflow.auth.domain.repository.PasswordResetTokenRepository;
 import com.linkflow.auth.infrastructure.config.LinkflowSecurityProperties;
 import com.linkflow.common.event.EmailRequestedEvent;
 import com.linkflow.common.exception.ConflictException;
+import com.linkflow.common.exception.ResourceNotFoundException;
 import com.linkflow.common.mail.MailSendCooldown;
 import com.linkflow.common.metrics.LinkflowMetrics;
 import com.linkflow.common.port.TokenRevocationPort;
@@ -324,6 +326,57 @@ class AuthServiceTest {
         assertEquals("access-jwt", response.getAccessToken());
         assertEquals("refresh-opaque", response.getRefreshToken());
         assertEquals(900L, response.getExpiresIn());
+    }
+
+    @Test
+    void verifyEmail_validTokenMarksAccountVerifiedAndConsumesToken() {
+        UUID userId = UUID.randomUUID();
+        SecureTokenGenerator generator = new SecureTokenGenerator();
+        String rawToken = generator.generateToken();
+
+        EmailVerificationToken token = EmailVerificationToken.builder()
+                .tokenHash(generator.hash(rawToken))
+                .userId(userId)
+                .expiresAt(Instant.now().plusSeconds(3600))
+                .used(false)
+                .build();
+
+        when(emailVerificationTokenRepository.findByTokenHash(generator.hash(rawToken)))
+                .thenReturn(Optional.of(token));
+        when(userLookupPort.findById(userId)).thenReturn(Optional.of(
+                new UserPrincipalData(userId, "pending@example.com", "hash", "P", "V",
+                        Set.of(SecurityConstants.ROLE_USER), true, false)));
+
+        assertDoesNotThrow(() -> authService.verifyEmail(rawToken));
+
+        assertTrue(token.isUsed());
+        verify(emailVerificationTokenRepository).save(token);
+        verify(userLookupPort).updateEmailVerified(userId, true);
+    }
+
+    @Test
+    void verifyEmail_unknownTokenThrowsResourceNotFound() {
+        SecureTokenGenerator generator = new SecureTokenGenerator();
+        String rawToken = generator.generateToken();
+
+        when(emailVerificationTokenRepository.findByTokenHash(generator.hash(rawToken)))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> authService.verifyEmail(rawToken));
+        verify(userLookupPort, never()).updateEmailVerified(any(), anyBoolean());
+    }
+
+    @Test
+    void login_unverifiedAccountThrowsEmailNotVerifiedException() {
+        UUID userId = UUID.randomUUID();
+        when(userLookupPort.findByEmail("unverified@example.com")).thenReturn(Optional.of(
+                new UserPrincipalData(userId, "unverified@example.com", "hash", "U", "V",
+                        Set.of(SecurityConstants.ROLE_USER), true, false)));
+        when(securityProperties.isEmailVerificationRequired()).thenReturn(true);
+
+        assertThrows(EmailNotVerifiedException.class,
+                () -> authService.login(new LoginRequest("unverified@example.com", "StrongP@ss1")));
     }
 
     private UUID stubSuccessfulRegistration() {

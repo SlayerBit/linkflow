@@ -87,6 +87,25 @@ class EmailSenderAdapterTest {
     }
 
     @Test
+    void sendEmailVerification_withProductionBaseUrl_generatesHttpsProductionVerificationLink() throws Exception {
+        mailProperties.setBaseUrl("https://linkflow.slayerbit.me");
+
+        adapter.sendEmailVerification(new EmailSenderPort.VerificationEmail(
+                "user@example.com", "TestUser", "secure-token-123456", TTL));
+
+        assertThat(GREEN_MAIL.waitForIncomingEmail(5_000, 1)).isTrue();
+        MimeMessage received = GREEN_MAIL.getReceivedMessages()[0];
+        String body = bodyOf(received);
+
+        assertThat(body)
+                .contains("https://linkflow.slayerbit.me/verify-email?token=secure-token-123456")
+                .doesNotContain("http://13.200.242.17")
+                .doesNotContain("http://localhost")
+                .doesNotContain("http://127.0.0.1")
+                .doesNotContain("http://linkflow.slayerbit.me");
+    }
+
+    @Test
     void sendPasswordReset_usesResetPathAndRendersExpiryInMinutes() throws Exception {
         adapter.sendPasswordReset(new EmailSenderPort.PasswordResetEmail(
                 "ada@example.com", "Ada", "reset-xyz", Duration.ofMinutes(15)));

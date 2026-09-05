@@ -79,7 +79,7 @@ linkflow:
     from-address: ${LINKFLOW_MAIL_FROM:no-reply@linkflow.local}
     from-name: ${LINKFLOW_MAIL_FROM_NAME:LinkFlow}
     # Must be the origin a recipient's browser can reach, not an internal container hostname.
-    base-url: ${LINKFLOW_MAIL_BASE_URL:http://localhost:8080}
+    base-url: ${LINKFLOW_MAIL_BASE_URL:${linkflow.base-url}}
     max-attempts: ${LINKFLOW_MAIL_MAX_ATTEMPTS:3}
     retry-backoff-ms: ${LINKFLOW_MAIL_RETRY_BACKOFF_MS:1000}
   mail-cooldown:

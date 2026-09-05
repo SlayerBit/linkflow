@@ -24,7 +24,7 @@ spring:
 linkflow:
   mail:
     from-address: ${LINKFLOW_MAIL_FROM:no-reply@linkflow.local}
-    base-url: ${LINKFLOW_MAIL_BASE_URL:http://localhost:8080}
+    base-url: ${LINKFLOW_MAIL_BASE_URL:${linkflow.base-url:http://localhost:8080}}
   security:
     swagger-public: false
     actuator-public: false
